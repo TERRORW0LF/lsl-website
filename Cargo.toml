@@ -24,7 +24,11 @@ wasm-bindgen = "=0.2.87"
 thiserror = "1.0.38"
 tracing = { version = "0.1.37", optional = true }
 http = "0.2.8"
-sqlx = { version = "0.7.2", features = ["postgres"] }
+sqlx = { version = "0.7.2", features = ["postgres", "runtime-tokio", "macros", "chrono", "rust_decimal"] }
+serde = { version = "1.0.188", features = ["derive"] }
+axum_session_auth = { version = "0.7.0", features = ["postgres-rustls"] }
+rustls-acme = { version = "0.7.6", features = ["axum"] }
+axum-server = "0.5.1"
 
 [features]
 default = ["hydrate", "ssr"]
