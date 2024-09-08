@@ -7,28 +7,29 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-axum = { version = "0.6.4", optional = true }
+axum = { version = "0.7.5", optional = true }
 console_error_panic_hook = "0.1"
 console_log = "1"
 cfg-if = "1"
-leptos = { version = "0.5", features = ["nightly"] }
-leptos_axum = { version = "0.5.1" }
-leptos_meta = { version = "0.5", features = ["nightly"] }
-leptos_router = { version = "0.5", features = ["nightly"] }
+leptos = { version = "0.6", features = ["nightly"] }
+leptos_axum = "0.6.15"
+leptos_meta = { version = "0.6", features = ["nightly"] }
+leptos_router = { version = "0.6", features = ["nightly"] }
 log = "0.4"
-simple_logger = "4"
+simple_logger = "5"
 tokio = { version = "1.25.0", optional = true }
-tower = { version = "0.4.13", optional = true }
-tower-http = { version = "0.4", features = ["fs"], optional = true }
-wasm-bindgen = "=0.2.87"
+tower = { version = "0.5.0", optional = true }
+tower-http = { version = "0.5", features = ["fs"], optional = true }
+wasm-bindgen = "0.2.87"
 thiserror = "1.0.38"
 tracing = { version = "0.1.37", optional = true }
-http = "0.2.8"
-sqlx = { version = "0.7.2", features = ["postgres", "runtime-tokio", "macros", "chrono", "rust_decimal"] }
+http = "1.1.0"
+sqlx = { version = "0.8.2", features = ["postgres", "runtime-tokio", "macros", "chrono", "rust_decimal"] }
 serde = { version = "1.0.188", features = ["derive"] }
-axum_session_auth = { version = "0.7.0", features = ["postgres-rustls"] }
-rustls-acme = { version = "0.7.6", features = ["axum"] }
-axum-server = "0.5.1"
+axum_session_auth = "0.14.1"
+axum_session_sqlx = { version = "0.3.0", features = ["postgres", "tls-rustls"] }
+rustls-acme = { version = "0.11.1", features = ["axum"] }
+axum-server = "0.7.1"
 
 [features]
 default = ["hydrate", "ssr"]
