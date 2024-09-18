@@ -7,34 +7,56 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-axum = { version = "0.7.5", optional = true }
+anyhow = "1.0.88"
+cfg-if = "1"
 console_error_panic_hook = "0.1"
 console_log = "1"
-cfg-if = "1"
-leptos = { version = "0.6", features = ["nightly"] }
-leptos_axum = "0.6.15"
+http = "1.1.0"
+leptos = { version = "0.6.15", features = ["nightly"] }
 leptos_meta = { version = "0.6", features = ["nightly"] }
 leptos_router = { version = "0.6", features = ["nightly"] }
+serde = { version = "1.0.188", features = ["derive"] }
+thiserror = "1.0.38"
+wasm-bindgen = "0.2.87"
 log = "0.4"
 simple_logger = "5"
+argon2 = { version = "0.5.3", optional = true }
+axum = { version = "0.7.5", features = ["macros"], optional = true }
+axum-server = { version = "0.7.1", optional = true }
+axum_session = {version = "0.14.2", optional = true }
+axum_session_auth = { version = "0.14.1", optional = true }
+axum_session_sqlx = { version = "0.3.0", features = ["postgres", "tls-rustls"], optional = true }
+leptos_axum = { version = "0.6.15", optional = true }
+rustls-acme = { version = "0.11.1", features = ["axum"], optional = true }
+sqlx = { version = "0.8.2", features = ["postgres", "runtime-tokio", "tls-rustls", "macros", "chrono", "rust_decimal"], optional = true }
 tokio = { version = "1.25.0", optional = true }
-tower = { version = "0.5.0", optional = true }
+tokio-stream = { version = "0.1.16", optional = true }
+tower = { version = "0.5.0", features = ["util"], optional = true }
 tower-http = { version = "0.5", features = ["fs"], optional = true }
-wasm-bindgen = "0.2.87"
-thiserror = "1.0.38"
 tracing = { version = "0.1.37", optional = true }
-http = "1.1.0"
-sqlx = { version = "0.8.2", features = ["postgres", "runtime-tokio", "macros", "chrono", "rust_decimal"] }
-serde = { version = "1.0.188", features = ["derive"] }
-axum_session_auth = "0.14.1"
-axum_session_sqlx = { version = "0.3.0", features = ["postgres", "tls-rustls"] }
-rustls-acme = { version = "0.11.1", features = ["axum"] }
-axum-server = "0.7.1"
 
 [features]
-default = ["hydrate", "ssr"]
-hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate"]
-ssr = ["dep:axum", "dep:tokio", "dep:tower", "dep:tower-http", "leptos/ssr", "leptos_meta/ssr", "leptos_router/ssr", "dep:tracing"]
+default = [ "ssr" ]
+hydrate = [ "leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate"]
+ssr = [
+    "dep:argon2",
+    "dep:axum",
+    "dep:axum-server",
+    "dep:axum_session",
+    "dep:axum_session_auth",
+    "dep:axum_session_sqlx",
+    "dep:leptos_axum",
+    "dep:rustls-acme",
+    "dep:sqlx",
+    "dep:tokio",
+    "dep:tokio-stream",
+    "dep:tower",
+    "dep:tower-http",
+    "dep:tracing",
+    "leptos/ssr",
+    "leptos_meta/ssr", 
+    "leptos_router/ssr",
+]
 
 # Defines a size-optimized profile for the WASM bundle in release mode
 [profile.wasm-release]

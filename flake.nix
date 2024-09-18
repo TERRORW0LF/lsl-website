@@ -38,6 +38,7 @@
             cargo-deny
             cargo-edit
             cargo-watch
+            dart-sass
             rust-analyzer
             gcc
           ];
