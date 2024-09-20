@@ -1,4 +1,101 @@
+* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+
+a {
+	text-decoration: none;
+	color: inherit;
+}
+
+html,
+body {
+	height: 100%;
+	font-size: 1.2rem;
+	line-height: 2;
+}
+
 body {
 	font-family: sans-serif;
+}
+
+header {
+	position: sticky;
+	top: 0;
+}
+
+header nav {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	width: 100%;
+	font-size: 1rem;
+	background: #fff;
+}
+
+div.site-nav *,
+div.user-nav * {
+	margin: 1rem 4rem;
+}
+
+div.site-nav {
+	display: flex;
+	flex-direction: row;
+	justify-content: flex-start;
+}
+
+div.user-nav {
+	display: flex;
+	flex-direction: row;
+	justify-content: flex-end;
+}
+
+main {
+	padding: 1rem 2rem 2rem;
+}
+
+#welcome {
+	padding: 7rem 3rem 0;
 	text-align: center;
+}
+
+#welcome h1 {
+	font-size: 4rem;
+}
+
+#welcome p {
+	margin: auto;
+	margin-top: 1rem;
+	max-width: 100ch;
+}
+
+#potd {
+	margin: 10rem 3rem 8rem;
+}
+
+#potd h2 {
+	font-size: 4rem;
+}
+
+#potd p {
+	margin-top: 1rem;
+	max-width: 80ch;
+}
+
+#section {
+	display: flex;
+	font-size: 1.5rem;
+}
+
+#leaderboard-nav {
+	font-size: 1.2rem;
+}
+
+#leaderboard-nav ul {
+	list-style: none;
+}
+
+#leaderboard-nav ul li.selected {
+	color: aqua;
 }

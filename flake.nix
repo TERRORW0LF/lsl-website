@@ -40,6 +40,7 @@
             cargo-watch
             dart-sass
             rust-analyzer
+            leptosfmt
             gcc
           ];
         };
