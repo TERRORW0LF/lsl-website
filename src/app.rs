@@ -40,7 +40,7 @@ pub fn App() -> impl IntoView {
             <header>
                 <nav id="site-nav">
                     <div class="site-nav">
-                        <A href="/">"Lucio Surf League"</A>
+                        <A href="/home">"Lucio Surf League"</A>
                         <A href="/leaderboard">"Leaderboard"</A>
                     </div>
                     <div class="user-nav">
@@ -83,7 +83,13 @@ pub fn App() -> impl IntoView {
             </header>
             <main>
                 <Routes>
-                    <Route path="" view=HomePage />
+                    <Route
+                        path=""
+                        view=move || {
+                            view! { <Redirect path="home" /> }
+                        }
+                    />
+                    <Route path="home" view=HomePage />
                     <Route path="register" view=move || view! { <Register action=register /> } />
                     <Route path="login" view=move || view! { <Login action=login /> } />
                     <Route
