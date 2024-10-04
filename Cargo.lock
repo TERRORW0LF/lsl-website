@@ -769,8 +769,10 @@ checksum = "a21f936df1771bf62b77f047b726c4625ff2e8aa607c01ec06e5a05bd8463401"
 dependencies = [
  "android-tzdata",
  "iana-time-zone",
+ "js-sys",
  "num-traits",
  "serde",
+ "wasm-bindgen",
  "windows-targets 0.52.6",
 ]
 
@@ -2149,6 +2151,7 @@ dependencies = [
  "axum_session_auth",
  "axum_session_sqlx",
  "cfg-if",
+ "chrono",
  "console_error_panic_hook",
  "console_log",
  "http",
@@ -2157,6 +2160,7 @@ dependencies = [
  "leptos_meta",
  "leptos_router",
  "log",
+ "rust_decimal",
  "rustls-acme",
  "serde",
  "simple_logger",

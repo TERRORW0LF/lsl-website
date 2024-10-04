@@ -1,4 +1,5 @@
 use crate::{
+    api::{get_runs_category, MapRuns},
     auth::{get_user, Login, Logout, Register},
     error_template::{AppError, ErrorTemplate},
 };
@@ -40,7 +41,7 @@ pub fn App() -> impl IntoView {
             <header>
                 <nav id="site-nav">
                     <div class="site-nav">
-                        <A href="/home">"Lucio Surf League"</A>
+                        <A href="/home">"Home"</A>
                         <A href="/leaderboard">"Leaderboard"</A>
                     </div>
                     <div class="user-nav">
@@ -82,32 +83,62 @@ pub fn App() -> impl IntoView {
                 </nav>
             </header>
             <main>
-                <Routes>
-                    <Route
-                        path=""
-                        view=move || {
-                            view! { <Redirect path="home" /> }
-                        }
-                    />
-                    <Route path="home" view=HomePage />
-                    <Route path="register" view=move || view! { <Register action=register /> } />
-                    <Route path="login" view=move || view! { <Login action=login /> } />
-                    <Route
-                        path="settings"
-                        view=move || {
-                            view! {
-                                <h1>"Settings"</h1>
-                                <Logout action=logout />
-                            }
-                        }
-                    />
-                    <Route path="leaderboard" view=Section>
-                        <Route path=":patch" view=Leaderboard />
-                        <Route path="" view=|| view! { "Please select a patch." } />
-                    </Route>
-                </Routes>
+                <AppRouter register=register login=login logout=logout />
             </main>
         </Router>
+    }
+}
+
+#[component(transparent)]
+fn AppRouter(
+    register: Action<Register, Result<(), ServerFnError>>,
+    login: Action<Login, Result<(), ServerFnError>>,
+    logout: Action<Logout, Result<(), ServerFnError>>,
+) -> impl IntoView {
+    view! {
+        <Routes>
+            <Route path="" view=|| view! { <Redirect path="home" /> } />
+            <Route path="home" view=HomePage />
+            <Route path="register" view=move || view! { <Register action=register /> } />
+            <Route path="login" view=move || view! { <Login action=login /> } />
+            <Route
+                path="settings"
+                view=move || {
+                    view! {
+                        <h1>"Settings"</h1>
+                        <Logout action=logout />
+                    }
+                }
+            />
+            <LeaderboardRouter />
+        </Routes>
+    }
+}
+
+#[component(transparent)]
+fn LeaderboardRouter() -> impl IntoView {
+    let (patch, set_patch) = create_signal(String::new());
+
+    view! {
+        <Route path="leaderboard" view=move || view! { <Section patch=patch /> }>
+            <Route
+                path=":patch/:layout/:category"
+                view=move || view! { <Leaderboard patch=set_patch /> }
+            />
+            <Route path="" view=|| view! { <Redirect path="2.00/1/standard" /> } />
+            <Route
+                path=":patch"
+                view=|| {
+                    view! { <Redirect path="1/standard" /> }
+                }
+            />
+            <Route
+                path=":patch/:layout"
+                view=|| {
+                    view! { <Redirect path="standard" /> }
+                }
+            />
+        </Route>
     }
 }
 
@@ -141,41 +172,22 @@ fn HomePage() -> impl IntoView {
 }
 
 #[component]
-pub fn Section() -> impl IntoView {
-    let (patch, set_patch) = create_signal(-1);
-    let on_patch = move |n: i32| {
-        patch.with(|patch| {
-            if *patch == n {
-                "selected".to_string()
-            } else {
-                String::new()
-            }
-        })
-    };
-
+pub fn Section(patch: ReadSignal<String>) -> impl IntoView {
     view! {
         <section id="section">
             <nav id="leaderboard-nav">
                 <ul>
-                    <li class=move || on_patch(0)>
-                        <A on:click=move |_| set_patch(0) href="1.00">
-                            "1.00"
-                        </A>
+                    <li class:selected=move || patch.with(|p| p == "1.00")>
+                        <A href="1.00">"1.00"</A>
                     </li>
-                    <li class=move || on_patch(1)>
-                        <A on:click=move |_| set_patch(1) href="1.41">
-                            "1.41"
-                        </A>
+                    <li class:selected=move || patch.with(|p| p == "1.41")>
+                        <A href="1.41">"1.41"</A>
                     </li>
-                    <li class=move || on_patch(2)>
-                        <A on:click=move |_| set_patch(2) href="1.50">
-                            "1.50"
-                        </A>
+                    <li class:selected=move || patch.with(|p| p == "1.50")>
+                        <A href="1.50">"1.50"</A>
                     </li>
-                    <li class=move || on_patch(3)>
-                        <A on:click=move |_| set_patch(3) href="2.00">
-                            "current"
-                        </A>
+                    <li class:selected=move || patch.with(|p| p == "2.00")>
+                        <A href="2.00">"current"</A>
                     </li>
                 </ul>
             </nav>
@@ -185,8 +197,63 @@ pub fn Section() -> impl IntoView {
 }
 
 #[component]
-pub fn Leaderboard() -> impl IntoView {
-    "Loading"
+pub fn Leaderboard(patch: WriteSignal<String>) -> impl IntoView {
+    let params = use_params_map();
+    create_effect(move |_| params.with(|params| patch.set(params.get("patch").cloned().unwrap())));
+    let selection = create_memo(move |_| {
+        params.with(|params| {
+            (
+                params.get("patch").cloned().unwrap(),
+                params.get("layout").cloned().unwrap(),
+                params.get("category").cloned().unwrap(),
+            )
+        })
+    });
+    let maps = create_resource(selection, |s| get_runs_category(s.0, s.1, s.2));
+
+    view! {
+        <Suspense fallback=move || {
+            view! { <p>"Loading..."</p> }
+        }>
+            {move || {
+                maps.get()
+                    .map(|data| match data {
+                        Err(e) => view! { <p>{e.to_string()}</p> }.into_view(),
+                        Ok(maps) => {
+                            maps.into_iter()
+                                .map(|map| {
+                                    view! { <LeaderboardEntry map=map /> }
+                                })
+                                .collect_view()
+                        }
+                    })
+            }}
+        </Suspense>
+    }
+}
+
+#[component]
+pub fn LeaderboardEntry(map: MapRuns) -> impl IntoView {
+    view! {
+        <div class="lbentry">
+            <h2>{map.map}</h2>
+            <img src="" />
+            <div class="lb_entry_ranks">
+                {map
+                    .runs
+                    .into_iter()
+                    .map(|n| {
+                        view! {
+                            <div>
+                                <span>{n.username}</span>
+                                <span>{n.time.to_string()}</span>
+                            </div>
+                        }
+                    })
+                    .collect_view()}
+            </div>
+        </div>
+    }
 }
 
 #[component]
