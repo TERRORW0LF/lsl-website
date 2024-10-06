@@ -125,17 +125,17 @@ fn LeaderboardRouter() -> impl IntoView {
                 path=":patch/:layout/:category"
                 view=move || view! { <Leaderboard patch=set_patch /> }
             />
-            <Route path="" view=|| view! { <Redirect path="2.00/1/standard" /> } />
+            <Route path="" view=|| view! { <Redirect path="2.00/1/Standard" /> } />
             <Route
                 path=":patch"
                 view=|| {
-                    view! { <Redirect path="1/standard" /> }
+                    view! { <Redirect path="1/Standard" /> }
                 }
             />
             <Route
                 path=":patch/:layout"
                 view=|| {
-                    view! { <Redirect path="standard" /> }
+                    view! { <Redirect path="Standard" /> }
                 }
             />
         </Route>
@@ -209,7 +209,7 @@ pub fn Leaderboard(patch: WriteSignal<String>) -> impl IntoView {
             )
         })
     });
-    let maps = create_resource(selection, |s| get_runs_category(s.0, s.1, s.2));
+    let maps = create_resource(selection, |s| get_runs_category(s.0, s.1, s.2, true));
 
     view! {
         <Suspense fallback=move || {
