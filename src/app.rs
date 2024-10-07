@@ -220,11 +220,17 @@ pub fn Leaderboard(patch: WriteSignal<String>) -> impl IntoView {
                     .map(|data| match data {
                         Err(e) => view! { <p>{e.to_string()}</p> }.into_view(),
                         Ok(maps) => {
-                            maps.into_iter()
-                                .map(|map| {
-                                    view! { <LeaderboardEntry map=map /> }
-                                })
-                                .collect_view()
+                            view! {
+                                <div id="lb">
+                                    {maps
+                                        .into_iter()
+                                        .map(|map| {
+                                            view! { <LeaderboardEntry map=map /> }
+                                        })
+                                        .collect_view()}
+                                </div>
+                            }
+                                .into_view()
                         }
                     })
             }}
@@ -235,22 +241,29 @@ pub fn Leaderboard(patch: WriteSignal<String>) -> impl IntoView {
 #[component]
 pub fn LeaderboardEntry(map: MapRuns) -> impl IntoView {
     view! {
-        <div class="lbentry">
-            <h2>{map.map}</h2>
-            <img src="" />
-            <div class="lb_entry_ranks">
-                {map
-                    .runs
-                    .into_iter()
-                    .map(|n| {
-                        view! {
-                            <div>
-                                <span>{n.username}</span>
-                                <span>{n.time.to_string()}</span>
-                            </div>
-                        }
-                    })
-                    .collect_view()}
+        <div class="lb_entry">
+            <h2>{map.map.clone()}</h2>
+            <div class="content">
+                <img
+                    src=format!("/cdn/maps/{}.jpg", map.map)
+                    alt=format!("Picture of {}", map.map)
+                />
+                <div class="lb_entry_ranks">
+                    {map
+                        .runs
+                        .into_iter()
+                        .enumerate()
+                        .map(|(i, n)| {
+                            view! {
+                                <div class="lb_entry_rank">
+                                    <span>{i + 1}"."</span>
+                                    <span>{n.username}</span>
+                                    <span>{n.time.to_string()}</span>
+                                </div>
+                            }
+                        })
+                        .collect_view()}
+                </div>
             </div>
         </div>
     }

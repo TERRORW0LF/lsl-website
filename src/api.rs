@@ -23,7 +23,7 @@ pub struct Run {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "ssr", derive(sqlx::FromRow, sqlx::Type))]
+#[cfg_attr(feature = "ssr", derive(sqlx::Type), sqlx(no_pg_array))]
 pub struct PartialRun {
     pub id: i32,
     pub section_id: i32,
@@ -35,6 +35,20 @@ pub struct PartialRun {
     pub is_pb: bool,
     pub is_wr: bool,
     pub created_at: DateTime<Utc>,
+}
+
+// WARNING: Absolutely horrid hack to make query_as function work with array_agg
+// Probably destroys type safety, make sure to always double check queries
+#[cfg(feature = "ssr")]
+impl sqlx::postgres::PgHasArrayType for PartialRun {
+    fn array_type_info() -> sqlx::postgres::PgTypeInfo {
+        // Internally, Postgres uses the `_` prefix to denote an array.
+        // https://github.com/postgres/postgres/blob/5d8aa8/src/include/catalog/pg_type.dat#L556
+        sqlx::postgres::PgTypeInfo::with_name("_record")
+    }
+    fn array_compatible(_ty: &sqlx::postgres::PgTypeInfo) -> bool {
+        true
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -65,7 +79,7 @@ pub async fn get_runs_id(id: i32, pb_only: bool) -> Result<MapRuns, ServerFnErro
             }
             + r#", 
                 '{NULL}'), '{}')
-                AS "runs: Vec<PartialRun>"
+                AS runs
             FROM section s
             INNER JOIN run r ON section_id = s.id
             INNER JOIN "user" u ON user_id = u.id
@@ -101,7 +115,7 @@ pub async fn get_runs_category(
             }
             + r#",
                 '{NULL}'), '{}')
-                AS "runs: Vec<PartialRun>"
+                AS runs
             FROM section s
             LEFT JOIN run r ON section_id = s.id
             LEFT JOIN "user" u ON user_id = u.id

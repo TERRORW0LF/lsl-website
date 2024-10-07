@@ -99,3 +99,43 @@ main {
 #leaderboard-nav ul li.selected {
 	color: aqua;
 }
+
+#lb {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(700px, 1fr));
+	margin: 2rem;
+	gap: 1rem;
+
+	.lb_entry {
+		padding: 0 1rem 1rem;
+		background: #aaa;
+		border-radius: 0.2rem;
+
+		h2 {
+			font-size: 1.2rem;
+		}
+
+		.content {
+			display: flex;
+			flex-direction: row;
+			width: 100%;
+			font-size: 1rem;
+
+			img {
+				flex-basis: 100%;
+				width: 100%;
+			}
+
+			.lb_entry_ranks {
+				padding: 0.2rem;
+				flex-basis: 100%;
+
+				.lb_entry_rank {
+					margin: 0.1rem auto;
+					display: flex;
+					justify-content: space-between;
+				}
+			}
+		}
+	}
+}
