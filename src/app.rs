@@ -26,7 +26,15 @@ pub fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context();
 
+    create_effect(|_| {
+        document()
+            .document_element()
+            .unwrap()
+            .set_class_name("dark")
+    });
+
     view! {
+        <Html lang="en-US" dir="ltr" />
         <Stylesheet id="leptos" href="/pkg/lsl-website.css" />
 
         // sets the document title
@@ -39,12 +47,12 @@ pub fn App() -> impl IntoView {
             view! { <ErrorTemplate outside_errors /> }.into_view()
         }>
             <header>
-                <nav id="site-nav">
-                    <div class="site-nav">
+                <nav class="split-row-nav">
+                    <div class="left-row-nav">
                         <A href="/home">"Home"</A>
-                        <A href="/leaderboard">"Leaderboard"</A>
+                        <A href="/leaderboard/2.00/1/Standard">"Leaderboard"</A>
                     </div>
-                    <div class="user-nav">
+                    <div class="right-row-nav">
                         <Transition fallback=move || {
                             view! { <span>"Loading..."</span> }
                         }>
@@ -63,7 +71,6 @@ pub fn App() -> impl IntoView {
                                             view! {
                                                 <A href="/register">"Register"</A>
                                                 <A href="/login">"Login"</A>
-                                                <span>"Logged out."</span>
                                             }
                                                 .into_view()
                                         }
@@ -118,12 +125,21 @@ fn AppRouter(
 #[component(transparent)]
 fn LeaderboardRouter() -> impl IntoView {
     let (patch, set_patch) = create_signal(String::new());
+    let (layout, set_layout) = create_signal(String::new());
+    let (category, set_category) = create_signal(String::new());
 
     view! {
-        <Route path="leaderboard" view=move || view! { <Section patch=patch /> }>
+        <Route
+            path="leaderboard"
+            view=move || view! { <Section patch=patch layout=layout category=category /> }
+        >
             <Route
                 path=":patch/:layout/:category"
-                view=move || view! { <Leaderboard patch=set_patch /> }
+                view=move || {
+                    view! {
+                        <Leaderboard patch=set_patch layout=set_layout category=set_category />
+                    }
+                }
             />
             <Route path="" view=|| view! { <Redirect path="2.00/1/Standard" /> } />
             <Route
@@ -172,34 +188,107 @@ fn HomePage() -> impl IntoView {
 }
 
 #[component]
-pub fn Section(patch: ReadSignal<String>) -> impl IntoView {
+pub fn Section(
+    patch: ReadSignal<String>,
+    layout: ReadSignal<String>,
+    category: ReadSignal<String>,
+) -> impl IntoView {
     view! {
-        <section id="section">
-            <nav id="leaderboard-nav">
-                <ul>
-                    <li class:selected=move || patch.with(|p| p == "1.00")>
-                        <A href="1.00">"1.00"</A>
-                    </li>
-                    <li class:selected=move || patch.with(|p| p == "1.41")>
-                        <A href="1.41">"1.41"</A>
-                    </li>
-                    <li class:selected=move || patch.with(|p| p == "1.50")>
-                        <A href="1.50">"1.50"</A>
-                    </li>
-                    <li class:selected=move || patch.with(|p| p == "2.00")>
-                        <A href="2.00">"current"</A>
-                    </li>
-                </ul>
-            </nav>
+        <section id="leaderboard">
+            <header id="lb_header">
+                <nav class="split-row-nav">
+                    <div class="left-row-nav">
+                        <nav class="burger-nav">
+                            <input type="checkbox" />
+                            <span></span>
+                            <span></span>
+                            <span></span>
+
+                            <nav class="column-nav">
+                                <ul>
+                                    <li class:selected=move || patch.with(|p| p == "1.00")>
+                                        <A href="1.00">"1.00"</A>
+                                    </li>
+
+                                    <li class:selected=move || patch.with(|p| p == "1.41")>
+                                        <A href="1.41">"1.41"</A>
+                                    </li>
+
+                                    <li class:selected=move || patch.with(|p| p == "1.50")>
+                                        <A href="1.50">"1.50"</A>
+                                    </li>
+
+                                    <li class:selected=move || patch.with(|p| p == "2.00")>
+                                        <A href="2.00">"Current"</A>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </nav>
+                        <A href=move || patch.get() + "/1/" + &category.get()>
+                            <span class="text" class:selected=move || layout.with(|l| l == "1")>
+                                "Layout 1"
+                            </span>
+                        </A>
+                        <A href=move || patch.get() + "/2/" + &category.get()>
+                            <span class="text" class:selected=move || layout.with(|l| l == "2")>
+                                "Layout 2"
+                            </span>
+                        </A>
+                        <A href=move || patch.get() + "/3/" + &category.get()>
+                            <span class="text" class:selected=move || layout.with(|l| l == "3")>
+                                "Layout 3"
+                            </span>
+                        </A>
+                        <A href=move || patch.get() + "/4/" + &category.get()>
+                            <span class="text" class:selected=move || layout.with(|l| l == "4")>
+                                "Layout 4"
+                            </span>
+                        </A>
+                        <A href=move || patch.get() + "/5/" + &category.get()>
+                            <span class="text" class:selected=move || layout.with(|l| l == "5")>
+                                "Layout 5"
+                            </span>
+                        </A>
+                    </div>
+                    <div class="right-row-nav">
+                        <A href=move || patch.get() + "/" + &layout.get() + "/Standard">
+                            <span
+                                class="text"
+                                class:selected=move || { category.with(|c| c == "Standard") }
+                            >
+                                "Standard"
+                            </span>
+                        </A>
+                        <A href=move || patch.get() + "/" + &layout.get() + "/Gravspeed">
+                            <span
+                                class="text"
+                                class:selected=move || { category.with(|c| c == "Gravspeed") }
+                            >
+                                "Gravspeed"
+                            </span>
+                        </A>
+                    </div>
+                </nav>
+            </header>
             <Outlet />
         </section>
     }
 }
 
 #[component]
-pub fn Leaderboard(patch: WriteSignal<String>) -> impl IntoView {
+pub fn Leaderboard(
+    patch: WriteSignal<String>,
+    layout: WriteSignal<String>,
+    category: WriteSignal<String>,
+) -> impl IntoView {
     let params = use_params_map();
-    create_effect(move |_| params.with(|params| patch.set(params.get("patch").cloned().unwrap())));
+    create_effect(move |_| {
+        params.with(|params| {
+            patch.set(params.get("patch").cloned().unwrap());
+            layout.set(params.get("layout").cloned().unwrap());
+            category.set(params.get("category").cloned().unwrap());
+        })
+    });
     let selection = create_memo(move |_| {
         params.with(|params| {
             (
@@ -242,7 +331,20 @@ pub fn Leaderboard(patch: WriteSignal<String>) -> impl IntoView {
 pub fn LeaderboardEntry(map: MapRuns) -> impl IntoView {
     view! {
         <div class="lb_entry">
-            <h2>{map.map.clone()}</h2>
+            <div class="header">
+                <h2>{map.map.clone()}</h2>
+                {match map.runs.get(0) {
+                    Some(r) => {
+                        view! {
+                            <h5>{r.username.clone()}</h5>
+                            <h5>{r.created_at.to_rfc2822()}</h5>
+                            <h5>{r.time.to_string()} " seconds"</h5>
+                        }
+                            .into_view()
+                    }
+                    None => {}.into_view(),
+                }}
+            </div>
             <div class="content">
                 <img
                     src=format!("/cdn/maps/{}.jpg", map.map)
@@ -256,9 +358,9 @@ pub fn LeaderboardEntry(map: MapRuns) -> impl IntoView {
                         .map(|(i, n)| {
                             view! {
                                 <div class="lb_entry_rank">
-                                    <span>{i + 1}"."</span>
+                                    <span>"#"{i + 1}</span>
                                     <span>{n.username}</span>
-                                    <span>{n.time.to_string()}</span>
+                                    <span>{n.time.to_string()} " sec"</span>
                                 </div>
                             }
                         })
