@@ -1,0 +1,118 @@
+#box {
+    box-sizing: border-box;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 25rem;
+    padding: 2.5rem;
+    background-color: var(--grey-800);
+    border-radius: 0.3rem;
+
+    h1 {
+        text-align: center;
+        font-size: 2rem;
+        font-weight: 700;
+    }
+
+    .input-box {
+        position: relative;
+        padding-top: 2rem;
+
+        input {
+            width: 100%;
+            padding: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--grey-0);
+            border: 1px solid var(--grey-200);
+            border-radius: 4px;
+            background: transparent;
+        }
+
+        input:focus {
+            outline: var(--info) solid 3px;
+            border-color: transparent;
+        }
+
+        input:focus~.placeholder,
+        input:not([value=""])~.placeholder {
+            top: 1.5rem;
+            padding: 0 0.2rem;
+            margin-left: 0.5rem;
+            font-size: 0.6rem;
+            color: var(--info);
+            background-color: var(--grey-1000);
+        }
+
+        input:not(:focus, [value=""])~.placeholder {
+            color: var(--grey-200);
+        }
+
+        input:invalid:not([value=""], :focus) {
+            outline: var(--error) solid 3px;
+            border-color: transparent;
+        }
+
+        input:invalid:not([value=""], :focus)~.error {
+            display: inline;
+        }
+
+        .placeholder {
+            position: absolute;
+            top: 2.15rem;
+            left: 0.5rem;
+            padding: 0.5rem 0 0;
+            font-size: 0.8rem;
+            color: var(--grey-500);
+            pointer-events: none;
+            transition: 0.3s;
+        }
+
+        .error {
+            display: none;
+            font-size: 0.8rem;
+            color: var(--error);
+        }
+    }
+
+    .remember {
+        margin-top: 0.5rem;
+        font-size: 0.8rem;
+
+        label {
+            padding-left: 0.5rem;
+            align-self: center;
+            cursor: pointer;
+        }
+    }
+
+    input[type="submit"] {
+        border: none;
+        outline: none;
+        padding: 0.4rem 0.7rem;
+        margin: 1rem 0;
+        font-size: 1rem;
+        font-weight: 850;
+        color: var(--grey-1000);
+        background-color: var(--info);
+        cursor: pointer;
+        border-radius: 5px;
+        float: right;
+    }
+
+    input[type="checkbox"] {
+        cursor: pointer;
+    }
+
+    .line {
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .link {
+        align-self: center;
+        font-size: 1rem;
+        font-weight: 500;
+        color: var(--info);
+    }
+}

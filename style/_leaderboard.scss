@@ -1,0 +1,117 @@
+#leaderboard {
+    padding-top: 2rem;
+    font-size: 1.5rem;
+
+    #lb_header {
+        top: 3rem;
+
+        nav.split-row-nav {
+            background-color: var(--grey-900);
+            color: inherit;
+
+            .burger-nav {
+                padding-top: 0.3rem;
+                margin-right: -1rem;
+                min-width: 0;
+
+                input {
+                    top: calc(0.6rem - 5px);
+                }
+
+                .column-nav {
+                    margin-top: 1rem;
+                }
+            }
+        }
+    }
+
+    #lb {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(600, 1fr));
+        margin: 2rem;
+        gap: 1rem;
+
+        .lb_entry {
+            padding: 1rem;
+            padding-top: 0.5rem;
+            background-color: var(--grey-800);
+            border-radius: 0.2rem;
+
+            .header {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 0.2rem;
+
+                * {
+                    text-wrap: nowrap;
+                }
+
+                h2 {
+                    font-size: 1.2rem;
+                    color: var(--primary-400);
+                    margin-right: 2rem;
+                }
+
+                h5 {
+                    align-self: flex-end;
+                    font-size: 0.85rem;
+                    color: var(--primary-200);
+                }
+
+                h5:not(:last-child) {
+                    width: 100%;
+                    text-align: end;
+                    overflow-x: hidden;
+                }
+
+                h5:last-child {
+                    margin-left: 1rem;
+                    text-align: end;
+                }
+            }
+
+            .content {
+                display: flex;
+                flex-direction: row;
+                width: 100%;
+
+                img {
+                    flex-shrink: 0;
+                    width: 60%;
+                    aspect-ratio: 16/9;
+                    border-radius: 0.2rem;
+                }
+
+                .lb_entry_ranks {
+                    padding-left: 1rem;
+                    width: 40%;
+                    font-size: 0.75rem;
+                    color: var(--grey-0);
+
+                    .lb_entry_rank {
+                        margin: 0.2rem 0;
+                        display: flex;
+
+                        span:not(:first-child) {
+                            margin-left: 0.5rem;
+                        }
+
+                        span:not(:last-child, :first-child) {
+                            text-wrap: nowrap;
+                            overflow-x: hidden;
+                        }
+
+                        span:last-child {
+                            flex-grow: 1;
+                            font-size: 0.65rem;
+                            text-align: end;
+                            text-wrap: nowrap;
+                            align-self: flex-end;
+                            color: var(--primary-100);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

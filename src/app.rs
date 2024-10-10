@@ -36,6 +36,12 @@ pub fn App() -> impl IntoView {
     view! {
         <Html lang="en-US" dir="ltr" />
         <Stylesheet id="leptos" href="/pkg/lsl-website.css" />
+        <Link rel="preconnect" href="https://fonts.googleapis.com" />
+        <Link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+        <Link
+            href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,100..1000&display=swap"
+            rel="stylesheet"
+        />
 
         // sets the document title
         <Title text="Welcome to Leptos" />
@@ -68,11 +74,7 @@ pub fn App() -> impl IntoView {
                                                 .into_view()
                                         }
                                         Ok(None) => {
-                                            view! {
-                                                <A href="/register">"Register"</A>
-                                                <A href="/login">"Login"</A>
-                                            }
-                                                .into_view()
+                                            view! { <A href="/login">"Login"</A> }.into_view()
                                         }
                                         Ok(Some(user)) => {
                                             view! {
@@ -193,6 +195,14 @@ pub fn Section(
     layout: ReadSignal<String>,
     category: ReadSignal<String>,
 ) -> impl IntoView {
+    let layouts = move || match patch.get().as_str() {
+        "1.00" => vec![1, 2],
+        "1.41" => vec![1, 2, 3, 4],
+        "1.50" => vec![1, 2, 3, 4, 5],
+        "2.00" => vec![1, 2, 3, 4, 5],
+        _ => vec![],
+    };
+
     view! {
         <section id="leaderboard">
             <header id="lb_header">
@@ -224,31 +234,28 @@ pub fn Section(
                                 </ul>
                             </nav>
                         </nav>
-                        <A href=move || patch.get() + "/1/" + &category.get()>
-                            <span class="text" class:selected=move || layout.with(|l| l == "1")>
-                                "Layout 1"
-                            </span>
-                        </A>
-                        <A href=move || patch.get() + "/2/" + &category.get()>
-                            <span class="text" class:selected=move || layout.with(|l| l == "2")>
-                                "Layout 2"
-                            </span>
-                        </A>
-                        <A href=move || patch.get() + "/3/" + &category.get()>
-                            <span class="text" class:selected=move || layout.with(|l| l == "3")>
-                                "Layout 3"
-                            </span>
-                        </A>
-                        <A href=move || patch.get() + "/4/" + &category.get()>
-                            <span class="text" class:selected=move || layout.with(|l| l == "4")>
-                                "Layout 4"
-                            </span>
-                        </A>
-                        <A href=move || patch.get() + "/5/" + &category.get()>
-                            <span class="text" class:selected=move || layout.with(|l| l == "5")>
-                                "Layout 5"
-                            </span>
-                        </A>
+                        <For
+                            each=layouts
+                            key=|l| l.to_owned()
+                            children=move |l| {
+                                view! {
+                                    <A href=move || {
+                                        patch.get() + "/" + &l.to_string() + "/" + &category.get()
+                                    }>
+                                        <span
+                                            class="text"
+                                            class:selected=move || {
+                                                layout.with(|la| *la == l.to_string())
+                                            }
+                                        >
+                                            "Layout "
+                                            {l}
+                                        </span>
+                                    </A>
+                                }
+                            }
+                        />
+
                     </div>
                     <div class="right-row-nav">
                         <A href=move || patch.get() + "/" + &layout.get() + "/Standard">
@@ -337,7 +344,6 @@ pub fn LeaderboardEntry(map: MapRuns) -> impl IntoView {
                     Some(r) => {
                         view! {
                             <h5>{r.username.clone()}</h5>
-                            <h5>{r.created_at.to_rfc2822()}</h5>
                             <h5>{r.time.to_string()} " seconds"</h5>
                         }
                             .into_view()
@@ -360,7 +366,7 @@ pub fn LeaderboardEntry(map: MapRuns) -> impl IntoView {
                                 <div class="lb_entry_rank">
                                     <span>"#"{i + 1}</span>
                                     <span>{n.username}</span>
-                                    <span>{n.time.to_string()} " sec"</span>
+                                    <span>{n.time.to_string()} " s"</span>
                                 </div>
                             }
                         })
@@ -374,76 +380,114 @@ pub fn LeaderboardEntry(map: MapRuns) -> impl IntoView {
 #[component]
 pub fn Login(action: Action<Login, Result<(), ServerFnError>>) -> impl IntoView {
     view! {
-        <ActionForm action=action>
-            <h1>"Log In"</h1>
-            <label>
-                "User ID:"
-                <input
-                    type="text"
-                    placeholder="User ID"
-                    maxlength="32"
-                    name="username"
-                    class="auth-input"
-                />
-            </label>
-            <br />
-            <label>
-                "Password:"
-                <input type="password" placeholder="Password" name="password" class="auth-input" />
-            </label>
-            <br />
-            <label>
-                <input type="checkbox" name="remember" class="auth-input" />
-                "Remember me?"
-            </label>
-            <br />
-            <button type="submit" class="button">
-                "Log In"
-            </button>
-        </ActionForm>
+        <section id="box">
+            <h1>"Sign In"</h1>
+            <ActionForm action=action>
+                <div class="input-box">
+                    <input
+                        type="text"
+                        name="username"
+                        id="username"
+                        required
+                        value=""
+                        onkeyup="this.setAttribute('value', this.value);"
+                    />
+                    <label for="username" class="placeholder">
+                        "Username"
+                    </label>
+                </div>
+                <div class="input-box">
+                    <input
+                        type="password"
+                        name="password"
+                        id="password"
+                        required
+                        value=""
+                        onkeyup="this.setAttribute('value', this.value);"
+                    />
+                    <label for="password" class="placeholder">
+                        "Password"
+                    </label>
+                </div>
+                <div class="remember">
+                    <input type="checkbox" name="remember" id="remember" />
+                    <label for="remember">"Remember me?"</label>
+                </div>
+                <div class="line">
+                    <A href="/register" class="link">
+                        "Create account"
+                    </A>
+                    <input type="submit" class="button" value="Sign In" />
+                </div>
+            </ActionForm>
+        </section>
     }
 }
 
 #[component]
 pub fn Register(action: Action<Register, Result<(), ServerFnError>>) -> impl IntoView {
     view! {
-        <ActionForm action=action>
+        <section id="box">
             <h1>"Sign Up"</h1>
-            <label>
-                "User ID:"
-                <input
-                    type="text"
-                    placeholder="User ID"
-                    maxlength="32"
-                    name="username"
-                    class="auth-input"
-                />
-            </label>
-            <br />
-            <label>
-                "Password:"
-                <input type="password" placeholder="Password" name="password" class="auth-input" />
-            </label>
-            <br />
-            <label>
-                "Confirm Password:"
-                <input
-                    type="password"
-                    placeholder="Password again"
-                    name="password_confirm"
-                    class="auth-input"
-                />
-            </label>
-            <br />
-            <label>
-                "Remember me?" <input type="checkbox" name="remember" class="auth-input" />
-            </label>
-
-            <br />
-            <button type="submit" class="button">
-                "Sign Up"
-            </button>
-        </ActionForm>
+            <ActionForm action=action>
+                <div class="input-box">
+                    <input
+                        type="text"
+                        maxlength="32"
+                        name="username"
+                        id="username"
+                        required
+                        minlength="2"
+                        maxlength="32"
+                        pattern="[a-zA-Z_\\-\\.]*"
+                        value=""
+                        onkeyup="this.setAttribute('value', this.value);"
+                    />
+                    <label for="username" class="placeholder">
+                        "Username"
+                    </label>
+                    <label for="username" class="error">
+                        "Username must adhere to [a-zA-Z_-.]{2,32}."
+                    </label>
+                </div>
+                <div class="input-box">
+                    <input
+                        type="password"
+                        name="password"
+                        id="password"
+                        required
+                        minlength="8"
+                        maxlength="256"
+                        value=""
+                        onkeyup="this.setAttribute('value', this.value);"
+                    />
+                    <label for="password" class="placeholder">
+                        "Password"
+                    </label>
+                    <label for="password" class="error">
+                        "Password must be between 8 and 256 characters long."
+                    </label>
+                </div>
+                <div class="input-box">
+                    <input
+                        type="password"
+                        name="password"
+                        id="password-repeat"
+                        required
+                        value=""
+                        onkeyup="this.setAttribute('value', this.value);"
+                    />
+                    <label for="password-repeat" class="placeholder">
+                        "Repeat password"
+                    </label>
+                </div>
+                <div class="remember">
+                    <input type="checkbox" name="remember" id="remember" />
+                    <label for="remember">"Remember me?"</label>
+                </div>
+                <input type="submit" class="button" value="Sign Up" />
+            </ActionForm>
+        </section>
     }
 }
 

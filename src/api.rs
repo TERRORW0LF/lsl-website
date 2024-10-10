@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local};
 use leptos::{server, ServerFnError};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -19,7 +19,7 @@ pub struct Run {
     pub verified: bool,
     pub is_pb: bool,
     pub is_wr: bool,
-    pub created_at: DateTime<Utc>,
+    pub created_at: DateTime<Local>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -34,7 +34,7 @@ pub struct PartialRun {
     pub verified: bool,
     pub is_pb: bool,
     pub is_wr: bool,
-    pub created_at: DateTime<Utc>,
+    pub created_at: DateTime<Local>,
 }
 
 // WARNING: Absolutely horrid hack to make query_as function work with array_agg
