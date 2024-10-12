@@ -6,6 +6,7 @@ use crate::{
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
+use wasm_bindgen::{prelude::Closure, JsCast};
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -33,6 +34,22 @@ pub fn App() -> impl IntoView {
             .set_class_name("dark")
     });
 
+    create_effect(|_| {
+        let a = Closure::<dyn FnMut()>::new(|| {
+            let _ = document()
+                .body()
+                .unwrap()
+                .style()
+                .set_property("--scroll", &(window().page_y_offset().unwrap()).to_string());
+        });
+        let _ = window().add_event_listener_with_callback_and_bool(
+            "scroll",
+            a.as_ref().unchecked_ref(),
+            false,
+        );
+        a.forget();
+    });
+
     view! {
         <Html lang="en-US" dir="ltr" />
         <Stylesheet id="leptos" href="/pkg/lsl-website.css" />
@@ -57,6 +74,10 @@ pub fn App() -> impl IntoView {
                     <div class="left-row-nav">
                         <A href="/home">"Home"</A>
                         <A href="/leaderboard/2.00/1/Standard">"Leaderboard"</A>
+                        <A href="/ranking">"Ranking"</A>
+                        <a href="https://discord.com/invite/G9QBCDY" rel="external">
+                            "Discord"
+                        </a>
                     </div>
                     <div class="right-row-nav">
                         <Transition fallback=move || {
@@ -108,6 +129,15 @@ fn AppRouter(
         <Routes>
             <Route path="" view=|| view! { <Redirect path="home" /> } />
             <Route path="home" view=HomePage />
+            <Route
+                path="discord"
+                view=|| {
+                    create_effect(|_| {
+                        window().location().set_href("https://discord.com/invite/G9QBCDY")
+                    });
+                    ""
+                }
+            />
             <Route path="register" view=move || view! { <Register action=register /> } />
             <Route path="login" view=move || view! { <Login action=login /> } />
             <Route
@@ -205,35 +235,16 @@ pub fn Section(
 
     view! {
         <section id="leaderboard">
+            <details>
+                <summary>
+                    <span role="term" aria-details="filters">
+                        "filters"
+                    </span>
+                </summary>
+            </details>
             <header id="lb_header">
                 <nav class="split-row-nav">
                     <div class="left-row-nav">
-                        <nav class="burger-nav">
-                            <input type="checkbox" />
-                            <span></span>
-                            <span></span>
-                            <span></span>
-
-                            <nav class="column-nav">
-                                <ul>
-                                    <li class:selected=move || patch.with(|p| p == "1.00")>
-                                        <A href="1.00">"1.00"</A>
-                                    </li>
-
-                                    <li class:selected=move || patch.with(|p| p == "1.41")>
-                                        <A href="1.41">"1.41"</A>
-                                    </li>
-
-                                    <li class:selected=move || patch.with(|p| p == "1.50")>
-                                        <A href="1.50">"1.50"</A>
-                                    </li>
-
-                                    <li class:selected=move || patch.with(|p| p == "2.00")>
-                                        <A href="2.00">"Current"</A>
-                                    </li>
-                                </ul>
-                            </nav>
-                        </nav>
                         <For
                             each=layouts
                             key=|l| l.to_owned()
@@ -242,15 +253,7 @@ pub fn Section(
                                     <A href=move || {
                                         patch.get() + "/" + &l.to_string() + "/" + &category.get()
                                     }>
-                                        <span
-                                            class="text"
-                                            class:selected=move || {
-                                                layout.with(|la| *la == l.to_string())
-                                            }
-                                        >
-                                            "Layout "
-                                            {l}
-                                        </span>
+                                        <span class="text">"Layout " {l}</span>
                                     </A>
                                 }
                             }
@@ -259,24 +262,31 @@ pub fn Section(
                     </div>
                     <div class="right-row-nav">
                         <A href=move || patch.get() + "/" + &layout.get() + "/Standard">
-                            <span
-                                class="text"
-                                class:selected=move || { category.with(|c| c == "Standard") }
-                            >
-                                "Standard"
-                            </span>
+                            <span class="text">"Standard"</span>
                         </A>
                         <A href=move || patch.get() + "/" + &layout.get() + "/Gravspeed">
-                            <span
-                                class="text"
-                                class:selected=move || { category.with(|c| c == "Gravspeed") }
-                            >
-                                "Gravspeed"
-                            </span>
+                            <span class="text">"Gravspeed"</span>
                         </A>
                     </div>
                 </nav>
             </header>
+            <div role="definition" id="filters" class="content">
+                "Patch: "
+                <ul>
+                    <li>
+                        <A href="1.00">"1.00"</A>
+                    </li>
+                    <li>
+                        <A href="1.41">"1.41"</A>
+                    </li>
+                    <li>
+                        <A href="1.50">"1.50"</A>
+                    </li>
+                    <li>
+                        <A href="2.00">"Current"</A>
+                    </li>
+                </ul>
+            </div>
             <Outlet />
         </section>
     }

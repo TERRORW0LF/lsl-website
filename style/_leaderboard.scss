@@ -2,25 +2,91 @@
     padding-top: 2rem;
     font-size: 1.5rem;
 
+    details {
+        z-index: 1;
+        margin: 2rem;
+        margin-right: 0;
+        width: 8rem;
+        overflow: hidden;
+        display: block;
+        position: relative;
+        font-size: 1rem;
+        font-weight: 600;
+
+        summary {
+            display: block;
+
+            span {
+                position: relative;
+                display: flex;
+                align-items: center;
+                height: 1.5rem;
+            }
+
+            span:hover {
+                cursor: pointer;
+            }
+
+            span::before {
+                content: "›";
+                font-size: 1.5rem;
+                font-weight: 700;
+                display: block;
+                align-items: center;
+                margin-top: -0.2rem;
+                margin-right: 0.4rem;
+                transition: rotate 400ms ease-out, margin 400ms ease-out;
+            }
+        }
+
+        summary::-webkit-details-marker,
+        summary::marker {
+            display: none;
+        }
+    }
+
+    details[open] span::before {
+        margin-left: 0.1rem;
+        margin-right: 0.3rem;
+        margin-top: 0;
+        rotate: 90deg;
+    }
+
+    >div.content {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 400ms ease-out;
+    }
+
+    details[open]~div.content {
+        max-height: 10rem;
+        transition: max-height 400ms ease-out;
+    }
+
+    @keyframes widen {
+        to {
+            padding-left: 0;
+        }
+    }
+
     #lb_header {
         top: 3rem;
+        margin-top: -4.3rem;
+        padding-left: 6rem;
+        z-index: 0;
+        background-color: var(--grey-900);
+        animation: widen 200s linear infinite;
+        animation-play-state: paused;
+        animation-delay: calc(var(--scroll) * -1s);
+        animation-iteration-count: 1;
+        animation-fill-mode: both;
 
         nav.split-row-nav {
-            background-color: var(--grey-900);
+            background-color: inherit;
             color: inherit;
 
-            .burger-nav {
-                padding-top: 0.3rem;
-                margin-right: -1rem;
-                min-width: 0;
-
-                input {
-                    top: calc(0.6rem - 5px);
-                }
-
-                .column-nav {
-                    margin-top: 1rem;
-                }
+            [aria-current="page"]>span {
+                border-bottom: 3px solid var(--grey-200);
             }
         }
     }
