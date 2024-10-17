@@ -1,5 +1,7 @@
 use chrono::{DateTime, Local};
-use leptos::{server, ServerFnError};
+use http::{header::CACHE_CONTROL, HeaderValue};
+use leptos::{expect_context, server, ServerFnError};
+use leptos_axum::ResponseOptions;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
@@ -64,34 +66,35 @@ pub struct MapRuns {
 }
 
 #[server(GetRunsId, "/api", "Url", "runs/id")]
-pub async fn get_runs_id(id: i32, pb_only: bool) -> Result<MapRuns, ServerFnError> {
+pub async fn get_runs_id(id: i32) -> Result<MapRuns, ServerFnError> {
     let pool = crate::auth::ssr::pool()?;
-    sqlx::query_as::<_, MapRuns>(
-        &(r#"SELECT s.id, s.patch, s.layout, s.category, s.map,
+    let res_opts = expect_context::<ResponseOptions>();
+    let res = sqlx::query_as::<_, MapRuns>(
+        r#"SELECT s.id, s.patch, s.layout, s.category, s.map,
                 COALESCE(NULLIF(ARRAY_AGG((r.id, r.section_id, u.id,
                         u."name", r.time, r.proof, r.verified, r.is_pb, r.is_wr, r.created_at)
-                    ORDER BY r.time ASC)"#
-            .to_string()
-            + if pb_only {
-                "FILTER(WHERE r.is_pb = TRUE)"
-            } else {
-                ""
-            }
-            + r#", 
+                    ORDER BY r.time ASC), 
                 '{NULL}'), '{}')
                 AS runs
             FROM section s
             INNER JOIN run r ON section_id = s.id
             INNER JOIN "user" u ON user_id = u.id
             WHERE s.id = $1
-            GROUP BY s.id, patch, layout, category, map"#),
+            GROUP BY s.id, patch, layout, category, map"#,
     )
     .bind(id)
     .fetch_one(&pool)
-    .await
-    .or(Err(ServerFnError::ServerError(
-        "Failed to look up runs".into(),
-    )))
+    .await;
+
+    match res {
+        Ok(runs) => {
+            res_opts.append_header(CACHE_CONTROL, HeaderValue::from_static("max-age=900"));
+            Ok(runs)
+        }
+        Err(_) => Err(ServerFnError::ServerError(
+            "Database lookup failed".to_string(),
+        )),
+    }
 }
 
 #[server(GetRunsCategory, "/api", "Url", "runs/category")]
@@ -99,41 +102,44 @@ pub async fn get_runs_category(
     patch: String,
     layout: String,
     category: String,
-    pb_only: bool,
 ) -> Result<Vec<MapRuns>, ServerFnError> {
     let pool = crate::auth::ssr::pool()?;
-    sqlx::query_as::<_, MapRuns>(
-        &(r#"SELECT s.id, patch, layout, category, map,
+    let res_opts = expect_context::<ResponseOptions>();
+    let res = sqlx::query_as::<_, MapRuns>(
+        r#"SELECT s.id, patch, layout, category, map,
                 COALESCE(NULLIF(ARRAY_AGG((r.id, r.section_id, r.user_id,
                         u."name", r.time, r.proof, r.verified, r.is_pb, r.is_wr, r.created_at)
-                    ORDER BY r.time ASC)"#
-            .to_string()
-            + if pb_only {
-                "FILTER(WHERE r.is_pb = TRUE)"
-            } else {
-                ""
-            }
-            + r#",
+                    ORDER BY r.time ASC),
                 '{NULL}'), '{}')
                 AS runs
             FROM section s
             LEFT JOIN run r ON section_id = s.id
             LEFT JOIN "user" u ON user_id = u.id
             WHERE patch = $1 AND layout = $2 AND category = $3
-            GROUP BY s.id, patch, layout, category, map"#),
+            GROUP BY s.id, patch, layout, category, map"#,
     )
     .bind(patch)
     .bind(layout)
     .bind(category)
     .fetch_all(&pool)
-    .await
-    .or_else(|e| Err(ServerFnError::ServerError(e.to_string())))
+    .await;
+
+    match res {
+        Ok(runs) => {
+            res_opts.append_header(CACHE_CONTROL, HeaderValue::from_static("max-age=900"));
+            Ok(runs)
+        }
+        Err(_) => Err(ServerFnError::ServerError(
+            "Database lookup failed".to_string(),
+        )),
+    }
 }
 
 #[server(GetRunsLatest, "/api", "Url", "runs/latest")]
 pub async fn get_runs_latest(offset: i32) -> Result<Vec<Run>, ServerFnError> {
     let pool = crate::auth::ssr::pool()?;
-    sqlx::query_as::<_, Run>(
+    let res_opts = expect_context::<ResponseOptions>();
+    let res = sqlx::query_as::<_, Run>(
         r#"SELECT run.id, run.created_at, section_id, patch,
             layout, category, map, user_id, "name", time, proof, verified, is_pb, is_wr
         FROM run
@@ -143,8 +149,15 @@ pub async fn get_runs_latest(offset: i32) -> Result<Vec<Run>, ServerFnError> {
     )
     .bind(offset)
     .fetch_all(&pool)
-    .await
-    .or(Err(ServerFnError::ServerError(
-        "Failed to look up runs".into(),
-    )))
+    .await;
+
+    match res {
+        Ok(runs) => {
+            res_opts.append_header(CACHE_CONTROL, HeaderValue::from_static("max-age=300"));
+            Ok(runs)
+        }
+        Err(_) => Err(ServerFnError::ServerError(
+            "Database lookup failed".to_string(),
+        )),
+    }
 }

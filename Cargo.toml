@@ -22,6 +22,7 @@ thiserror = "1.0.38"
 wasm-bindgen = "0.2.87"
 log = "0.4"
 simple_logger = "5"
+web-sys = "0.3.72"
 argon2 = { version = "0.5.3", optional = true }
 axum = { version = "0.7.5", features = ["macros"], optional = true }
 axum-server = { version = "0.7.1", optional = true }

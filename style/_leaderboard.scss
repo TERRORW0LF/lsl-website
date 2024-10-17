@@ -56,6 +56,33 @@
         max-height: 0;
         overflow: hidden;
         transition: max-height 400ms ease-out;
+
+        .group {
+            h6 {
+                font-size: 0.6rem;
+                color: var(--grey-200);
+            }
+
+            .options {
+                display: flex;
+                flex-wrap: wrap;
+                font-size: 0.8rem;
+                color: var(--grey-0);
+
+                input[type="radio"] {
+                    position: fixed;
+                    opacity: 0;
+                }
+
+                >* {
+                    border-radius: 4px;
+                }
+
+                *:checked {
+                    background-color: var(--grey-800);
+                }
+            }
+        }
     }
 
     details[open]~div.content {

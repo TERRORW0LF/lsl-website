@@ -238,7 +238,7 @@ pub fn Section(
             <details>
                 <summary>
                     <span role="term" aria-details="filters">
-                        "filters"
+                        "advanced"
                     </span>
                 </summary>
             </details>
@@ -258,7 +258,6 @@ pub fn Section(
                                 }
                             }
                         />
-
                     </div>
                     <div class="right-row-nav">
                         <A href=move || patch.get() + "/" + &layout.get() + "/Standard">
@@ -271,21 +270,43 @@ pub fn Section(
                 </nav>
             </header>
             <div role="definition" id="filters" class="content">
-                "Patch: "
-                <ul>
-                    <li>
-                        <A href="1.00">"1.00"</A>
-                    </li>
-                    <li>
-                        <A href="1.41">"1.41"</A>
-                    </li>
-                    <li>
-                        <A href="1.50">"1.50"</A>
-                    </li>
-                    <li>
-                        <A href="2.00">"Current"</A>
-                    </li>
-                </ul>
+                <Form method="GET" action="">
+                    <div class="group">
+                        <h6>"Patch"</h6>
+                        <div class="options">
+                            <A href="1.00">"1.00"</A>
+                            <A href="1.41">"1.41"</A>
+                            <A href="1.50">"1.50"</A>
+                            <A href="2.00">"Current"</A>
+                        </div>
+                    </div>
+                    <div class="group">
+                        <h6>"Sort by"</h6>
+                        <div class="options">
+                            <input type="radio" name="sort" value="time" id="time" />
+                            <label for="time">"Time"</label>
+
+                            <input type="radio" name="sort" value="date" id="date" />
+                            <label for="time">"Date"</label>
+                        </div>
+                    </div>
+                    <div class="group">
+                        <h6>"Filter"</h6>
+                        <div class="options">
+                            <input type="radio" name="filter" value="none" id="none" />
+                            <label for="none">"None"</label>
+                            <input type="radio" name="filter" value="is_pb" id="is_pb" />
+                            <label for="is_pb">"Is PB"</label>
+                            <input type="radio" name="filter" value="is_wr" id="is_wr" />
+                            <label for="is_wr">"Is WR"</label>
+                            <input type="radio" name="filter" value="was_pb" id="was_pb" />
+                            <label for="was_pb">"Was PB"</label>
+                            <input type="radio" name="filter" value="was_wr" id="was_wr" />
+                            <label for="was_wr">"Was WR"</label>
+                        </div>
+                    </div>
+                    <input type="submit" class="button" value="apply" />
+                </Form>
             </div>
             <Outlet />
         </section>
@@ -315,10 +336,10 @@ pub fn Leaderboard(
             )
         })
     });
-    let maps = create_resource(selection, |s| get_runs_category(s.0, s.1, s.2, true));
+    let maps = create_resource(selection, |s| get_runs_category(s.0, s.1, s.2));
 
     view! {
-        <Suspense fallback=move || {
+        <Transition fallback=move || {
             view! { <p>"Loading..."</p> }
         }>
             {move || {
@@ -340,7 +361,7 @@ pub fn Leaderboard(
                         }
                     })
             }}
-        </Suspense>
+        </Transition>
     }
 }
 
@@ -370,13 +391,14 @@ pub fn LeaderboardEntry(map: MapRuns) -> impl IntoView {
                     {map
                         .runs
                         .into_iter()
+                        .filter(|r| r.is_pb && r.verified)
                         .enumerate()
-                        .map(|(i, n)| {
+                        .map(|(i, r)| {
                             view! {
                                 <div class="lb_entry_rank">
                                     <span>"#"{i + 1}</span>
-                                    <span>{n.username}</span>
-                                    <span>{n.time.to_string()} " s"</span>
+                                    <span>{r.username}</span>
+                                    <span>{r.time.to_string()} " s"</span>
                                 </div>
                             }
                         })
