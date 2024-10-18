@@ -53,14 +53,18 @@
     }
 
     >div.content {
+        margin: 0.5rem 2rem;
         max-height: 0;
         overflow: hidden;
         transition: max-height 400ms ease-out;
 
         .group {
+            margin-bottom: 1rem;
+
             h6 {
                 font-size: 0.6rem;
                 color: var(--grey-200);
+                margin-bottom: 0.5rem;
             }
 
             .options {
@@ -75,18 +79,33 @@
                 }
 
                 >* {
+                    margin-right: 1.5rem;
                     border-radius: 4px;
+                    padding: 0.1rem 0.3rem 0.2rem;
+                    cursor: pointer;
                 }
 
-                *:checked {
-                    background-color: var(--grey-800);
+                :checked+* {
+                    background-color: var(--primary-900);
                 }
             }
+        }
+
+        input.button {
+            float: right;
+            padding: 0.3rem 1.5rem 0.4rem;
+            color: var(--grey-0);
+            background-color: var(--primary-900);
+            font-size: 0.7rem;
+            font-weight: 800;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
         }
     }
 
     details[open]~div.content {
-        max-height: 10rem;
+        max-height: 13rem;
         transition: max-height 400ms ease-out;
     }
 

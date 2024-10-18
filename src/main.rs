@@ -104,7 +104,7 @@ async fn main() {
 
     // build our application with a route
     let app = Router::new()
-        .route("/api/*fn_name", post(server_handler))
+        .route("/api/*fn_name", get(server_handler).post(server_handler))
         .leptos_routes_with_handler(routes.clone(), get(leptos_handler))
         .fallback(file_and_error_handler)
         .layer(AuthSessionLayer::<User, i64, SessionPgPool, PgPool>::new(

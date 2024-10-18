@@ -287,7 +287,7 @@ pub fn Section(
                             <label for="time">"Time"</label>
 
                             <input type="radio" name="sort" value="date" id="date" />
-                            <label for="time">"Date"</label>
+                            <label for="date">"Date"</label>
                         </div>
                     </div>
                     <div class="group">
