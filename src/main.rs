@@ -7,7 +7,7 @@ use axum::{
     body::Body as AxumBody,
     extract::{State},
     response::{IntoResponse, Response},
-    routing::{get, post},
+    routing::get,
     Extension, Router,
 };
 use axum_session_auth::{AuthConfig};
