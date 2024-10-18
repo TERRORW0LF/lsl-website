@@ -1,6 +1,6 @@
 use chrono::{DateTime, Local};
 use http::{header::CACHE_CONTROL, HeaderValue};
-use leptos::{expect_context, server, ServerFnError};
+use leptos::{expect_context, server, server_fn::codec::GetUrl, ServerFnError};
 use leptos_axum::ResponseOptions;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -44,8 +44,6 @@ pub struct PartialRun {
 #[cfg(feature = "ssr")]
 impl sqlx::postgres::PgHasArrayType for PartialRun {
     fn array_type_info() -> sqlx::postgres::PgTypeInfo {
-        // Internally, Postgres uses the `_` prefix to denote an array.
-        // https://github.com/postgres/postgres/blob/5d8aa8/src/include/catalog/pg_type.dat#L556
         sqlx::postgres::PgTypeInfo::with_name("_record")
     }
     fn array_compatible(_ty: &sqlx::postgres::PgTypeInfo) -> bool {
@@ -56,7 +54,6 @@ impl sqlx::postgres::PgHasArrayType for PartialRun {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
 pub struct MapRuns {
-    /// Section id
     pub id: i32,
     pub patch: String,
     pub layout: String,
@@ -65,7 +62,7 @@ pub struct MapRuns {
     pub runs: Vec<PartialRun>,
 }
 
-#[server(GetRunsId, "/api", "Url", "runs/id")]
+#[server(GetRunsId, prefix="/api", endpoint="runs/id", input=GetUrl)]
 pub async fn get_runs_id(id: i32) -> Result<MapRuns, ServerFnError> {
     let pool = crate::auth::ssr::pool()?;
     let res_opts = expect_context::<ResponseOptions>();
@@ -97,7 +94,7 @@ pub async fn get_runs_id(id: i32) -> Result<MapRuns, ServerFnError> {
     }
 }
 
-#[server(GetRunsCategory, "/api", "Url", "runs/category")]
+#[server(GetRunsCategory, prefix="/api", endpoint="runs/category", input=GetUrl)]
 pub async fn get_runs_category(
     patch: String,
     layout: String,
@@ -135,7 +132,7 @@ pub async fn get_runs_category(
     }
 }
 
-#[server(GetRunsLatest, "/api", "Url", "runs/latest")]
+#[server(GetRunsLatest, prefix="/api", endpoint="runs/latest", input=GetUrl)]
 pub async fn get_runs_latest(offset: i32) -> Result<Vec<Run>, ServerFnError> {
     let pool = crate::auth::ssr::pool()?;
     let res_opts = expect_context::<ResponseOptions>();

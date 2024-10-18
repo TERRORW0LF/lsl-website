@@ -1,4 +1,4 @@
-use leptos::{server, ServerFnError};
+use leptos::{server, server_fn::codec::PostUrl, ServerFnError};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
@@ -192,7 +192,7 @@ pub mod ssr {
     }
 }
 
-#[server(GetUser, "/api", "Url", "user/get")]
+#[server(GetUser, prefix="/api", endpoint="user/get", input=PostUrl)]
 pub async fn get_user() -> Result<Option<User>, ServerFnError> {
     use self::ssr::*;
 
@@ -201,7 +201,7 @@ pub async fn get_user() -> Result<Option<User>, ServerFnError> {
     Ok(auth.current_user)
 }
 
-#[server(Register, "/api", "Url", "user/register")]
+#[server(Register, prefix="/api", endpoint="user/register", input=PostUrl)]
 pub async fn register(
     username: String,
     password: String,
@@ -244,7 +244,7 @@ pub async fn register(
     Ok(())
 }
 
-#[server(Login, "/api", "Url", "user/login")]
+#[server(Login, prefix="/api", endpoint="user/login", input=PostUrl)]
 pub async fn login(
     username: String,
     password: String,
@@ -277,7 +277,7 @@ pub async fn login(
     }
 }
 
-#[server(Logout, "/api", "Url", "user/logout")]
+#[server(Logout, prefix="/api", endpoint="user/logout", input=PostUrl)]
 pub async fn logout() -> Result<(), ServerFnError> {
     use self::ssr::*;
 
