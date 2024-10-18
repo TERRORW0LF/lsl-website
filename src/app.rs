@@ -238,7 +238,7 @@ pub fn Section(
             <details>
                 <summary>
                     <span role="term" aria-details="filters">
-                        "advanced"
+                        ""
                     </span>
                 </summary>
             </details>
@@ -305,7 +305,7 @@ pub fn Section(
                             <label for="was_wr">"Was WR"</label>
                         </div>
                     </div>
-                    <input type="submit" class="button" value="apply" />
+                    <input type="submit" class="button" value="Apply" />
                 </Form>
             </div>
             <Outlet />
