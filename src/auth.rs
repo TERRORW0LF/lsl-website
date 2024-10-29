@@ -1,4 +1,4 @@
-use leptos::{server, server_fn::codec::PostUrl, ServerFnError};
+use leptos::prelude::{server, server_fn::codec::PostUrl, ServerFnError};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
@@ -35,7 +35,7 @@ pub mod ssr {
     pub use axum::async_trait;
     pub use axum_session_auth::{Authentication, HasPermission};
     pub use axum_session_sqlx::SessionPgPool;
-    pub use leptos::{server, use_context, ServerFnError};
+    pub use leptos::prelude::{server, use_context, ServerFnError};
     use sqlx::types::chrono::{DateTime, Local};
     pub use sqlx::{
         postgres::{PgConnectOptions, PgPoolOptions},

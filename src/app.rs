@@ -1,19 +1,50 @@
+use std::cmp::Ordering;
+
 use crate::{
-    api::{get_runs_category, MapRuns},
-    auth::{get_user, Login, Logout, Register},
+    api::{get_runs_category, MapRuns, PartialRun},
+    auth::{get_user, Login, Logout, Register, User},
     error_template::{AppError, ErrorTemplate},
 };
-use leptos::*;
+use leptos::{either::*, prelude::*};
+use leptos_meta::MetaTags;
 use leptos_meta::*;
-use leptos_router::*;
+use leptos_router::{
+    components::{Form, Outlet, ParentRoute, ProtectedRoute, Redirect, Route, Router, Routes, A},
+    hooks::{use_params_map, use_query_map},
+    path, MatchNestedRoutes,
+};
 use wasm_bindgen::{prelude::Closure, JsCast};
+
+pub fn shell(options: LeptosOptions) -> impl IntoView {
+    view! {
+        <!DOCTYPE html>
+        <html lang="en" dir="ltr">
+        <head>
+        <Link rel="preconnect" href="https://fonts.googleapis.com" />
+        <Link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+        <Link
+            href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,100..1000&display=swap"
+            rel="stylesheet"
+        />
+                <meta charset="utf-8"/>
+                <meta name="viewport" content="width=device-width, initial-scale=1"/>
+                <AutoReload options=options.clone()/>
+                <HydrationScripts options/>
+                <MetaTags/>
+            </head>
+            <body>
+                <App/>
+            </body>
+        </html>
+    }
+}
 
 #[component]
 pub fn App() -> impl IntoView {
-    let login = create_server_action::<Login>();
-    let logout = create_server_action::<Logout>();
-    let register = create_server_action::<Register>();
-    let user = create_resource(
+    let login = ServerAction::<Login>::new();
+    let logout = ServerAction::<Logout>::new();
+    let register = ServerAction::<Register>::new();
+    let user = Resource::new(
         move || {
             (
                 login.version().get(),
@@ -27,14 +58,14 @@ pub fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context();
 
-    create_effect(|_| {
+    Effect::new(|_| {
         document()
             .document_element()
             .unwrap()
             .set_class_name("dark")
     });
 
-    create_effect(|_| {
+    Effect::new(|_| {
         let a = Closure::<dyn FnMut()>::new(|| {
             let _ = document()
                 .body()
@@ -51,24 +82,11 @@ pub fn App() -> impl IntoView {
     });
 
     view! {
-        <Html lang="en-US" dir="ltr" />
         <Stylesheet id="leptos" href="/pkg/lsl-website.css" />
-        <Link rel="preconnect" href="https://fonts.googleapis.com" />
-        <Link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
-        <Link
-            href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,100..1000&display=swap"
-            rel="stylesheet"
-        />
-
         // sets the document title
-        <Title text="Welcome to Leptos" />
-
+        <Title text="Lucio Surf League" />
         // content for this welcome page
-        <Router fallback=|| {
-            let mut outside_errors = Errors::default();
-            outside_errors.insert_with_default_key(AppError::NotFound);
-            view! { <ErrorTemplate outside_errors /> }.into_view()
-        }>
+        <Router>
             <header>
                 <nav class="split-row-nav">
                     <div class="left-row-nav">
@@ -87,24 +105,16 @@ pub fn App() -> impl IntoView {
                                 user.get()
                                     .map(|user| match user {
                                         Err(e) => {
-                                            view! {
-                                                <A href="/register">"Register"</A>
+                                            EitherOf3::A(view! {
                                                 <A href="/login">"Login"</A>
                                                 <span>{format!("Login error: {}", e)}</span>
-                                            }
-                                                .into_view()
+                                            })
                                         }
                                         Ok(None) => {
-                                            view! { <A href="/login">"Login"</A> }.into_view()
+                                            EitherOf3::B(view! { <A href="/login">"Login"</A> })
                                         }
                                         Ok(Some(user)) => {
-                                            view! {
-                                                <A href="/settings">"Settings"</A>
-                                                <span>
-                                                    {format!("Logged in as: {} ({})", user.username, user.id)}
-                                                </span>
-                                            }
-                                                .into_view()
+                                            EitherOf3::C(view! { <A href="/settings"><img src=format!("/cdn/users/{}.jpg", user.id) /></A> })
                                         }
                                     })
                             }}
@@ -113,7 +123,7 @@ pub fn App() -> impl IntoView {
                 </nav>
             </header>
             <main>
-                <AppRouter register=register login=login logout=logout />
+                <AppRouter register=register login=login logout=logout user=user />
             </main>
         </Router>
     }
@@ -121,27 +131,34 @@ pub fn App() -> impl IntoView {
 
 #[component(transparent)]
 fn AppRouter(
-    register: Action<Register, Result<(), ServerFnError>>,
-    login: Action<Login, Result<(), ServerFnError>>,
-    logout: Action<Logout, Result<(), ServerFnError>>,
+    register: ServerAction<Register>,
+    login: ServerAction<Login>,
+    logout: ServerAction<Logout>,
+    user: Resource<Result<Option<User>, ServerFnError>>,
 ) -> impl IntoView {
     view! {
-        <Routes>
-            <Route path="" view=|| view! { <Redirect path="home" /> } />
-            <Route path="home" view=HomePage />
+        <Routes fallback = || {
+            let mut outside_errors = Errors::default();
+            outside_errors.insert_with_default_key(AppError::NotFound);
+            view! { <ErrorTemplate outside_errors /> }
+        }>
+            <Route path=path!("") view=|| view! { <Redirect path="home" /> } />
+            <Route path=path!("home") view=HomePage />
             <Route
-                path="discord"
+                path=path!("discord")
                 view=|| {
-                    create_effect(|_| {
+                    Effect::new(|_| {
                         window().location().set_href("https://discord.com/invite/G9QBCDY")
                     });
                     ""
                 }
             />
-            <Route path="register" view=move || view! { <Register action=register /> } />
-            <Route path="login" view=move || view! { <Login action=login /> } />
-            <Route
-                path="settings"
+            <Route path=path!("register") view=move || view! { <Register action=register /> } />
+            <Route path=path!("login") view=move || view! { <Login action=login /> } />
+            <ProtectedRoute
+                path=path!("settings")
+                condition=move || user.get().map(|n| n.map_or(false, |u| u.map_or(false, |_| true)))
+                redirect_path=|| "/login"
                 view=move || {
                     view! {
                         <h1>"Settings"</h1>
@@ -155,45 +172,47 @@ fn AppRouter(
 }
 
 #[component(transparent)]
-fn LeaderboardRouter() -> impl IntoView {
-    let (patch, set_patch) = create_signal(String::new());
-    let (layout, set_layout) = create_signal(String::new());
-    let (category, set_category) = create_signal(String::new());
+fn LeaderboardRouter() -> impl MatchNestedRoutes + Clone {
+    let (patch, set_patch) = signal(String::new());
+    let (layout, set_layout) = signal(String::new());
+    let (category, set_category) = signal(String::new());
 
     view! {
-        <Route
-            path="leaderboard"
+        <ParentRoute
+            path=path!("leaderboard")
             view=move || view! { <Section patch=patch layout=layout category=category /> }
         >
             <Route
-                path=":patch/:layout/:category"
+                path=path!(":patch/:layout/:category")
                 view=move || {
                     view! {
                         <Leaderboard patch=set_patch layout=set_layout category=set_category />
                     }
                 }
             />
-            <Route path="" view=|| view! { <Redirect path="2.00/1/Standard" /> } />
+            <Route path=path!("") view=|| view! { <Redirect path="2.00/1/standard" /> } />
             <Route
-                path=":patch"
+                path=path!(":patch")
                 view=|| {
-                    view! { <Redirect path="1/Standard" /> }
+                    view! { <Redirect path="1/standard" /> }
                 }
             />
             <Route
-                path=":patch/:layout"
+                path=path!(":patch/:layout")
                 view=|| {
-                    view! { <Redirect path="Standard" /> }
+                    view! { <Redirect path="standard" /> }
                 }
             />
-        </Route>
+        </ParentRoute>
     }
+    .into_inner()
 }
 
 /// Renders the home page of your application.
 #[component]
 fn HomePage() -> impl IntoView {
     view! {
+        <Title text="Home" />
         <section id="welcome">
             <h1>"Welcome to the Lucio Surf League!"</h1>
             <p>
@@ -233,7 +252,10 @@ pub fn Section(
         _ => vec![],
     };
 
+    let query = use_query_map();
+
     view! {
+        <Title text="Leaderboard"/>
         <section id="leaderboard">
             <details>
                 <summary>
@@ -252,6 +274,7 @@ pub fn Section(
                                 view! {
                                     <A href=move || {
                                         patch.get() + "/" + &l.to_string() + "/" + &category.get()
+                                            + &query.get().to_query_string()
                                     }>
                                         <span class="text">"Layout " {l}</span>
                                     </A>
@@ -260,17 +283,26 @@ pub fn Section(
                         />
                     </div>
                     <div class="right-row-nav">
-                        <A href=move || patch.get() + "/" + &layout.get() + "/Standard">
+                        <A href=move || {
+                            patch.get() + "/" + &layout.get() + "/standard"
+                                + &query.get().to_query_string()
+                        }>
                             <span class="text">"Standard"</span>
                         </A>
-                        <A href=move || patch.get() + "/" + &layout.get() + "/Gravspeed">
+                        <A href=move || {
+                            patch.get() + "/" + &layout.get() + "/gravspeed"
+                                + &query.get().to_query_string()
+                        }>
                             <span class="text">"Gravspeed"</span>
                         </A>
                     </div>
                 </nav>
             </header>
             <div role="definition" id="filters" class="content">
-                <Form method="GET" action="">
+                <Form
+                    method="GET"
+                    action=move || patch.get() + "/" + &layout.get() + "/" + &category.get()
+                >
                     <div class="group">
                         <h6>"Patch"</h6>
                         <div class="options">
@@ -303,6 +335,8 @@ pub fn Section(
                             <label for="was_pb">"Was PB"</label>
                             <input type="radio" name="filter" value="was_wr" id="was_wr" />
                             <label for="was_wr">"Was WR"</label>
+                            <input type="radio" name="filter" value="verified" id="verified" />
+                            <label for="verified">"Verified"</label>
                         </div>
                     </div>
                     <input type="submit" class="button" value="Apply" />
@@ -320,23 +354,25 @@ pub fn Leaderboard(
     category: WriteSignal<String>,
 ) -> impl IntoView {
     let params = use_params_map();
-    create_effect(move |_| {
+    Effect::new(move |_| {
         params.with(|params| {
-            patch.set(params.get("patch").cloned().unwrap());
-            layout.set(params.get("layout").cloned().unwrap());
-            category.set(params.get("category").cloned().unwrap());
+            patch.set(params.get("patch").unwrap());
+            layout.set(params.get("layout").unwrap());
+            category.set(params.get("category").unwrap());
         })
     });
-    let selection = create_memo(move |_| {
+    let selection = Memo::new(move |_| {
         params.with(|params| {
             (
-                params.get("patch").cloned().unwrap(),
-                params.get("layout").cloned().unwrap(),
-                params.get("category").cloned().unwrap(),
+                params.get("patch").unwrap(),
+                params.get("layout").unwrap(),
+                params.get("category").unwrap(),
             )
         })
     });
-    let maps = create_resource(selection, |s| get_runs_category(s.0, s.1, s.2));
+    let maps = Resource::new(selection, |mut s| {
+        get_runs_category(s.0, s.1, format!("{}{}", s.2.remove(0).to_uppercase(), s.2))
+    });
 
     view! {
         <Transition fallback=move || {
@@ -345,9 +381,9 @@ pub fn Leaderboard(
             {move || {
                 maps.get()
                     .map(|data| match data {
-                        Err(e) => view! { <p>{e.to_string()}</p> }.into_view(),
+                        Err(e) => Either::Right(view! { <p>{e.to_string()}</p> }),
                         Ok(maps) => {
-                            view! {
+                            Either::Left(view! {
                                 <div id="lb">
                                     {maps
                                         .into_iter()
@@ -356,8 +392,7 @@ pub fn Leaderboard(
                                         })
                                         .collect_view()}
                                 </div>
-                            }
-                                .into_view()
+                            })
                         }
                     })
             }}
@@ -367,42 +402,137 @@ pub fn Leaderboard(
 
 #[component]
 pub fn LeaderboardEntry(map: MapRuns) -> impl IntoView {
+    let filter = |f: Option<String>| match f {
+        Some(f) => match f.as_str() {
+            "verified" => |r: &PartialRun| -> bool { r.verified },
+            "was_pb" => |_: &PartialRun| -> bool { false },
+            "is_pb" => |r: &PartialRun| -> bool { r.is_pb },
+            "was_wr" => |_: &PartialRun| -> bool { false },
+            "is_wr" => |r: &PartialRun| -> bool { r.is_wr },
+            _ => |_: &PartialRun| -> bool { true },
+        },
+        None => |r: &PartialRun| -> bool { r.is_pb },
+    };
+    let sort = |s: Option<String>| match s {
+        Some(s) => match s.as_str() {
+            "date" => move |r1: &PartialRun, r2: &PartialRun| -> Ordering {
+                if r1.created_at > r2.created_at {
+                    Ordering::Less
+                } else {
+                    Ordering::Greater
+                }
+            },
+            _ => move |r1: &PartialRun, r2: &PartialRun| -> Ordering {
+                if r1.time == r2.time {
+                    if r1.created_at < r2.created_at {
+                        Ordering::Less
+                    } else {
+                        Ordering::Greater
+                    }
+                } else {
+                    if r1.time < r2.time {
+                        Ordering::Less
+                    } else {
+                        Ordering::Greater
+                    }
+                }
+            },
+        },
+        None => move |r1: &PartialRun, r2: &PartialRun| -> Ordering {
+            if r1.time < r2.time {
+                Ordering::Less
+            } else {
+                Ordering::Greater
+            }
+        },
+    };
+
+    let filter_key = || use_query_map().with(|q| q.get("filter").map(|s| s.to_owned()));
+    let sort_key = || use_query_map().with(|q| q.get("sort").map(|s| s.to_owned()));
+    let runs = move || {
+        let mut r = map.runs.clone();
+        r.sort_unstable_by(sort(sort_key()));
+        let runs: Vec<(usize, PartialRun)> = r
+            .into_iter()
+            .filter(filter(filter_key()))
+            .enumerate()
+            .collect();
+        runs
+    };
+    let runs2 = runs.clone();
+    let (run, set_run) = signal::<Option<PartialRun>>(None);
+
     view! {
         <div class="lb_entry">
             <div class="header">
                 <h2>{map.map.clone()}</h2>
-                {match map.runs.get(0) {
-                    Some(r) => {
-                        view! {
+                {move || match runs().get(0) {
+                    Some((_, r)) => {
+                        set_run(Some(r.clone()));
+                        Either::Left(view! {
                             <h5>{r.username.clone()}</h5>
                             <h5>{r.time.to_string()} " seconds"</h5>
-                        }
-                            .into_view()
+                        })
                     }
-                    None => {}.into_view(),
+                    None => Either::Right(view!{}),
                 }}
             </div>
             <div class="content">
-                <img
-                    src=format!("/cdn/maps/{}.jpg", map.map)
-                    alt=format!("Picture of {}", map.map)
-                />
-                <div class="lb_entry_ranks">
-                    {map
-                        .runs
-                        .into_iter()
-                        .filter(|r| r.is_pb && r.verified)
-                        .enumerate()
-                        .map(|(i, r)| {
-                            view! {
-                                <div class="lb_entry_rank">
-                                    <span>"#"{i + 1}</span>
-                                    <span>{r.username}</span>
-                                    <span>{r.time.to_string()} " s"</span>
+                <div class="video">
+                    {move || match run.get() {
+                        Some(r) => {
+                            Either::Left(view! {
+                                <div class="buttons">
+                                    <a class="play-wrapper" href=r.proof.clone()>
+                                        <div></div>
+                                    </a>
+                                    <br />
+                                    <a class="external" href=r.proof target="_blank">
+                                        "Open in new Tab"
+                                    </a>
                                 </div>
+                            })
+                        }
+                        None => Either::Right(view!{}),
+                    }} <div class="toner">
+                        <img
+                            src=format!("/cdn/maps/{}.jpg", map.map)
+                            alt=format!("Picture of {}", map.map)
+                        />
+                    </div>
+                </div>
+                <div class="lb_entry_ranks">
+                    <Show
+                        when=move || run.with(|r| r.is_some())
+                        fallback=|| view! { <span class="no-data">"No Runs Found"</span> }
+                    >
+                        <For
+                            each=runs2.clone()
+                            key=|r| r.1.id
+                            children=move |(i, r)| {
+                                view! {
+                                    <div class="lb_entry_rank">
+                                        <span class="rank">
+                                            {move || match sort_key() {
+                                                Some(k) => {
+                                                    if k == "time" {
+                                                        "#".to_string() + &(i + 1).to_string()
+                                                    } else {
+                                                        format!("{}", r.created_at.format("%d/%m/%y"))
+                                                    }
+                                                }
+                                                None => "#".to_string() + &(i + 1).to_string(),
+                                            }}
+                                        </span>
+                                        <span class="name">
+                                            <A href=format!("/user/{}", r.user_id)>{r.username}</A>
+                                        </span>
+                                        <span class="time">{r.time.to_string()} " s"</span>
+                                    </div>
+                                }
                             }
-                        })
-                        .collect_view()}
+                        />
+                    </Show>
                 </div>
             </div>
         </div>
@@ -410,8 +540,9 @@ pub fn LeaderboardEntry(map: MapRuns) -> impl IntoView {
 }
 
 #[component]
-pub fn Login(action: Action<Login, Result<(), ServerFnError>>) -> impl IntoView {
+pub fn Login(action: ServerAction<Login>) -> impl IntoView {
     view! {
+        <Title text="Log In" />
         <section id="box">
             <h1>"Sign In"</h1>
             <ActionForm action=action>
@@ -446,7 +577,7 @@ pub fn Login(action: Action<Login, Result<(), ServerFnError>>) -> impl IntoView 
                     <label for="remember">"Remember me?"</label>
                 </div>
                 <div class="line">
-                    <A href="/register" class="link">
+                    <A href="/register" attr:class="link">
                         "Create account"
                     </A>
                     <input type="submit" class="button" value="Sign In" />
@@ -457,8 +588,9 @@ pub fn Login(action: Action<Login, Result<(), ServerFnError>>) -> impl IntoView 
 }
 
 #[component]
-pub fn Register(action: Action<Register, Result<(), ServerFnError>>) -> impl IntoView {
+pub fn Register(action: ServerAction<Register>) -> impl IntoView {
     view! {
+        <Title text="Sign Up" />
         <section id="box">
             <h1>"Sign Up"</h1>
             <ActionForm action=action>
@@ -524,8 +656,9 @@ pub fn Register(action: Action<Register, Result<(), ServerFnError>>) -> impl Int
 }
 
 #[component]
-pub fn Logout(action: Action<Logout, Result<(), ServerFnError>>) -> impl IntoView {
+pub fn Logout(action: ServerAction<Logout>) -> impl IntoView {
     view! {
+        <Title text="Log Out" />
         <div id="loginbox">
             <ActionForm action=action>
                 <button type="submit" class="button">

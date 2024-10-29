@@ -3,7 +3,7 @@
     font-size: 1.5rem;
 
     details {
-        z-index: 1;
+        z-index: 3;
         margin: 2rem;
         margin-right: 0;
         width: 2rem;
@@ -124,7 +124,7 @@
         top: 3rem;
         margin-top: -4.7rem;
         padding-left: 4rem;
-        z-index: 0;
+        z-index: 2;
         background-color: var(--grey-900);
         animation: widen 200s linear infinite;
         animation-play-state: paused;
@@ -189,38 +189,95 @@
 
             .content {
                 display: flex;
+                position: relative;
                 flex-direction: row;
                 width: 100%;
 
-                img {
+                .video {
+                    position: relative;
+                    display: flex;
                     flex-shrink: 0;
                     width: 60%;
                     aspect-ratio: 16/9;
-                    border-radius: 0.2rem;
+
+                    .toner {
+                        background-color: var(--black);
+                        opacity: 0.5;
+
+                        img {
+                            width: 100%;
+                            border-radius: 0.2rem;
+                        }
+                    }
+
+                    .buttons {
+                        z-index: 1;
+                        position: absolute;
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%);
+                        text-align: center;
+                        line-height: 0.5;
+
+                        .play-wrapper {
+                            display: inline-block;
+                            min-width: 4rem;
+                            min-height: 4rem;
+                            max-width: 4rem;
+                            max-height: 4rem;
+                            background-color: var(--grey-1000);
+                            border-radius: 50%;
+
+                            div {
+                                mask: url(/play-button.svg) no-repeat center / 1.5rem;
+                                margin-top: -0.05rem;
+                                margin-left: 0.15rem;
+                                min-width: 4rem;
+                                min-height: 4rem;
+                                background-color: var(--grey-0);
+                            }
+                        }
+
+                        .external {
+                            font-size: 1rem;
+                            font-weight: 500;
+                        }
+                    }
                 }
 
                 .lb_entry_ranks {
                     padding-left: 1rem;
                     width: 40%;
+                    min-height: 0;
+                    aspect-ratio: 16/13.5;
                     font-size: 0.75rem;
                     color: var(--grey-0);
+                    overflow-y: scroll;
+
+                    .lb_entry_rank:first-child {
+                        margin-top: 0.2rem;
+                    }
+
+                    .lb_entry_rank:last-child {
+                        margin-bottom: 0.2rem;
+                    }
 
                     .lb_entry_rank {
-                        margin: 0.2rem 0;
+                        margin: 0.5rem 0;
                         display: flex;
 
-                        span:not(:first-child) {
+                        span:not(.rank) {
                             margin-left: 0.5rem;
                         }
 
-                        span:not(:last-child, :first-child) {
+                        span.name {
                             text-wrap: nowrap;
                             overflow-x: hidden;
                         }
 
-                        span:last-child {
+                        span.time {
                             flex-grow: 1;
-                            font-size: 0.65rem;
+                            font-size: 0.7rem;
                             text-align: end;
                             text-wrap: nowrap;
                             align-self: flex-end;

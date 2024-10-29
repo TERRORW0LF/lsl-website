@@ -1,6 +1,7 @@
 use axum_session::SessionLayer;
 use axum_session_auth::AuthSessionLayer;
-use lsl_website::{auth::ssr::AuthSession, fallback::file_and_error_handler, state::AppState};
+use lsl_website::{auth::ssr::AuthSession, state::AppState};
+use tower::ServiceBuilder;
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 use axum::{
@@ -13,7 +14,7 @@ use axum::{
 use axum_session_auth::{AuthConfig};
 use axum_session_sqlx::SessionPgPool;
 use http::Request;
-use leptos::*;
+use leptos::prelude::*;
 use leptos_axum::{generate_route_list, handle_server_fns_with_context, LeptosRoutes};
 use leptos_router::RouteListing;
 use lsl_website::{app::*, auth::ssr::User};
@@ -25,20 +26,21 @@ use axum_session_sqlx::SessionPgSessionStore;
 use lsl_website::auth::ssr::{connect_to_database};
 
 async fn leptos_handler(
-    State(state): State<AppState>,
+    state: State<AppState>,
     session: AuthSession,
     req: Request<AxumBody>,
 ) -> Response {
+    let pool = state.pool.clone();
+    let options = state.leptos_options.clone();
     let handler = leptos_axum::render_route_with_context(
-        state.leptos_options.clone(),
         state.routes.clone(),
         move || {
-            provide_context(state.pool.clone());
+            provide_context(pool.clone());
             provide_context(session.clone());
         },
-        App,
+        move || shell(options.clone()),
     );
-    handler(req).await.into_response()
+    handler(state, req).await.into_response()
 }
 
 async fn server_handler(
@@ -91,7 +93,7 @@ async fn main() {
     // <https://github.com/leptos-rs/start-axum#executing-a-server-on-a-remote-machine-without-the-toolchain>
     // Alternately a file can be specified such as Some("Cargo.toml")
     // The file would need to be included with the executable when moved to deployment
-    let conf = get_configuration(None).await.unwrap();
+    let conf = get_configuration(None).unwrap();
     let leptos_options = conf.leptos_options;
     let addr = leptos_options.site_addr;
     let routes = generate_route_list(App);
@@ -106,13 +108,14 @@ async fn main() {
     let app = Router::new()
         .route("/api/*fn_name", get(server_handler).post(server_handler))
         .leptos_routes_with_handler(routes.clone(), get(leptos_handler))
-        .fallback(file_and_error_handler)
-        .layer(AuthSessionLayer::<User, i64, SessionPgPool, PgPool>::new(
+        .layer(ServiceBuilder::new()
+            .layer(SessionLayer::new(session_store))
+            .layer(AuthSessionLayer::<User, i64, SessionPgPool, PgPool>::new(
                 Some(pool.clone()),
             )
             .with_config(auth_config),
-        )
-        .layer(SessionLayer::new(session_store))
+        ))
+        .fallback(leptos_axum::file_and_error_handler::<AppState, _>(shell))
         .with_state(state);
 
     // run our app with hyper

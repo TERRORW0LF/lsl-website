@@ -1,6 +1,6 @@
 use chrono::{DateTime, Local};
 use http::{header::CACHE_CONTROL, HeaderValue};
-use leptos::{expect_context, server, server_fn::codec::GetUrl, ServerFnError};
+use leptos::prelude::{expect_context, server, server_fn::codec::GetUrl, ServerFnError};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
@@ -68,8 +68,8 @@ pub async fn get_runs_id(id: i32) -> Result<MapRuns, ServerFnError> {
     let res = sqlx::query_as::<_, MapRuns>(
         r#"SELECT s.id, s.patch, s.layout, s.category, s.map,
                 COALESCE(NULLIF(ARRAY_AGG((r.id, r.section_id, u.id,
-                        u."name", r.time, r.proof, r.verified, r.is_pb, r.is_wr, r.created_at)
-                    ORDER BY r.time ASC) FILTER(WHERE r.id IS NOT NULL), '{NULL}'), '{}') AS runs
+                        u."name", r.time, r.proof, r.verified, r.is_pb, r.is_wr, r.created_at)) 
+                    FILTER(WHERE r.id IS NOT NULL), '{NULL}'), '{}') AS runs
             FROM section s
             INNER JOIN run r ON section_id = s.id
             INNER JOIN "user" u ON user_id = u.id
@@ -97,13 +97,14 @@ pub async fn get_runs_category(
     layout: String,
     category: String,
 ) -> Result<Vec<MapRuns>, ServerFnError> {
+    tracing::debug!("{}", category);
     let pool = crate::auth::ssr::pool()?;
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let res = sqlx::query_as::<_, MapRuns>(
         r#"SELECT s.id, patch, layout, category, map,
                 COALESCE(NULLIF(ARRAY_AGG((r.id, r.section_id, r.user_id,
-                        u."name", r.time, r.proof, r.verified, r.is_pb, r.is_wr, r.created_at)
-                    ORDER BY r.time ASC) FILTER(WHERE r.id IS NOT NULL), '{NULL}'), '{}') AS runs
+                        u."name", r.time, r.proof, r.verified, r.is_pb, r.is_wr, r.created_at)) 
+                    FILTER(WHERE r.id IS NOT NULL), '{NULL}'), '{}') AS runs
             FROM section s
             LEFT JOIN run r ON section_id = s.id
             LEFT JOIN "user" u ON user_id = u.id
@@ -140,6 +141,7 @@ pub async fn get_runs_latest(offset: i32) -> Result<Vec<Run>, ServerFnError> {
         FROM run
         INNER JOIN section ON section_id = section.id
         INNER JOIN "user" ON user_id = u.id
+        ORDER BY run.created_at DESC
         LIMIT 50 OFFSET $1"#,
     )
     .bind(offset)
