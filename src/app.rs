@@ -1,4 +1,4 @@
-use std::cmp::Ordering;
+use std::{cmp::Ordering, collections::HashMap};
 
 use crate::{
     api::{get_runs_category, MapRuns, PartialRun},
@@ -13,27 +13,28 @@ use leptos_router::{
     hooks::{use_params_map, use_query_map},
     path, MatchNestedRoutes,
 };
+use rust_decimal::Decimal;
 use wasm_bindgen::{prelude::Closure, JsCast};
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
         <!DOCTYPE html>
         <html lang="en" dir="ltr">
-        <head>
-        <Link rel="preconnect" href="https://fonts.googleapis.com" />
-        <Link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
-        <Link
-            href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,100..1000&display=swap"
-            rel="stylesheet"
-        />
-                <meta charset="utf-8"/>
-                <meta name="viewport" content="width=device-width, initial-scale=1"/>
-                <AutoReload options=options.clone()/>
-                <HydrationScripts options/>
-                <MetaTags/>
+            <head>
+                <Link rel="preconnect" href="https://fonts.googleapis.com" />
+                <Link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+                <Link
+                    href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,100..1000&display=swap"
+                    rel="stylesheet"
+                />
+                <meta charset="utf-8" />
+                <meta name="viewport" content="width=device-width, initial-scale=1" />
+                <AutoReload options=options.clone() />
+                <HydrationScripts options />
+                <MetaTags />
             </head>
             <body>
-                <App/>
+                <App />
             </body>
         </html>
     }
@@ -105,16 +106,24 @@ pub fn App() -> impl IntoView {
                                 user.get()
                                     .map(|user| match user {
                                         Err(e) => {
-                                            EitherOf3::A(view! {
-                                                <A href="/login">"Login"</A>
-                                                <span>{format!("Login error: {}", e)}</span>
-                                            })
+                                            EitherOf3::A(
+                                                view! {
+                                                    <A href="/login">"Login"</A>
+                                                    <span>{format!("Login error: {}", e)}</span>
+                                                },
+                                            )
                                         }
                                         Ok(None) => {
                                             EitherOf3::B(view! { <A href="/login">"Login"</A> })
                                         }
                                         Ok(Some(user)) => {
-                                            EitherOf3::C(view! { <A href="/settings"><img src=format!("/cdn/users/{}.jpg", user.id) /></A> })
+                                            EitherOf3::C(
+                                                view! {
+                                                    <A href="/settings">
+                                                        <img src=format!("/cdn/users/{}.jpg", user.id) />
+                                                    </A>
+                                                },
+                                            )
                                         }
                                     })
                             }}
@@ -137,7 +146,7 @@ fn AppRouter(
     user: Resource<Result<Option<User>, ServerFnError>>,
 ) -> impl IntoView {
     view! {
-        <Routes fallback = || {
+        <Routes fallback=|| {
             let mut outside_errors = Errors::default();
             outside_errors.insert_with_default_key(AppError::NotFound);
             view! { <ErrorTemplate outside_errors /> }
@@ -255,7 +264,7 @@ pub fn Section(
     let query = use_query_map();
 
     view! {
-        <Title text="Leaderboard"/>
+        <Title text="Leaderboard" />
         <section id="leaderboard">
             <details>
                 <summary>
@@ -383,16 +392,18 @@ pub fn Leaderboard(
                     .map(|data| match data {
                         Err(e) => Either::Right(view! { <p>{e.to_string()}</p> }),
                         Ok(maps) => {
-                            Either::Left(view! {
-                                <div id="lb">
-                                    {maps
-                                        .into_iter()
-                                        .map(|map| {
-                                            view! { <LeaderboardEntry map=map /> }
-                                        })
-                                        .collect_view()}
-                                </div>
-                            })
+                            Either::Left(
+                                view! {
+                                    <div id="lb">
+                                        {maps
+                                            .into_iter()
+                                            .map(|map| {
+                                                view! { <LeaderboardEntry map=map /> }
+                                            })
+                                            .collect_view()}
+                                    </div>
+                                },
+                            )
                         }
                     })
             }}
@@ -402,35 +413,56 @@ pub fn Leaderboard(
 
 #[component]
 pub fn LeaderboardEntry(map: MapRuns) -> impl IntoView {
-    let filter = |f: Option<String>| match f {
-        Some(f) => match f.as_str() {
-            "verified" => |r: &PartialRun| -> bool { r.verified },
-            "was_pb" => |_: &PartialRun| -> bool { false },
-            "is_pb" => |r: &PartialRun| -> bool { r.is_pb },
-            "was_wr" => |_: &PartialRun| -> bool { false },
-            "is_wr" => |r: &PartialRun| -> bool { r.is_wr },
-            _ => |_: &PartialRun| -> bool { true },
-        },
-        None => |r: &PartialRun| -> bool { r.is_pb },
-    };
+    fn filter<'a>(
+        r: &'a PartialRun,
+        f: Option<String>,
+        t: &'a mut Decimal,
+        ts: &'a mut HashMap<i64, Decimal>,
+    ) -> bool {
+        match f {
+            Some(f) => match f.as_str() {
+                "verified" => r.verified,
+                "was_pb" => {
+                    if &r.time < ts.get(&r.user_id).unwrap_or(&Decimal::new(999999, 3)) {
+                        ts.insert(r.user_id, r.time);
+                        true
+                    } else {
+                        false
+                    }
+                }
+                "is_pb" => r.is_pb,
+                "was_wr" => {
+                    if r.time < *t {
+                        *t = r.time;
+                        true
+                    } else {
+                        false
+                    }
+                }
+                "is_wr" => r.is_wr,
+                _ => true,
+            },
+            None => r.is_pb,
+        }
+    }
     let sort = |s: Option<String>| match s {
         Some(s) => match s.as_str() {
-            "date" => move |r1: &PartialRun, r2: &PartialRun| -> Ordering {
-                if r1.created_at > r2.created_at {
+            "date" => move |r1: &(usize, PartialRun), r2: &(usize, PartialRun)| -> Ordering {
+                if r1.1.created_at > r2.1.created_at {
                     Ordering::Less
                 } else {
                     Ordering::Greater
                 }
             },
-            _ => move |r1: &PartialRun, r2: &PartialRun| -> Ordering {
-                if r1.time == r2.time {
-                    if r1.created_at < r2.created_at {
+            _ => move |r1: &(usize, PartialRun), r2: &(usize, PartialRun)| -> Ordering {
+                if r1.1.time == r2.1.time {
+                    if r1.1.created_at < r2.1.created_at {
                         Ordering::Less
                     } else {
                         Ordering::Greater
                     }
                 } else {
-                    if r1.time < r2.time {
+                    if r1.1.time < r2.1.time {
                         Ordering::Less
                     } else {
                         Ordering::Greater
@@ -438,8 +470,8 @@ pub fn LeaderboardEntry(map: MapRuns) -> impl IntoView {
                 }
             },
         },
-        None => move |r1: &PartialRun, r2: &PartialRun| -> Ordering {
-            if r1.time < r2.time {
+        None => move |r1: &(usize, PartialRun), r2: &(usize, PartialRun)| -> Ordering {
+            if r1.1.time < r2.1.time {
                 Ordering::Less
             } else {
                 Ordering::Greater
@@ -450,13 +482,15 @@ pub fn LeaderboardEntry(map: MapRuns) -> impl IntoView {
     let filter_key = || use_query_map().with(|q| q.get("filter").map(|s| s.to_owned()));
     let sort_key = || use_query_map().with(|q| q.get("sort").map(|s| s.to_owned()));
     let runs = move || {
-        let mut r = map.runs.clone();
-        r.sort_unstable_by(sort(sort_key()));
-        let runs: Vec<(usize, PartialRun)> = r
+        let mut old_time = Decimal::new(999999, 3);
+        let mut old_times = HashMap::<i64, Decimal>::new();
+        let r = map.runs.clone();
+        let mut runs: Vec<(usize, PartialRun)> = r
             .into_iter()
-            .filter(filter(filter_key()))
+            .filter(|r| filter(r, filter_key(), &mut old_time, &mut old_times))
             .enumerate()
             .collect();
+        runs.sort_unstable_by(sort(sort_key()));
         runs
     };
     let runs2 = runs.clone();
@@ -469,31 +503,35 @@ pub fn LeaderboardEntry(map: MapRuns) -> impl IntoView {
                 {move || match runs().get(0) {
                     Some((_, r)) => {
                         set_run(Some(r.clone()));
-                        Either::Left(view! {
-                            <h5>{r.username.clone()}</h5>
-                            <h5>{r.time.to_string()} " seconds"</h5>
-                        })
+                        Either::Left(
+                            view! {
+                                <h5>{r.username.clone()}</h5>
+                                <h5>{r.time.to_string()} " seconds"</h5>
+                            },
+                        )
                     }
-                    None => Either::Right(view!{}),
+                    None => Either::Right(view! {}),
                 }}
             </div>
             <div class="content">
                 <div class="video">
                     {move || match run.get() {
                         Some(r) => {
-                            Either::Left(view! {
-                                <div class="buttons">
-                                    <a class="play-wrapper" href=r.proof.clone()>
-                                        <div></div>
-                                    </a>
-                                    <br />
-                                    <a class="external" href=r.proof target="_blank">
-                                        "Open in new Tab"
-                                    </a>
-                                </div>
-                            })
+                            Either::Left(
+                                view! {
+                                    <div class="buttons">
+                                        <a class="play-wrapper" href=r.proof.clone()>
+                                            <div></div>
+                                        </a>
+                                        <br />
+                                        <a class="external" href=r.proof target="_blank">
+                                            "Open in new Tab"
+                                        </a>
+                                    </div>
+                                },
+                            )
                         }
-                        None => Either::Right(view!{}),
+                        None => Either::Right(view! {}),
                     }} <div class="toner">
                         <img
                             src=format!("/cdn/maps/{}.jpg", map.map)

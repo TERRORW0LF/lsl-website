@@ -68,7 +68,8 @@ pub async fn get_runs_id(id: i32) -> Result<MapRuns, ServerFnError> {
     let res = sqlx::query_as::<_, MapRuns>(
         r#"SELECT s.id, s.patch, s.layout, s.category, s.map,
                 COALESCE(NULLIF(ARRAY_AGG((r.id, r.section_id, u.id,
-                        u."name", r.time, r.proof, r.verified, r.is_pb, r.is_wr, r.created_at)) 
+                        u."name", r.time, r.proof, r.verified, r.is_pb, r.is_wr, r.created_at)
+                    ORDER BY r.created_at ASC)
                     FILTER(WHERE r.id IS NOT NULL), '{NULL}'), '{}') AS runs
             FROM section s
             INNER JOIN run r ON section_id = s.id
@@ -103,7 +104,8 @@ pub async fn get_runs_category(
     let res = sqlx::query_as::<_, MapRuns>(
         r#"SELECT s.id, patch, layout, category, map,
                 COALESCE(NULLIF(ARRAY_AGG((r.id, r.section_id, r.user_id,
-                        u."name", r.time, r.proof, r.verified, r.is_pb, r.is_wr, r.created_at)) 
+                        u."name", r.time, r.proof, r.verified, r.is_pb, r.is_wr, r.created_at)
+                    ORDER BY r.created_at ASC) 
                     FILTER(WHERE r.id IS NOT NULL), '{NULL}'), '{}') AS runs
             FROM section s
             LEFT JOIN run r ON section_id = s.id
