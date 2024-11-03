@@ -17,6 +17,7 @@ pub struct Run {
     pub username: String,
     pub time: Decimal,
     pub proof: String,
+    pub yt_id: Option<String>,
     pub verified: bool,
     pub is_pb: bool,
     pub is_wr: bool,
@@ -32,6 +33,7 @@ pub struct PartialRun {
     pub username: String,
     pub time: Decimal,
     pub proof: String,
+    pub yt_id: Option<String>,
     pub verified: bool,
     pub is_pb: bool,
     pub is_wr: bool,
@@ -67,8 +69,8 @@ pub async fn get_runs_id(id: i32) -> Result<MapRuns, ServerFnError> {
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let res = sqlx::query_as::<_, MapRuns>(
         r#"SELECT s.id, s.patch, s.layout, s.category, s.map,
-                COALESCE(NULLIF(ARRAY_AGG((r.id, r.section_id, u.id,
-                        u."name", r.time, r.proof, r.verified, r.is_pb, r.is_wr, r.created_at)
+                COALESCE(NULLIF(ARRAY_AGG((r.id, r.section_id, u.id, u."name", r.time,
+                        r.proof, r.yt_id, r.verified, r.is_pb, r.is_wr, r.created_at)
                     ORDER BY r.created_at ASC)
                     FILTER(WHERE r.id IS NOT NULL), '{NULL}'), '{}') AS runs
             FROM section s
@@ -98,13 +100,12 @@ pub async fn get_runs_category(
     layout: String,
     category: String,
 ) -> Result<Vec<MapRuns>, ServerFnError> {
-    tracing::debug!("{}", category);
     let pool = crate::auth::ssr::pool()?;
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let res = sqlx::query_as::<_, MapRuns>(
         r#"SELECT s.id, patch, layout, category, map,
-                COALESCE(NULLIF(ARRAY_AGG((r.id, r.section_id, r.user_id,
-                        u."name", r.time, r.proof, r.verified, r.is_pb, r.is_wr, r.created_at)
+                COALESCE(NULLIF(ARRAY_AGG((r.id, r.section_id, r.user_id, u."name", r.time,
+                r.proof, r.yt_id, r.verified, r.is_pb, r.is_wr, r.created_at)
                     ORDER BY r.created_at ASC) 
                     FILTER(WHERE r.id IS NOT NULL), '{NULL}'), '{}') AS runs
             FROM section s
@@ -139,7 +140,7 @@ pub async fn get_runs_latest(offset: i32) -> Result<Vec<Run>, ServerFnError> {
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let res = sqlx::query_as::<_, Run>(
         r#"SELECT run.id, run.created_at, section_id, patch,
-            layout, category, map, user_id, "name", time, proof, verified, is_pb, is_wr
+            layout, category, map, user_id, "name", time, proof, yt_id, verified, is_pb, is_wr
         FROM run
         INNER JOIN section ON section_id = section.id
         INNER JOIN "user" ON user_id = u.id

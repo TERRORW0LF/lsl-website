@@ -92,7 +92,7 @@ pub fn App() -> impl IntoView {
                 <nav class="split-row-nav">
                     <div class="left-row-nav">
                         <A href="/home">"Home"</A>
-                        <A href="/leaderboard/2.00/1/Standard">"Leaderboard"</A>
+                        <A href="/leaderboard/2.00/1/standard">"Leaderboard"</A>
                         <A href="/ranking">"Ranking"</A>
                         <a href="https://discord.com/invite/G9QBCDY" rel="external">
                             "Discord"
@@ -447,22 +447,22 @@ pub fn LeaderboardEntry(map: MapRuns) -> impl IntoView {
     }
     let sort = |s: Option<String>| match s {
         Some(s) => match s.as_str() {
-            "date" => move |r1: &(usize, PartialRun), r2: &(usize, PartialRun)| -> Ordering {
-                if r1.1.created_at > r2.1.created_at {
+            "date" => move |r1: &PartialRun, r2: &PartialRun| -> Ordering {
+                if r1.created_at > r2.created_at {
                     Ordering::Less
                 } else {
                     Ordering::Greater
                 }
             },
-            _ => move |r1: &(usize, PartialRun), r2: &(usize, PartialRun)| -> Ordering {
-                if r1.1.time == r2.1.time {
-                    if r1.1.created_at < r2.1.created_at {
+            _ => move |r1: &PartialRun, r2: &PartialRun| -> Ordering {
+                if r1.time == r2.time {
+                    if r1.created_at < r2.created_at {
                         Ordering::Less
                     } else {
                         Ordering::Greater
                     }
                 } else {
-                    if r1.1.time < r2.1.time {
+                    if r1.time < r2.time {
                         Ordering::Less
                     } else {
                         Ordering::Greater
@@ -470,8 +470,8 @@ pub fn LeaderboardEntry(map: MapRuns) -> impl IntoView {
                 }
             },
         },
-        None => move |r1: &(usize, PartialRun), r2: &(usize, PartialRun)| -> Ordering {
-            if r1.1.time < r2.1.time {
+        None => move |r1: &PartialRun, r2: &PartialRun| -> Ordering {
+            if r1.time < r2.time {
                 Ordering::Less
             } else {
                 Ordering::Greater
@@ -485,16 +485,19 @@ pub fn LeaderboardEntry(map: MapRuns) -> impl IntoView {
         let mut old_time = Decimal::new(999999, 3);
         let mut old_times = HashMap::<i64, Decimal>::new();
         let r = map.runs.clone();
-        let mut runs: Vec<(usize, PartialRun)> = r
+        let mut runs: Vec<PartialRun> = r
             .into_iter()
             .filter(|r| filter(r, filter_key(), &mut old_time, &mut old_times))
-            .enumerate()
             .collect();
         runs.sort_unstable_by(sort(sort_key()));
-        runs
+        runs.into_iter()
+            .enumerate()
+            .collect::<Vec<(usize, PartialRun)>>()
     };
     let runs2 = runs.clone();
-    let (run, set_run) = signal::<Option<PartialRun>>(None);
+    let (top_run, set_top_run) = signal::<Option<PartialRun>>(None);
+    let (sel_run, set_sel_run) = signal::<Option<PartialRun>>(None);
+    let (play, set_play) = signal::<bool>(false);
 
     view! {
         <div class="lb_entry">
@@ -502,10 +505,13 @@ pub fn LeaderboardEntry(map: MapRuns) -> impl IntoView {
                 <h2>{map.map.clone()}</h2>
                 {move || match runs().get(0) {
                     Some((_, r)) => {
-                        set_run(Some(r.clone()));
+                        set_top_run(Some(r.clone()));
+                        set_sel_run(Some(r.clone()));
                         Either::Left(
                             view! {
-                                <h5>{r.username.clone()}</h5>
+                                <a href=format!("/user/{}", r.user_id)>
+                                    <h5>{r.username.clone()}</h5>
+                                </a>
                                 <h5>{r.time.to_string()} " seconds"</h5>
                             },
                         )
@@ -515,41 +521,85 @@ pub fn LeaderboardEntry(map: MapRuns) -> impl IntoView {
             </div>
             <div class="content">
                 <div class="video">
-                    {move || match run.get() {
-                        Some(r) => {
-                            Either::Left(
+                    {move || {
+                        let v = play.get();
+                        let r = sel_run.get();
+                        if r.is_some() {
+                            let r = r.unwrap();
+                            if v && r.yt_id.is_some() {
+                                EitherOf3::A(
+                                    view! {
+                                        <iframe
+                                            src=r.yt_id.clone().unwrap()
+                                                + "?autoplay=1&rel=0&modestbranding=1&showinfo=0"
+                                            allowfullscreen
+                                        ></iframe>
+                                    },
+                                )
+                            } else {
+                                let proof = r.proof.clone();
+                                if v {
+                                    Effect::new(move |_| {
+                                        window().open_with_url_and_target(&r.proof, "_blank")
+                                    });
+                                }
+                                EitherOf3::B(
+                                    view! {
+                                        <div class="buttons">
+                                            <button
+                                                class="play-wrapper"
+                                                on:click=move |_| { set_play(true) }
+                                            >
+                                                <div></div>
+                                            </button>
+                                            <br />
+                                            <a class="external" href=proof target="_blank">
+                                                "Open in new Tab"
+                                            </a>
+                                        </div>
+                                        <div class="toner">
+                                            <img
+                                                src=format!("/cdn/maps/{}.jpg", map.map)
+                                                alt=format!("Picture of {}", map.map)
+                                            />
+                                        </div>
+                                    },
+                                )
+                            }
+                        } else {
+                            EitherOf3::C(
                                 view! {
-                                    <div class="buttons">
-                                        <a class="play-wrapper" href=r.proof.clone()>
-                                            <div></div>
-                                        </a>
-                                        <br />
-                                        <a class="external" href=r.proof target="_blank">
-                                            "Open in new Tab"
-                                        </a>
+                                    <div class="toner">
+                                        <img
+                                            src=format!("/cdn/maps/{}.jpg", map.map)
+                                            alt=format!("Picture of {}", map.map)
+                                        />
                                     </div>
                                 },
                             )
                         }
-                        None => Either::Right(view! {}),
-                    }} <div class="toner">
-                        <img
-                            src=format!("/cdn/maps/{}.jpg", map.map)
-                            alt=format!("Picture of {}", map.map)
-                        />
-                    </div>
+                    }}
                 </div>
                 <div class="lb_entry_ranks">
                     <Show
-                        when=move || run.with(|r| r.is_some())
+                        when=move || top_run.with(|r| r.is_some())
                         fallback=|| view! { <span class="no-data">"No Runs Found"</span> }
                     >
                         <For
                             each=runs2.clone()
                             key=|r| r.1.id
                             children=move |(i, r)| {
+                                let selected = move || sel_run().is_some_and(|s| s.id == r.id);
+                                let run = r.clone();
                                 view! {
-                                    <div class="lb_entry_rank">
+                                    <div
+                                        class="lb_entry_rank"
+                                        on:click=move |_| {
+                                            set_play(false);
+                                            set_sel_run(Some(run.clone()));
+                                        }
+                                        class:selected=selected
+                                    >
                                         <span class="rank">
                                             {move || match sort_key() {
                                                 Some(k) => {
