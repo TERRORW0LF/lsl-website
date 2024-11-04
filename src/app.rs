@@ -166,7 +166,7 @@ fn AppRouter(
             <Route path=path!("login") view=move || view! { <Login action=login /> } />
             <ProtectedRoute
                 path=path!("settings")
-                condition=move || user.get().map(|n| n.map_or(false, |u| u.map_or(false, |_| true)))
+                condition=move || user.get().map(|n| n.map_or(false, |u| u.is_some()))
                 redirect_path=|| "/login"
                 view=move || {
                     view! {
