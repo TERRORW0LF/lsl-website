@@ -1,4 +1,5 @@
 use leptos::prelude::{server, server_fn::codec::PostUrl, ServerFnError};
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
@@ -23,6 +24,30 @@ impl Default for User {
             permissions,
         }
     }
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct YtVidJson {
+    kind: String,
+    etag: String,
+    id: String,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct YtPageInfo {
+    total_results: i32,
+    results_per_page: i32,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct YtJson {
+    kind: String,
+    etag: String,
+    items: Vec<YtVidJson>,
+    page_info: YtPageInfo,
 }
 
 #[cfg(feature = "ssr")]
@@ -287,4 +312,50 @@ pub async fn logout() -> Result<(), ServerFnError> {
     leptos_axum::redirect("/");
 
     Ok(())
+}
+
+#[server(Submit, prefix="/api", endpoint="runs/submit", input=PostUrl)]
+pub async fn submit(section_id: i32, time: Decimal, yt_id: String) -> Result<(), ServerFnError> {
+    use self::ssr::*;
+
+    let auth = auth()?;
+
+    match auth.current_user {
+        Some(u) => {
+            match reqwest::get(format!(
+                "https://www.googleapis.com/youtube/v3/videos?part=id&id={yt_id}"
+            ))
+            .await
+            {
+                Ok(r) => match r.json::<YtJson>().await {
+                    Ok(v) => {
+                        if v.page_info.total_results == 0 {
+                            Err(ServerFnError::ServerError("Video not found".to_string()))
+                        } else {
+                            let proof = format!("https://youtube.com/watch?v={yt_id}");
+                            let pool = pool()?;
+                            let res = sqlx::query(
+                                r#"INSERT INTO run (section_id, user_id, time, proof, yt_id, verified)
+                                VALUES ($1, $2, $3, $4, $5, $6)"#
+                            ).bind(section_id).bind(u.id).bind(time).bind(proof).bind(yt_id).bind(true).execute(&pool).await;
+
+                            match res {
+                                Ok(_) => Ok(()),
+                                Err(_) => Err(ServerFnError::ServerError(
+                                    "Database insert failed".to_string(),
+                                )),
+                            }
+                        }
+                    }
+                    Err(_) => Err(ServerFnError::ServerError(
+                        "Failed to parse yt api response".to_string(),
+                    )),
+                },
+                Err(_) => Err(ServerFnError::ServerError(
+                    "YT api request failed".to_string(),
+                )),
+            }
+        }
+        None => Err(ServerFnError::ServerError("Not logged in".to_string())),
+    }
 }

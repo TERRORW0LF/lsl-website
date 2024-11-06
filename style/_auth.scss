@@ -15,11 +15,19 @@
         font-weight: 700;
     }
 
+    .row {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
     .input-box {
         position: relative;
+        width: 100%;
         padding-top: 2rem;
 
-        input {
+        input,
+        select {
             width: 100%;
             padding: 0.5rem;
             font-size: 0.8rem;
@@ -36,7 +44,7 @@
 
         input:focus~.placeholder,
         input:not([value=""])~.placeholder {
-            top: 1.5rem;
+            top: 1.6rem;
             padding: 0 0.2rem;
             margin-left: 0.5rem;
             font-size: 0.6rem;
@@ -55,6 +63,18 @@
 
         input:invalid:not([value=""], :focus)~.error {
             display: inline;
+        }
+
+        .indicator {
+            position: absolute;
+            top: 1.6rem;
+            left: 0.5rem;
+            padding: 0 0.2rem;
+            margin-left: 0.5rem;
+            font-size: 0.6rem;
+            color: var(--grey-200);
+            background-color: var(--grey-1000);
+            pointer-events: none;
         }
 
         .placeholder {

@@ -1,8 +1,8 @@
 use std::{cmp::Ordering, collections::HashMap};
 
 use crate::{
-    api::{get_runs_category, MapRuns, PartialRun},
-    auth::{get_user, Login, Logout, Register, User},
+    api::{get_maps, get_runs_category, MapRuns, PartialRun},
+    auth::{get_user, Login, Logout, Register, Submit, User},
     error_template::{AppError, ErrorTemplate},
 };
 use leptos::{either::*, prelude::*};
@@ -174,6 +174,12 @@ fn AppRouter(
                         <Logout action=logout />
                     }
                 }
+            />
+            <ProtectedRoute
+                path=path!("submit")
+                condition=move || user.get().map(|n| n.map_or(false, |u| u.is_some()))
+                redirect_path=|| "/login"
+                view=Submit
             />
             <LeaderboardRouter />
         </Routes>
@@ -530,8 +536,10 @@ pub fn LeaderboardEntry(map: MapRuns) -> impl IntoView {
                                 EitherOf3::A(
                                     view! {
                                         <iframe
-                                            src=r.yt_id.clone().unwrap()
-                                                + "?autoplay=1&rel=0&modestbranding=1&showinfo=0"
+                                            src=format!(
+                                                "https://www.youtube.com/embed/{}?autoplay=1&rel=0&modestbranding=1&showinfo=0",
+                                                r.yt_id.clone().unwrap(),
+                                            )
                                             allowfullscreen
                                         ></iframe>
                                     },
@@ -685,7 +693,6 @@ pub fn Register(action: ServerAction<Register>) -> impl IntoView {
                 <div class="input-box">
                     <input
                         type="text"
-                        maxlength="32"
                         name="username"
                         id="username"
                         required
@@ -754,5 +761,143 @@ pub fn Logout(action: ServerAction<Logout>) -> impl IntoView {
                 </button>
             </ActionForm>
         </div>
+    }
+}
+
+#[component]
+pub fn Submit() -> impl IntoView {
+    let action = ServerAction::<Submit>::new();
+    let maps = Resource::new(
+        || (),
+        |_| async move { get_maps("2.00".to_string(), "1".to_string(), "Standard".to_string()).await },
+    );
+    view! {
+        <Title text="Submit" />
+        <section id="box">
+            <h1>"Submit"</h1>
+            <ActionForm action=action>
+                <div class="row">
+                    <div class="input-box">
+                        <input
+                            type="text"
+                            name="code"
+                            id="code"
+                            minlength="4"
+                            maxlength="4"
+                            pattern="[1-5][SG][A-Z0-9]{2}"
+                            value=""
+                            onkeyup="this.setAttribute('value', this.value);"
+                        />
+                        <label for="code" class="placeholder">
+                            "Code"
+                        </label>
+                        <label for="code" class="error">
+                            "Invalid code."
+                        </label>
+                    </div>
+                    <div class="input-box">
+                        <input
+                            type="number"
+                            name="time"
+                            id="time"
+                            min="0"
+                            step="0.001"
+                            value=""
+                            onkeyup="this.setAttribute('value', this.value);"
+                        />
+                        <label for="time" class="placeholder">
+                            "Time"
+                        </label>
+                        <label for="time" class="error">
+                            "Invalid time."
+                        </label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="input-box">
+                        <select name="layout" id="layout">
+                            <option value="1">"Layout 1"</option>
+                            <option value="2">"Layout 2"</option>
+                            <option value="3">"Layout 3"</option>
+                            <option value="4">"Layout 4"</option>
+                            <option value="5">"Layout 5"</option>
+                        </select>
+                        <label for="layout" class="indicator">
+                            "Layout"
+                        </label>
+                    </div>
+                    <div class="input-box">
+                        <select name="category" id="category">
+                            <option value="Standard">"Standard"</option>
+                            <option value="Gravspeed">"Gravspeed"</option>
+                        </select>
+                        <label for="category" class="indicator">
+                            "Category"
+                        </label>
+                    </div>
+                </div>
+                <div class="input-box">
+                    <input list="maps" name="map" id="map" />
+                    <datalist id="maps">
+                        {move || match maps.get() {
+                            None => {
+                                log::debug!("Loading");
+                                EitherOf3::A(
+                                    view! {
+                                        <option hidden disabled selected value="">
+                                            {"Test".to_string()}
+                                        </option>
+                                    },
+                                )
+                            }
+                            Some(maps) => {
+                                match maps {
+                                    Ok(v) => {
+                                        log::debug!("Values");
+                                        EitherOf3::B(
+                                            v
+                                                .into_iter()
+                                                .map(|m| view! { <option value="Test">"Test"</option> })
+                                                .collect_view(),
+                                        )
+                                    }
+                                    Err(_) => {
+                                        log::debug!("Error");
+                                        EitherOf3::C(
+                                            view! {
+                                                <option hidden disabled selected value=""></option>
+                                            },
+                                        )
+                                    }
+                                }
+                            }
+                        }}
+                    </datalist>
+                    <label for="map" class="placeholder">
+                        "Map"
+                    </label>
+                </div>
+                <div class="input-box">
+                    <input
+                        type="text"
+                        name="yt_id"
+                        id="yt_id"
+                        required
+                        minlength="11"
+                        maxlength="11"
+                        pattern="[a-zA-Z0-9_\\-]*"
+                        value=""
+                        onkeyup="this.setAttribute('value', this.value);"
+                    />
+                    <label for="yt_id" class="placeholder">
+                        "Video ID"
+                    </label>
+                    <label for="yt_id" class="error">
+                        "Invalid video ID."
+                    </label>
+                </div>
+                <input type="submit" class="button" value="Submit" />
+            </ActionForm>
+        </section>
     }
 }

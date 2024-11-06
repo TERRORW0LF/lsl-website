@@ -63,6 +63,16 @@ pub struct MapRuns {
     pub runs: Vec<PartialRun>,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
+pub struct Map(String);
+
+impl std::fmt::Display for Map {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 #[server(GetRunsId, prefix="/api", endpoint="runs/id", input=GetUrl)]
 pub async fn get_runs_id(id: i32) -> Result<MapRuns, ServerFnError> {
     let pool = crate::auth::ssr::pool()?;
@@ -155,6 +165,36 @@ pub async fn get_runs_latest(offset: i32) -> Result<Vec<Run>, ServerFnError> {
         Ok(runs) => {
             res_opts.append_header(CACHE_CONTROL, HeaderValue::from_static("max-age=300"));
             Ok(runs)
+        }
+        Err(_) => Err(ServerFnError::ServerError(
+            "Database lookup failed".to_string(),
+        )),
+    }
+}
+
+#[server(GetMaps, prefix="/api", endpoint="maps", input=GetUrl)]
+pub async fn get_maps(
+    patch: String,
+    layout: String,
+    category: String,
+) -> Result<Vec<Map>, ServerFnError> {
+    let pool = crate::auth::ssr::pool()?;
+    let res_opts = expect_context::<leptos_axum::ResponseOptions>();
+    let res = sqlx::query_as::<_, Map>(
+        r#"SELECT map
+        FROM section
+        WHERE patch=$1 AND layout=$2 AND category=$3"#,
+    )
+    .bind(patch)
+    .bind(layout)
+    .bind(category)
+    .fetch_all(&pool)
+    .await;
+
+    match res {
+        Ok(maps) => {
+            res_opts.append_header(CACHE_CONTROL, HeaderValue::from_static("max-age=604800"));
+            Ok(maps)
         }
         Err(_) => Err(ServerFnError::ServerError(
             "Database lookup failed".to_string(),
