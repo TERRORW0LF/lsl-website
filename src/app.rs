@@ -767,10 +767,6 @@ pub fn Logout(action: ServerAction<Logout>) -> impl IntoView {
 #[component]
 pub fn Submit() -> impl IntoView {
     let action = ServerAction::<Submit>::new();
-    let maps = Resource::new(
-        || (),
-        |_| async move { get_maps("2.00".to_string(), "1".to_string(), "Standard".to_string()).await },
-    );
     view! {
         <Title text="Submit" />
         <section id="box">
@@ -839,39 +835,34 @@ pub fn Submit() -> impl IntoView {
                 <div class="input-box">
                     <input list="maps" name="map" id="map" />
                     <datalist id="maps">
-                        {move || match maps.get() {
-                            None => {
-                                log::debug!("Loading");
-                                EitherOf3::A(
-                                    view! {
-                                        <option hidden disabled selected value="">
-                                            {"Test".to_string()}
-                                        </option>
-                                    },
-                                )
-                            }
-                            Some(maps) => {
-                                match maps {
-                                    Ok(v) => {
-                                        log::debug!("Values");
-                                        EitherOf3::B(
-                                            v
-                                                .into_iter()
-                                                .map(|m| view! { <option value="Test">"Test"</option> })
-                                                .collect_view(),
-                                        )
-                                    }
-                                    Err(_) => {
-                                        log::debug!("Error");
-                                        EitherOf3::C(
-                                            view! {
-                                                <option hidden disabled selected value=""></option>
-                                            },
-                                        )
-                                    }
+                        <Await
+                            future=get_maps(
+                                "2.00".to_string(),
+                                "1".to_string(),
+                                "Standard".to_string(),
+                            )
+                            let:maps
+                        >
+                            {match maps {
+                                Ok(v) => {
+                                    log::debug!("Values");
+                                    Either::Left(
+                                        v
+                                            .into_iter()
+                                            .map(|m| {
+                                                view! {
+                                                    <option value=m.to_string()>{m.to_string()}</option>
+                                                }
+                                            })
+                                            .collect_view(),
+                                    )
                                 }
-                            }
-                        }}
+                                Err(_) => {
+                                    log::debug!("Error");
+                                    Either::Right(view! {})
+                                }
+                            }}
+                        </Await>
                     </datalist>
                     <label for="map" class="placeholder">
                         "Map"
