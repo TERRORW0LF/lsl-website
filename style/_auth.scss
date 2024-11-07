@@ -15,6 +15,12 @@
         font-weight: 700;
     }
 
+    .text {
+        padding-top: 1rem;
+        font-size: 0.8rem;
+        color: var(--grey-500);
+    }
+
     .row {
         display: flex;
         justify-content: space-between;
@@ -49,7 +55,7 @@
             margin-left: 0.5rem;
             font-size: 0.6rem;
             color: var(--info);
-            background-color: var(--grey-1000);
+            background-color: var(--grey-800);
         }
 
         input:not(:focus, [value=""])~.placeholder {
@@ -73,7 +79,7 @@
             margin-left: 0.5rem;
             font-size: 0.6rem;
             color: var(--grey-200);
-            background-color: var(--grey-1000);
+            background-color: var(--grey-800);
             pointer-events: none;
         }
 
@@ -85,7 +91,7 @@
             font-size: 0.8rem;
             color: var(--grey-500);
             pointer-events: none;
-            transition: 0.3s;
+            transition: 0.1s;
         }
 
         .error {

@@ -314,48 +314,74 @@ pub async fn logout() -> Result<(), ServerFnError> {
     Ok(())
 }
 
+#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
+struct SectionId {
+    id: i32,
+}
+
 #[server(Submit, prefix="/api", endpoint="runs/submit", input=PostUrl)]
-pub async fn submit(section_id: i32, time: Decimal, yt_id: String) -> Result<(), ServerFnError> {
+pub async fn submit(
+    layout: String,
+    category: String,
+    map: String,
+    time: Decimal,
+    yt_id: String,
+) -> Result<(), ServerFnError> {
     use self::ssr::*;
 
     let auth = auth()?;
+    let pool = pool()?;
 
-    match auth.current_user {
-        Some(u) => {
-            match reqwest::get(format!(
-                "https://www.googleapis.com/youtube/v3/videos?part=id&id={yt_id}"
-            ))
-            .await
-            {
-                Ok(r) => match r.json::<YtJson>().await {
-                    Ok(v) => {
-                        if v.page_info.total_results == 0 {
-                            Err(ServerFnError::ServerError("Video not found".to_string()))
-                        } else {
-                            let proof = format!("https://youtube.com/watch?v={yt_id}");
-                            let pool = pool()?;
-                            let res = sqlx::query(
+    let id = sqlx::query_as::<_, SectionId>(
+        r#"SELECT id
+    FROM section
+    WHERE patch='2.00' AND layout=$1 AND category=$2 AND map=$3"#,
+    )
+    .bind(layout)
+    .bind(category)
+    .bind(map)
+    .fetch_one(&pool)
+    .await;
+
+    match id {
+        Ok(section_id) => match auth.current_user {
+            Some(u) => {
+                match reqwest::get(format!(
+                    "https://www.googleapis.com/youtube/v3/videos?key={}&part=id&id={yt_id}",
+                    env!("YT_KEY")
+                ))
+                .await
+                {
+                    Ok(r) => match r.json::<YtJson>().await {
+                        Ok(v) => {
+                            if v.page_info.total_results == 0 {
+                                Err(ServerFnError::ServerError("Video not found".to_string()))
+                            } else {
+                                let proof = format!("https://youtube.com/watch?v={yt_id}");
+                                let res = sqlx::query(
                                 r#"INSERT INTO run (section_id, user_id, time, proof, yt_id, verified)
                                 VALUES ($1, $2, $3, $4, $5, $6)"#
-                            ).bind(section_id).bind(u.id).bind(time).bind(proof).bind(yt_id).bind(true).execute(&pool).await;
+                            ).bind(section_id.id).bind(u.id).bind(time).bind(proof).bind(yt_id).bind(true).execute(&pool).await;
 
-                            match res {
-                                Ok(_) => Ok(()),
-                                Err(_) => Err(ServerFnError::ServerError(
-                                    "Database insert failed".to_string(),
-                                )),
+                                match res {
+                                    Ok(_) => Ok(()),
+                                    Err(_) => Err(ServerFnError::ServerError(
+                                        "Database insert failed".to_string(),
+                                    )),
+                                }
                             }
                         }
-                    }
+                        Err(_) => Err(ServerFnError::ServerError(
+                            "Failed to parse yt api response".to_string(),
+                        )),
+                    },
                     Err(_) => Err(ServerFnError::ServerError(
-                        "Failed to parse yt api response".to_string(),
+                        "YT api request failed".to_string(),
                     )),
-                },
-                Err(_) => Err(ServerFnError::ServerError(
-                    "YT api request failed".to_string(),
-                )),
+                }
             }
-        }
-        None => Err(ServerFnError::ServerError("Not logged in".to_string())),
+            None => Err(ServerFnError::ServerError("Not logged in".to_string())),
+        },
+        Err(_) => Err(ServerFnError::ServerError("Section not found".to_string())),
     }
 }

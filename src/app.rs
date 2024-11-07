@@ -1,7 +1,7 @@
 use std::{cmp::Ordering, collections::HashMap};
 
 use crate::{
-    api::{get_maps, get_runs_category, MapRuns, PartialRun},
+    api::{get_maps, get_runs_category, Map, MapRuns, PartialRun},
     auth::{get_user, Login, Logout, Register, Submit, User},
     error_template::{AppError, ErrorTemplate},
 };
@@ -15,6 +15,7 @@ use leptos_router::{
 };
 use rust_decimal::Decimal;
 use wasm_bindgen::{prelude::Closure, JsCast};
+use web_sys::Event;
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
@@ -767,6 +768,11 @@ pub fn Logout(action: ServerAction<Logout>) -> impl IntoView {
 #[component]
 pub fn Submit() -> impl IntoView {
     let action = ServerAction::<Submit>::new();
+    let (code, set_code) = signal(String::new());
+    let (time, set_time) = signal(String::new());
+    let (map, set_map) = signal(String::new());
+    let (yt, set_yt) = signal(String::new());
+    let (maps, set_maps) = signal::<Option<Vec<Map>>>(None);
     view! {
         <Title text="Submit" />
         <section id="box">
@@ -776,16 +782,35 @@ pub fn Submit() -> impl IntoView {
                     <div class="input-box">
                         <input
                             type="text"
-                            name="code"
                             id="code"
                             minlength="4"
                             maxlength="4"
-                            pattern="[1-5][SG][A-Z0-9]{2}"
-                            value=""
-                            onkeyup="this.setAttribute('value', this.value);"
+                            pattern="[1-5][sgSG][a-zA-Z0-9]{2}"
+                            value=code
+                            on:input=move |e| {
+                                let c = event_target_value::<Event>(&e);
+                                match maps.get() {
+                                    Some(ms) => {
+                                        let id: String = c
+                                            .chars()
+                                            .into_iter()
+                                            .skip(2)
+                                            .take(2)
+                                            .collect::<String>()
+                                            .to_ascii_uppercase();
+                                        let m = ms.into_iter().find(|m| m.code[2..4] == id);
+                                        match m {
+                                            Some(m) => set_map(m.name),
+                                            None => set_map(String::new()),
+                                        };
+                                    }
+                                    None => {}
+                                };
+                                set_code(c)
+                            }
                         />
                         <label for="code" class="placeholder">
-                            "Code"
+                            "Code ∗"
                         </label>
                         <label for="code" class="error">
                             "Invalid code."
@@ -793,13 +818,14 @@ pub fn Submit() -> impl IntoView {
                     </div>
                     <div class="input-box">
                         <input
+                            required
                             type="number"
                             name="time"
                             id="time"
                             min="0"
                             step="0.001"
-                            value=""
-                            onkeyup="this.setAttribute('value', this.value);"
+                            value=time
+                            on:input=move |e| set_time(event_target_value::<Event>(&e))
                         />
                         <label for="time" class="placeholder">
                             "Time"
@@ -811,7 +837,17 @@ pub fn Submit() -> impl IntoView {
                 </div>
                 <div class="row">
                     <div class="input-box">
-                        <select name="layout" id="layout">
+                        <select
+                            required
+                            name="layout"
+                            id="layout"
+                            prop:selectedIndex=move || {
+                                code.get()
+                                    .chars()
+                                    .next()
+                                    .map_or(0, |c| c.to_digit(10).unwrap_or(0) as i32 - 1)
+                            }
+                        >
                             <option value="1">"Layout 1"</option>
                             <option value="2">"Layout 2"</option>
                             <option value="3">"Layout 3"</option>
@@ -823,7 +859,24 @@ pub fn Submit() -> impl IntoView {
                         </label>
                     </div>
                     <div class="input-box">
-                        <select name="category" id="category">
+                        <select
+                            required
+                            name="category"
+                            id="category"
+                            prop:selectedIndex=move || {
+                                code.get()
+                                    .chars()
+                                    .nth(1)
+                                    .map_or(
+                                        0,
+                                        |c| match c.to_ascii_lowercase() {
+                                            's' => 0,
+                                            'g' => 1,
+                                            _ => -1,
+                                        },
+                                    )
+                            }
+                        >
                             <option value="Standard">"Standard"</option>
                             <option value="Gravspeed">"Gravspeed"</option>
                         </select>
@@ -833,7 +886,14 @@ pub fn Submit() -> impl IntoView {
                     </div>
                 </div>
                 <div class="input-box">
-                    <input list="maps" name="map" id="map" />
+                    <input
+                        list="maps"
+                        name="map"
+                        id="map"
+                        value=map
+                        prop:value=map
+                        on:input=move |e| set_map(event_target_value::<Event>(&e))
+                    />
                     <datalist id="maps">
                         <Await
                             future=get_maps(
@@ -845,22 +905,19 @@ pub fn Submit() -> impl IntoView {
                         >
                             {match maps {
                                 Ok(v) => {
-                                    log::debug!("Values");
+                                    set_maps(Some(v.clone()));
                                     Either::Left(
                                         v
                                             .into_iter()
                                             .map(|m| {
                                                 view! {
-                                                    <option value=m.to_string()>{m.to_string()}</option>
+                                                    <option value=m.name.clone()>{m.name.clone()}</option>
                                                 }
                                             })
                                             .collect_view(),
                                     )
                                 }
-                                Err(_) => {
-                                    log::debug!("Error");
-                                    Either::Right(view! {})
-                                }
+                                Err(_) => Either::Right(view! {}),
                             }}
                         </Await>
                     </datalist>
@@ -877,8 +934,8 @@ pub fn Submit() -> impl IntoView {
                         minlength="11"
                         maxlength="11"
                         pattern="[a-zA-Z0-9_\\-]*"
-                        value=""
-                        onkeyup="this.setAttribute('value', this.value);"
+                        value=yt
+                        on:input=move |e| set_yt(event_target_value::<Event>(&e))
                     />
                     <label for="yt_id" class="placeholder">
                         "Video ID"
@@ -887,6 +944,7 @@ pub fn Submit() -> impl IntoView {
                         "Invalid video ID."
                     </label>
                 </div>
+                <div class="text">"∗ Fields are optional."</div>
                 <input type="submit" class="button" value="Submit" />
             </ActionForm>
         </section>

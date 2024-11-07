@@ -63,14 +63,12 @@ pub struct MapRuns {
     pub runs: Vec<PartialRun>,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
-pub struct Map(String);
-
-impl std::fmt::Display for Map {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
+pub struct Map {
+    #[cfg_attr(feature = "ssr", sqlx(rename = "map"))]
+    pub name: String,
+    pub code: String,
 }
 
 #[server(GetRunsId, prefix="/api", endpoint="runs/id", input=GetUrl)]
@@ -181,7 +179,7 @@ pub async fn get_maps(
     let pool = crate::auth::ssr::pool()?;
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let res = sqlx::query_as::<_, Map>(
-        r#"SELECT map
+        r#"SELECT map, code
         FROM section
         WHERE patch=$1 AND layout=$2 AND category=$3"#,
     )

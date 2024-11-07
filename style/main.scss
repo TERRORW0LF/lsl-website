@@ -106,7 +106,7 @@ nav.split-row-nav {
 	justify-content: space-between;
 	text-align: center;
 	width: 100%;
-	height: 3rem;
+	min-height: 3rem;
 	font-size: 1rem;
 	font-weight: 600;
 	color: var(--grey-1000);
@@ -114,6 +114,10 @@ nav.split-row-nav {
 
 	.left-row-nav,
 	.right-row-nav {
+		display: flex;
+		flex-direction: row;
+		flex-wrap: wrap;
+
 		>* {
 			margin: 1rem 2rem;
 
@@ -137,19 +141,15 @@ nav.split-row-nav {
 		}
 	}
 
-	.right-row-nav * {
-		text-align: right;
-	}
-
 	.left-row-nav {
-		display: flex;
-		flex-direction: row;
 		justify-content: flex-start;
 	}
 
 	.right-row-nav {
-		display: flex;
-		flex-direction: row;
 		justify-content: flex-end;
+	}
+
+	.right-row-nav * {
+		text-align: right;
 	}
 }
