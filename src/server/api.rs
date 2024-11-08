@@ -73,7 +73,7 @@ pub struct Map {
 
 #[server(GetRunsId, prefix="/api", endpoint="runs/id", input=GetUrl)]
 pub async fn get_runs_id(id: i32) -> Result<MapRuns, ServerFnError> {
-    let pool = crate::auth::ssr::pool()?;
+    let pool = crate::server::auth::ssr::pool()?;
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let res = sqlx::query_as::<_, MapRuns>(
         r#"SELECT s.id, s.patch, s.layout, s.category, s.map,
@@ -108,7 +108,7 @@ pub async fn get_runs_category(
     layout: String,
     category: String,
 ) -> Result<Vec<MapRuns>, ServerFnError> {
-    let pool = crate::auth::ssr::pool()?;
+    let pool = crate::server::auth::ssr::pool()?;
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let res = sqlx::query_as::<_, MapRuns>(
         r#"SELECT s.id, patch, layout, category, map,
@@ -143,21 +143,41 @@ pub async fn get_runs_category(
 }
 
 #[server(GetRunsLatest, prefix="/api", endpoint="runs/latest", input=GetUrl)]
-pub async fn get_runs_latest(offset: i32) -> Result<Vec<Run>, ServerFnError> {
-    let pool = crate::auth::ssr::pool()?;
+pub async fn get_runs_latest(user_id: Option<i64>, offset: i32) -> Result<Vec<Run>, ServerFnError> {
+    let pool = crate::server::auth::ssr::pool()?;
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
-    let res = sqlx::query_as::<_, Run>(
-        r#"SELECT run.id, run.created_at, section_id, patch,
-            layout, category, map, user_id, "name", time, proof, yt_id, verified, is_pb, is_wr
-        FROM run
-        INNER JOIN section ON section_id = section.id
-        INNER JOIN "user" ON user_id = u.id
-        ORDER BY run.created_at DESC
-        LIMIT 50 OFFSET $1"#,
-    )
-    .bind(offset)
-    .fetch_all(&pool)
-    .await;
+    let res = match user_id {
+        Some(id) => {
+            sqlx::query_as::<_, Run>(
+                r#"SELECT run.id, run.created_at, section_id, patch, layout, 
+                    category, map, user_id, "name", time, proof, yt_id, verified, is_pb, is_wr
+                FROM run
+                INNER JOIN section s ON section_id = s.id
+                INNER JOIN "user" u ON user_id = u.id
+                WHERE user_id = $1
+                ORDER BY run.created_at DESC
+                LIMIT 50 OFFSET $2"#,
+            )
+            .bind(id)
+            .bind(offset)
+            .fetch_all(&pool)
+            .await
+        }
+        None => {
+            sqlx::query_as::<_, Run>(
+                r#"SELECT run.id, run.created_at, section_id, patch, layout, 
+                    category, map, user_id, "name", time, proof, yt_id, verified, is_pb, is_wr
+                FROM run
+                INNER JOIN section ON section_id = section.id
+                INNER JOIN "user" ON user_id = u.id
+                ORDER BY run.created_at DESC
+                LIMIT 50 OFFSET $1"#,
+            )
+            .bind(offset)
+            .fetch_all(&pool)
+            .await
+        }
+    };
 
     match res {
         Ok(runs) => {
@@ -176,7 +196,7 @@ pub async fn get_maps(
     layout: String,
     category: String,
 ) -> Result<Vec<Map>, ServerFnError> {
-    let pool = crate::auth::ssr::pool()?;
+    let pool = crate::server::auth::ssr::pool()?;
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let res = sqlx::query_as::<_, Map>(
         r#"SELECT map, code

@@ -1,4 +1,8 @@
-use leptos::prelude::{server, server_fn::codec::PostUrl, ServerFnError};
+use http::HeaderValue;
+use leptos::{
+    logging::log,
+    prelude::{server, server_fn::codec::PostUrl, ServerFnError},
+};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -274,16 +278,18 @@ pub async fn login(
     username: String,
     password: String,
     remember: Option<String>,
+    redirect: Option<String>,
 ) -> Result<(), ServerFnError> {
     use self::ssr::*;
 
     let pool = pool()?;
     let auth = auth()?;
+    log!("{}", redirect.clone().unwrap());
 
     let (user, UserPasshash(expected_passhash)) =
         User::get_from_username_with_passhash(username, &pool)
             .await
-            .ok_or_else(|| ServerFnError::new("User does not exist."))?;
+            .ok_or_else(|| ServerFnError::new("Incorrect username or password."))?;
     let pwd_parsed = match PasswordHash::new(&expected_passhash) {
         Ok(v) => v,
         Err(_) => return Err(ServerFnError::new("Login failed: Failed to hash password")),
@@ -293,11 +299,18 @@ pub async fn login(
         Ok(_) => {
             auth.login_user(user.id);
             auth.remember_user(remember.is_some());
-            leptos_axum::redirect("/");
+            match HeaderValue::from_str(&format!("/{}", redirect.unwrap_or(String::new()))) {
+                Ok(r) => {
+                    let s = r.to_str().unwrap_or("/");
+                    log!("{s}");
+                    leptos_axum::redirect(s)
+                }
+                Err(_) => leptos_axum::redirect("/"),
+            };
             Ok(())
         }
         Err(_) => Err(ServerFnError::ServerError(
-            "Password does not match.".to_string(),
+            "incorrect username or password.".to_string(),
         )),
     }
 }

@@ -1,7 +1,6 @@
-pub mod api;
 pub mod app;
-pub mod auth;
-pub mod error_template;
+pub mod components;
+pub mod server;
 #[cfg(feature = "ssr")]
 pub mod state;
 

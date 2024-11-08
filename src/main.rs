@@ -1,6 +1,6 @@
 use axum_session::SessionLayer;
 use axum_session_auth::AuthSessionLayer;
-use lsl_website::{auth::ssr::AuthSession, state::AppState};
+use lsl_website::{server::auth::ssr::AuthSession, state::AppState};
 use tower::ServiceBuilder;
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
@@ -17,13 +17,12 @@ use http::Request;
 use leptos::prelude::*;
 use leptos_axum::{generate_route_list, handle_server_fns_with_context, LeptosRoutes};
 use leptos_router::RouteListing;
-use lsl_website::{app::*, auth::ssr::User};
+use lsl_website::{app::*, server::auth::ssr::{connect_to_database, User},};
 use rustls_acme::{caches::DirCache, AcmeConfig};
 use sqlx::PgPool;
 use tokio_stream::StreamExt;
 use axum_session::SessionConfig;
 use axum_session_sqlx::SessionPgSessionStore;
-use lsl_website::auth::ssr::{connect_to_database};
 
 async fn leptos_handler(
     state: State<AppState>,
