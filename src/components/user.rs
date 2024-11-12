@@ -9,10 +9,18 @@ use web_sys::Event;
 
 #[component]
 pub fn Login(action: ServerAction<Login>) -> impl IntoView {
+    let result = Signal::derive(move || action.value().get().unwrap_or(Ok(())));
+    let (username, set_username) = signal(String::new());
+    let (password, set_password) = signal(String::new());
     view! {
         <Title text="Log In" />
         <section id="box">
             <h1>"Sign In"</h1>
+            <ErrorBoundary fallback=|_| {
+                view! { <span class="error">"🛈 Incorrect username or password"</span> }
+            }>
+                <div class="hidden">{result}</div>
+            </ErrorBoundary>
             <ActionForm action=action>
                 <input
                     hidden
@@ -27,8 +35,8 @@ pub fn Login(action: ServerAction<Login>) -> impl IntoView {
                         name="username"
                         id="username"
                         required
-                        value=""
-                        onkeyup="this.setAttribute('value', this.value);"
+                        value=username
+                        on:input=move |e| set_username(event_target_value::<Event>(&e))
                     />
                     <label for="username" class="placeholder">
                         "Username"
@@ -40,8 +48,8 @@ pub fn Login(action: ServerAction<Login>) -> impl IntoView {
                         name="password"
                         id="password"
                         required
-                        value=""
-                        onkeyup="this.setAttribute('value', this.value);"
+                        value=password
+                        on:input=move |e| set_password(event_target_value::<Event>(&e))
                     />
                     <label for="password" class="placeholder">
                         "Password"
@@ -64,10 +72,19 @@ pub fn Login(action: ServerAction<Login>) -> impl IntoView {
 
 #[component]
 pub fn Register(action: ServerAction<Register>) -> impl IntoView {
+    let result = Signal::derive(move || action.value().get().unwrap_or(Ok(())));
+    let (username, set_username) = signal(String::new());
+    let (password, set_password) = signal(String::new());
+    let (password_rep, set_password_rep) = signal(String::new());
     view! {
         <Title text="Sign Up" />
         <section id="box">
             <h1>"Sign Up"</h1>
+            <ErrorBoundary fallback=|_| {
+                view! { <span class="error">"🛈 Username already exists"</span> }
+            }>
+                <div class="hidden">{result}</div>
+            </ErrorBoundary>
             <ActionForm action=action>
                 <div class="input-box">
                     <input
@@ -78,8 +95,8 @@ pub fn Register(action: ServerAction<Register>) -> impl IntoView {
                         minlength="2"
                         maxlength="32"
                         pattern="[a-zA-Z_\\-\\.]*"
-                        value=""
-                        onkeyup="this.setAttribute('value', this.value);"
+                        value=username
+                        on:input=move |e| set_username(event_target_value::<Event>(&e))
                     />
                     <label for="username" class="placeholder">
                         "Username"
@@ -96,8 +113,8 @@ pub fn Register(action: ServerAction<Register>) -> impl IntoView {
                         required
                         minlength="8"
                         maxlength="256"
-                        value=""
-                        onkeyup="this.setAttribute('value', this.value);"
+                        value=password
+                        on:input=move |e| set_password(event_target_value::<Event>(&e))
                     />
                     <label for="password" class="placeholder">
                         "Password"
@@ -109,14 +126,18 @@ pub fn Register(action: ServerAction<Register>) -> impl IntoView {
                 <div class="input-box">
                     <input
                         type="password"
-                        name="password"
+                        name="password_confirm"
                         id="password-repeat"
                         required
-                        value=""
-                        onkeyup="this.setAttribute('value', this.value);"
+                        pattern=password
+                        value=password_rep
+                        on:input=move |e| set_password_rep(event_target_value::<Event>(&e))
                     />
                     <label for="password-repeat" class="placeholder">
                         "Repeat password"
+                    </label>
+                    <label for="password-repeat" class="error">
+                        "Passwords must match."
                     </label>
                 </div>
                 <div class="remember">
@@ -146,6 +167,7 @@ pub fn Logout(action: ServerAction<Logout>) -> impl IntoView {
 #[component]
 pub fn Submit() -> impl IntoView {
     let action = ServerAction::<Submit>::new();
+    let result = Signal::derive(move || action.value().get().unwrap_or(Ok(())));
     let (code, set_code) = signal(String::new());
     let (time, set_time) = signal(String::new());
     let (map, set_map) = signal(String::new());
@@ -155,6 +177,27 @@ pub fn Submit() -> impl IntoView {
         <Title text="Submit" />
         <section id="box">
             <h1>"Submit"</h1>
+            <ErrorBoundary fallback=|e| {
+                view! {
+                    <span class="error">
+                        {move || {
+                            let m = e.get().iter().next().unwrap().1.to_string();
+                            leptos::logging::log!("{m}");
+                            match m.as_str() {
+                                "error running server function: Section not found" => {
+                                    "🛈 Invalid map name"
+                                }
+                                "error running server function: Video not found" => {
+                                    "🛈 YT video id does not exist"
+                                }
+                                _ => "🛈 Something went wrong. Try again",
+                            }
+                        }}
+                    </span>
+                }
+            }>
+                <div class="hidden">{result}</div>
+            </ErrorBoundary>
             <ActionForm action=action>
                 <div class="row">
                     <div class="input-box">

@@ -1,8 +1,5 @@
 use http::HeaderValue;
-use leptos::{
-    logging::log,
-    prelude::{server, server_fn::codec::PostUrl, ServerFnError},
-};
+use leptos::prelude::{server, server_fn::codec::PostUrl, ServerFnError};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -284,7 +281,6 @@ pub async fn login(
 
     let pool = pool()?;
     let auth = auth()?;
-    log!("{}", redirect.clone().unwrap());
 
     let (user, UserPasshash(expected_passhash)) =
         User::get_from_username_with_passhash(username, &pool)
@@ -300,11 +296,7 @@ pub async fn login(
             auth.login_user(user.id);
             auth.remember_user(remember.is_some());
             match HeaderValue::from_str(&format!("/{}", redirect.unwrap_or(String::new()))) {
-                Ok(r) => {
-                    let s = r.to_str().unwrap_or("/");
-                    log!("{s}");
-                    leptos_axum::redirect(s)
-                }
+                Ok(r) => leptos_axum::redirect(r.to_str().unwrap_or("/")),
                 Err(_) => leptos_axum::redirect("/"),
             };
             Ok(())

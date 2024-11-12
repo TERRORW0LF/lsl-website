@@ -21,6 +21,14 @@
         color: var(--grey-500);
     }
 
+    .error {
+        display: block;
+        margin-top: 1rem;
+        margin-bottom: -1.5rem;
+        font-size: 0.8rem;
+        color: var(--error);
+    }
+
     .row {
         display: flex;
         justify-content: space-between;
