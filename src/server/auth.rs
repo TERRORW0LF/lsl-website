@@ -1,3 +1,4 @@
+use crate::server::api::ApiError;
 use http::HeaderValue;
 use leptos::prelude::{server, server_fn::codec::PostUrl, ServerFnError};
 use rust_decimal::Decimal;
@@ -237,9 +238,7 @@ pub async fn register(
     use self::ssr::*;
 
     if password != password_confirm {
-        return Err(ServerFnError::ServerError(
-            "Passwords did not match.".to_string(),
-        ));
+        return Err(ApiError::InvalidCredentials.into());
     }
 
     let pool = pool()?;
@@ -256,7 +255,8 @@ pub async fn register(
         .bind(username.clone())
         .bind(pwd_hash)
         .execute(&pool)
-        .await?;
+        .await
+        .map_err(|_| ApiError::AlreadyExists)?;
 
     let user = User::get_from_username(username, &pool)
         .await
@@ -285,26 +285,21 @@ pub async fn login(
     let (user, UserPasshash(expected_passhash)) =
         User::get_from_username_with_passhash(username, &pool)
             .await
-            .ok_or_else(|| ServerFnError::new("Incorrect username or password."))?;
-    let pwd_parsed = match PasswordHash::new(&expected_passhash) {
-        Ok(v) => v,
-        Err(_) => return Err(ServerFnError::new("Login failed: Failed to hash password")),
-    };
+            .ok_or(ApiError::InvalidCredentials)?;
+    let pwd_parsed = PasswordHash::new(&expected_passhash)
+        .map_err(|_| ServerFnError::new("Login failed: Failed to hash password"))?;
 
-    match Argon2::default().verify_password(password.as_bytes(), &pwd_parsed) {
-        Ok(_) => {
-            auth.login_user(user.id);
-            auth.remember_user(remember.is_some());
-            match HeaderValue::from_str(&format!("/{}", redirect.unwrap_or(String::new()))) {
-                Ok(r) => leptos_axum::redirect(r.to_str().unwrap_or("/")),
-                Err(_) => leptos_axum::redirect("/"),
-            };
-            Ok(())
-        }
-        Err(_) => Err(ServerFnError::ServerError(
-            "incorrect username or password.".to_string(),
-        )),
-    }
+    Argon2::default()
+        .verify_password(password.as_bytes(), &pwd_parsed)
+        .map_err(|_| ApiError::InvalidCredentials)?;
+
+    auth.login_user(user.id);
+    auth.remember_user(remember.is_some());
+    match HeaderValue::from_str(&format!("/{}", redirect.unwrap_or(String::new()))) {
+        Ok(r) => leptos_axum::redirect(r.to_str().unwrap_or("/")),
+        Err(_) => leptos_axum::redirect("/"),
+    };
+    Ok(())
 }
 
 #[server(Logout, prefix="/api", endpoint="user/logout", input=PostUrl)]
@@ -337,56 +332,51 @@ pub async fn submit(
     let auth = auth()?;
     let pool = pool()?;
 
-    let id = sqlx::query_as::<_, SectionId>(
+    let u = auth.current_user.ok_or(ApiError::Unauthenticated)?;
+    let section_id = sqlx::query_as::<_, SectionId>(
         r#"SELECT id
-    FROM section
-    WHERE patch='2.00' AND layout=$1 AND category=$2 AND map=$3"#,
+        FROM section
+        WHERE patch='2.00' AND layout=$1 AND category=$2 AND map=$3"#,
     )
     .bind(layout)
     .bind(category)
     .bind(map)
     .fetch_one(&pool)
-    .await;
+    .await
+    .map_err(|_| ApiError::InvalidSection)?;
 
-    match id {
-        Ok(section_id) => match auth.current_user {
-            Some(u) => {
-                match reqwest::get(format!(
-                    "https://www.googleapis.com/youtube/v3/videos?key={}&part=id&id={yt_id}",
-                    env!("YT_KEY")
-                ))
-                .await
-                {
-                    Ok(r) => match r.json::<YtJson>().await {
-                        Ok(v) => {
-                            if v.page_info.total_results == 0 {
-                                Err(ServerFnError::ServerError("Video not found".to_string()))
-                            } else {
-                                let proof = format!("https://youtube.com/watch?v={yt_id}");
-                                let res = sqlx::query(
-                                r#"INSERT INTO run (section_id, user_id, time, proof, yt_id, verified)
-                                VALUES ($1, $2, $3, $4, $5, $6)"#
-                            ).bind(section_id.id).bind(u.id).bind(time).bind(proof).bind(yt_id).bind(true).execute(&pool).await;
+    let r = reqwest::get(format!(
+        "https://www.googleapis.com/youtube/v3/videos?key={}&part=id&id={yt_id}",
+        env!("YT_KEY")
+    ))
+    .await
+    .map_err(|_| ServerFnError::new("YT api request failed"))?;
 
-                                match res {
-                                    Ok(_) => Ok(()),
-                                    Err(_) => Err(ServerFnError::ServerError(
-                                        "Database insert failed".to_string(),
-                                    )),
-                                }
-                            }
-                        }
-                        Err(_) => Err(ServerFnError::ServerError(
-                            "Failed to parse yt api response".to_string(),
-                        )),
-                    },
-                    Err(_) => Err(ServerFnError::ServerError(
-                        "YT api request failed".to_string(),
-                    )),
-                }
-            }
-            None => Err(ServerFnError::ServerError("Not logged in".to_string())),
-        },
-        Err(_) => Err(ServerFnError::ServerError("Section not found".to_string())),
+    let v = r
+        .json::<YtJson>()
+        .await
+        .map_err(|_| ServerFnError::new("Failed to parse yt api response"))?;
+
+    if v.page_info.total_results == 0 {
+        Err(ApiError::InvalidYtId.into())
+    } else {
+        let proof = format!("https://youtube.com/watch?v={yt_id}");
+        let res = sqlx::query(
+            r#"INSERT INTO run (section_id, user_id, time, proof, yt_id, verified)
+                                    VALUES ($1, $2, $3, $4, $5, $6)"#,
+        )
+        .bind(section_id.id)
+        .bind(u.id)
+        .bind(time)
+        .bind(proof)
+        .bind(yt_id)
+        .bind(true)
+        .execute(&pool)
+        .await;
+
+        match res {
+            Ok(_) => Ok(()),
+            Err(_) => Err(ServerFnError::new("Database insert failed")),
+        }
     }
 }

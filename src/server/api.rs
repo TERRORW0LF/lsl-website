@@ -3,6 +3,21 @@ use http::{header::CACHE_CONTROL, HeaderValue};
 use leptos::prelude::{expect_context, server, server_fn::codec::GetUrl, ServerFnError};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
+
+#[derive(Clone, Debug, Error)]
+pub enum ApiError {
+    #[error("Unauthenticated")]
+    Unauthenticated,
+    #[error("Invalid Credentials")]
+    InvalidCredentials,
+    #[error("Invalid Section")]
+    InvalidSection,
+    #[error("Invalid YouTube ID")]
+    InvalidYtId,
+    #[error("Already Exists")]
+    AlreadyExists,
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
@@ -96,9 +111,7 @@ pub async fn get_runs_id(id: i32) -> Result<MapRuns, ServerFnError> {
             res_opts.append_header(CACHE_CONTROL, HeaderValue::from_static("max-age=900"));
             Ok(runs)
         }
-        Err(_) => Err(ServerFnError::ServerError(
-            "Database lookup failed".to_string(),
-        )),
+        Err(_) => Err(ApiError::InvalidSection.into()),
     }
 }
 
