@@ -3,19 +3,25 @@ use http::{header::CACHE_CONTROL, HeaderValue};
 use leptos::prelude::{expect_context, server, server_fn::codec::GetUrl, ServerFnError};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
+use strum::EnumString;
 use thiserror::Error;
 
-#[derive(Clone, Debug, Error)]
+#[derive(Clone, Debug, Error, EnumString, Serialize, Deserialize)]
 pub enum ApiError {
     #[error("Unauthenticated")]
+    #[strum(to_string = "Unauthenticated")]
     Unauthenticated,
     #[error("Invalid Credentials")]
+    #[strum(to_string = "Invalid Credentials")]
     InvalidCredentials,
     #[error("Invalid Section")]
+    #[strum(to_string = "Invalid Section")]
     InvalidSection,
     #[error("Invalid YouTube ID")]
+    #[strum(to_string = "Invalid YouTube ID")]
     InvalidYtId,
     #[error("Already Exists")]
+    #[strum(to_string = "Already Exists")]
     AlreadyExists,
 }
 
@@ -87,7 +93,7 @@ pub struct Map {
 }
 
 #[server(GetRunsId, prefix="/api", endpoint="runs/id", input=GetUrl)]
-pub async fn get_runs_id(id: i32) -> Result<MapRuns, ServerFnError> {
+pub async fn get_runs_id(id: i32) -> Result<MapRuns, ServerFnError<ApiError>> {
     let pool = crate::server::auth::ssr::pool()?;
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let runs = sqlx::query_as::<_, MapRuns>(
@@ -116,7 +122,7 @@ pub async fn get_runs_category(
     patch: String,
     layout: String,
     category: String,
-) -> Result<Vec<MapRuns>, ServerFnError> {
+) -> Result<Vec<MapRuns>, ServerFnError<ApiError>> {
     let pool = crate::server::auth::ssr::pool()?;
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let runs = sqlx::query_as::<_, MapRuns>(
@@ -136,14 +142,17 @@ pub async fn get_runs_category(
     .bind(category)
     .fetch_all(&pool)
     .await
-    .map_err(|_| ServerFnError::new("Database lookup failed"))?;
+    .map_err(|_| ServerFnError::ServerError("Database lookup failed".to_string()))?;
 
     res_opts.append_header(CACHE_CONTROL, HeaderValue::from_static("max-age=900"));
     Ok(runs)
 }
 
 #[server(GetRunsLatest, prefix="/api", endpoint="runs/latest", input=GetUrl)]
-pub async fn get_runs_latest(user_id: Option<i64>, offset: i32) -> Result<Vec<Run>, ServerFnError> {
+pub async fn get_runs_latest(
+    user_id: Option<i64>,
+    offset: i32,
+) -> Result<Vec<Run>, ServerFnError<ApiError>> {
     let pool = crate::server::auth::ssr::pool()?;
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let runs = match user_id {
@@ -178,7 +187,7 @@ pub async fn get_runs_latest(user_id: Option<i64>, offset: i32) -> Result<Vec<Ru
             .await
         }
     }
-    .map_err(|_| ServerFnError::new("Database lookup failed"))?;
+    .map_err(|_| ServerFnError::ServerError("Database lookup failed".to_string()))?;
 
     res_opts.append_header(CACHE_CONTROL, HeaderValue::from_static("max-age=300"));
     Ok(runs)
@@ -189,7 +198,7 @@ pub async fn get_maps(
     patch: String,
     layout: String,
     category: String,
-) -> Result<Vec<Map>, ServerFnError> {
+) -> Result<Vec<Map>, ServerFnError<ApiError>> {
     let pool = crate::server::auth::ssr::pool()?;
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let maps = sqlx::query_as::<_, Map>(
@@ -202,7 +211,7 @@ pub async fn get_maps(
     .bind(category)
     .fetch_all(&pool)
     .await
-    .map_err(|_| ServerFnError::new("Database lookup failed"))?;
+    .map_err(|_| ServerFnError::ServerError("Database lookup failed".to_string()))?;
 
     res_opts.append_header(CACHE_CONTROL, HeaderValue::from_static("max-age=604800"));
     Ok(maps)

@@ -54,6 +54,8 @@ struct YtJson {
 
 #[cfg(feature = "ssr")]
 pub mod ssr {
+    use crate::server::api::ApiError;
+
     pub use super::{User, UserPasshash};
     pub use argon2::{
         password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
@@ -88,13 +90,13 @@ pub mod ssr {
             .unwrap()
     }
 
-    pub fn pool() -> Result<PgPool, ServerFnError> {
+    pub fn pool() -> Result<PgPool, ServerFnError<ApiError>> {
         use_context::<PgPool>().ok_or_else(|| ServerFnError::ServerError("Pool missing.".into()))
     }
 
-    pub fn auth() -> Result<AuthSession, ServerFnError> {
+    pub fn auth() -> Result<AuthSession, ServerFnError<ApiError>> {
         use_context::<AuthSession>()
-            .ok_or_else(|| ServerFnError::ServerError("Auth session missing.".into()))
+            .ok_or_else(|| ServerFnError::ServerError("Auth session missing.".to_string()))
     }
 
     impl User {
@@ -234,7 +236,7 @@ pub async fn register(
     password: String,
     password_confirm: String,
     remember: Option<String>,
-) -> Result<(), ServerFnError> {
+) -> Result<(), ServerFnError<ApiError>> {
     use self::ssr::*;
 
     if password != password_confirm {
@@ -248,7 +250,11 @@ pub async fn register(
     let argon2 = Argon2::default();
     let pwd_hash = match argon2.hash_password(password.as_bytes(), &salt) {
         Ok(v) => v.to_string(),
-        Err(_) => return Err(ServerFnError::new("Signup failed: Failed to hash password")),
+        Err(_) => {
+            return Err(ServerFnError::ServerError(
+                "Signup failed: Failed to hash password".to_string(),
+            ))
+        }
     };
 
     sqlx::query("INSERT INTO \"user\" (name, password) VALUES ($1,$2)")
@@ -260,7 +266,9 @@ pub async fn register(
 
     let user = User::get_from_username(username, &pool)
         .await
-        .ok_or_else(|| ServerFnError::new("Signup failed: User does not exist."))?;
+        .ok_or_else(|| {
+            ServerFnError::ServerError("Signup failed: User does not exist.".to_string())
+        })?;
 
     auth.login_user(user.id);
     auth.remember_user(remember.is_some());
@@ -276,7 +284,7 @@ pub async fn login(
     password: String,
     remember: Option<String>,
     redirect: Option<String>,
-) -> Result<(), ServerFnError> {
+) -> Result<(), ServerFnError<ApiError>> {
     use self::ssr::*;
 
     let pool = pool()?;
@@ -286,8 +294,9 @@ pub async fn login(
         User::get_from_username_with_passhash(username, &pool)
             .await
             .ok_or(ApiError::InvalidCredentials)?;
-    let pwd_parsed = PasswordHash::new(&expected_passhash)
-        .map_err(|_| ServerFnError::new("Login failed: Failed to hash password"))?;
+    let pwd_parsed = PasswordHash::new(&expected_passhash).map_err(|_| {
+        ServerFnError::ServerError("Login failed: Failed to hash password".to_string())
+    })?;
 
     Argon2::default()
         .verify_password(password.as_bytes(), &pwd_parsed)
@@ -303,7 +312,7 @@ pub async fn login(
 }
 
 #[server(Logout, prefix="/api", endpoint="user/logout", input=PostUrl)]
-pub async fn logout() -> Result<(), ServerFnError> {
+pub async fn logout() -> Result<(), ServerFnError<ApiError>> {
     use self::ssr::*;
 
     let auth = auth()?;
@@ -326,7 +335,7 @@ pub async fn submit(
     map: String,
     time: Decimal,
     yt_id: String,
-) -> Result<(), ServerFnError> {
+) -> Result<(), ServerFnError<ApiError>> {
     use self::ssr::*;
 
     let auth = auth()?;
@@ -350,12 +359,12 @@ pub async fn submit(
         env!("YT_KEY")
     ))
     .await
-    .map_err(|_| ServerFnError::new("YT api request failed"))?;
+    .map_err(|_| ServerFnError::ServerError("YT api request failed".to_string()))?;
 
     let v = r
         .json::<YtJson>()
         .await
-        .map_err(|_| ServerFnError::new("Failed to parse yt api response"))?;
+        .map_err(|_| ServerFnError::ServerError("Failed to parse yt api response".to_string()))?;
 
     if v.page_info.total_results == 0 {
         Err(ApiError::InvalidYtId.into())
@@ -376,7 +385,9 @@ pub async fn submit(
 
         match res {
             Ok(_) => Ok(()),
-            Err(_) => Err(ServerFnError::new("Database insert failed")),
+            Err(_) => Err(ServerFnError::ServerError(
+                "Database insert failed".to_string(),
+            )),
         }
     }
 }

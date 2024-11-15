@@ -1,5 +1,5 @@
 use crate::server::{
-    api::{get_maps, Map},
+    api::{get_maps, ApiError, Map},
     auth::{Login, Logout, Register, Submit},
 };
 use leptos::{either::*, prelude::*};
@@ -16,8 +16,30 @@ pub fn Login(action: ServerAction<Login>) -> impl IntoView {
         <Title text="Log In" />
         <section id="box">
             <h1>"Sign In"</h1>
-            <ErrorBoundary fallback=|_| {
-                view! { <span class="error">"🛈 Incorrect username or password"</span> }
+            <ErrorBoundary fallback=|e| {
+                view! {
+                    <span class="error">
+                        {move || {
+                            let e = e.get().into_iter().next().unwrap().1;
+                            if e.is::<ServerFnError<ApiError>>() {
+                                let e = e.downcast_ref::<ServerFnError<ApiError>>().unwrap();
+                                match e {
+                                    ServerFnError::WrappedServerError(err) => {
+                                        match err {
+                                            ApiError::InvalidCredentials => {
+                                                "🛈 Incorrect username or password"
+                                            }
+                                            _ => "🛈 Something went wrong. Try again",
+                                        }
+                                    }
+                                    _ => "🛈 Something went wrong. Try again",
+                                }
+                            } else {
+                                "🛈 Something went wrong. Try again"
+                            }
+                        }}
+                    </span>
+                }
             }>
                 <div class="hidden">{result}</div>
             </ErrorBoundary>
@@ -80,8 +102,28 @@ pub fn Register(action: ServerAction<Register>) -> impl IntoView {
         <Title text="Sign Up" />
         <section id="box">
             <h1>"Sign Up"</h1>
-            <ErrorBoundary fallback=|_| {
-                view! { <span class="error">"🛈 Username already exists"</span> }
+            <ErrorBoundary fallback=|e| {
+                view! {
+                    <span class="error">
+                        {move || {
+                            let e = e.get().into_iter().next().unwrap().1;
+                            if e.is::<ServerFnError<ApiError>>() {
+                                let e = e.downcast_ref::<ServerFnError<ApiError>>().unwrap();
+                                match e {
+                                    ServerFnError::WrappedServerError(err) => {
+                                        match err {
+                                            ApiError::AlreadyExists => "🛈 Username already exists",
+                                            _ => "🛈 Something went wrong. Try again",
+                                        }
+                                    }
+                                    _ => "🛈 Something went wrong. Try again",
+                                }
+                            } else {
+                                "🛈 Something went wrong. Try again"
+                            }
+                        }}
+                    </span>
+                }
             }>
                 <div class="hidden">{result}</div>
             </ErrorBoundary>
@@ -181,16 +223,21 @@ pub fn Submit() -> impl IntoView {
                 view! {
                     <span class="error">
                         {move || {
-                            let m = e.get().iter().next().unwrap().1.to_string();
-                            leptos::logging::log!("{m}");
-                            match m.as_str() {
-                                "error running server function: Section not found" => {
-                                    "🛈 Invalid map name"
+                            let e = e.get().into_iter().next().unwrap().1;
+                            if e.is::<ServerFnError<ApiError>>() {
+                                let e = e.downcast_ref::<ServerFnError<ApiError>>().unwrap();
+                                match e {
+                                    ServerFnError::WrappedServerError(err) => {
+                                        match err {
+                                            ApiError::InvalidSection => "🛈 Invalid map name",
+                                            ApiError::InvalidYtId => "🛈 YT video id does not exist",
+                                            _ => "🛈 Something went wrong. Try again",
+                                        }
+                                    }
+                                    _ => "🛈 Something went wrong. Try again",
                                 }
-                                "error running server function: Video not found" => {
-                                    "🛈 YT video id does not exist"
-                                }
-                                _ => "🛈 Something went wrong. Try again",
+                            } else {
+                                "🛈 Something went wrong. Try again"
                             }
                         }}
                     </span>
