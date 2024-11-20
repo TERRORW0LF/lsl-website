@@ -3,7 +3,7 @@ use crate::{
         error_template::{AppError, ErrorTemplate},
         home::HomePage,
         leaderboard::{Leaderboard, Section},
-        user::{Login, Logout, Register, Submit},
+        user::{Dashboard, Login, Register, Submit},
     },
     server::auth::{get_user, Login, Logout, Register, User},
 };
@@ -120,7 +120,7 @@ pub fn App() -> impl IntoView {
                                             EitherOf3::C(
                                                 view! {
                                                     <A href="/dashboard">
-                                                        <img src=format!("/cdn/users/{}.jpg", user.id) />
+                                                        <img src=format!("/cdn/users/{}.jpg", user.pfp) />
                                                     </A>
                                                 },
                                             )
@@ -168,12 +168,7 @@ fn AppRouter(
                 path=path!("dashboard")
                 condition=move || user.get().map(|n| n.map_or(false, |u| u.is_some()))
                 redirect_path=|| "/login?redirect=dashboard"
-                view=move || {
-                    view! {
-                        <h1>"Settings"</h1>
-                        <Logout action=logout />
-                    }
-                }
+                view=move || view! { <Dashboard user logout /> }
             />
             <ProtectedRoute
                 path=path!("submit")

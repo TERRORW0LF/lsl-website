@@ -1,6 +1,6 @@
 use crate::server::{
     api::{get_maps, ApiError, Map},
-    auth::{Login, Logout, Register, Submit},
+    auth::{Login, Logout, Register, Submit, User},
 };
 use leptos::{either::*, prelude::*};
 use leptos_meta::Title;
@@ -415,6 +415,84 @@ pub fn Submit() -> impl IntoView {
                 <div class="text">"∗ Fields are optional."</div>
                 <input type="submit" class="button" value="Submit" />
             </ActionForm>
+        </section>
+    }
+}
+
+#[component]
+pub fn Dashboard(
+    user: Resource<Result<Option<User>, ServerFnError>>,
+    logout: ServerAction<Logout>,
+) -> impl IntoView {
+    view! {
+        <Title text="Dashboard" />
+        <section id="dashboard">
+            <Suspense fallback=|| view! { <h1>"Loading..."</h1> }>
+                <h1>"Dashboard"</h1>
+                <div class="section">
+                    <h2>"Profile"</h2>
+                    <div class="row">
+                        <img
+                            class="pfp"
+                            src=move || {
+                                format!(
+                                    "/cdn/users/{}.jpg",
+                                    user
+                                        .get()
+                                        .map(|res| {
+                                            res.unwrap_or_default().unwrap_or_default().pfp
+                                        })
+                                        .unwrap_or("default.jpg".into()),
+                                )
+                            }
+                        />
+                        <button class="primary">"Change Avatar"</button>
+                    </div>
+                    <div class="row">
+                        <div class="narrow">
+                            <h3>"USERNAME"</h3>
+                            <h4>
+                                {move || {
+                                    user.get()
+                                        .map(|user| user.map(|user| user.map(|user| user.username)))
+                                }}
+                            </h4>
+                        </div>
+                        <button class="secondary">"Edit"</button>
+                    </div>
+                    <div class="row">
+                        <div class="narrow">
+                            <h3>"PASSWORD"</h3>
+                            <h4>"********"</h4>
+                        </div>
+                        <button class="secondary">"Edit"</button>
+                    </div>
+                    <h2>"Account"</h2>
+                    <div>
+                        <h4>"Log Out"</h4>
+                        <p>"Logging out of your account will only affect this device."</p>
+                        <button
+                            class="primary"
+                            on:click=move |_| {
+                                let _ = logout.dispatch(Logout {});
+                            }
+                        >
+                            "Log Out"
+                        </button>
+                    </div>
+                    <div>
+                        <h4>"Account Removal"</h4>
+                        <p>
+                            "Removing your account will anonymize your account and prevent"
+                            "you from logging in. This action will not delete runs from the leaderboard."
+                        </p>
+                        <button class="secondary">"Disable Account"</button>
+                    </div>
+                </div>
+                <div class="section">
+                    <h2>"Submissions"</h2>
+                </div>
+            </Suspense>
         </section>
     }
 }

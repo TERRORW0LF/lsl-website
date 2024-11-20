@@ -1,0 +1,88 @@
+#dashboard {
+    margin: 5rem 0.5rem;
+    margin-left: max(0.5rem, 15vw + min(85vw - 100ch, 0px));
+    max-width: 100ch;
+    font-size: 0.7rem;
+
+    .row {
+        display: flex;
+        gap: 1rem;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .pfp {
+        width: 5rem;
+        height: 5rem;
+        margin-top: 0.5rem;
+        margin-bottom: 0.5rem;
+        border-radius: 50%;
+    }
+
+    h1 {
+        margin-bottom: 2rem;
+        font-size: 2rem;
+        font-weight: 800;
+    }
+
+    h2 {
+        margin-top: 3rem;
+        margin-bottom: 1.5rem;
+        font-size: 1.5rem;
+        font-weight: 650;
+    }
+
+    h3 {
+        margin-top: 1rem;
+        margin-bottom: 0.1rem;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: var(--grey-200);
+    }
+
+    h4 {
+        margin-top: 1.5rem;
+        margin-bottom: 0.2rem;
+        font-size: 0.8rem;
+        font-weight: 700;
+    }
+
+    p {
+        margin-bottom: 0.8rem;
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: var(--grey-500);
+        line-height: normal;
+    }
+
+    .narrow {
+        h3 {
+            margin-bottom: 0.2rem;
+        }
+
+        h4 {
+            margin-top: 0.2rem;
+        }
+    }
+
+    button {
+        padding: 0.4rem 1.5rem;
+        font-size: 0.7rem;
+        font-weight: 700;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+    .primary {
+        color: var(--grey-0);
+        background-color: var(--primary-800);
+        border: 2px solid var(--primary-800);
+    }
+
+    .secondary {
+        color: var(--grey-0);
+        background-color: transparent;
+        border: 2px solid var(--grey-500);
+    }
+}

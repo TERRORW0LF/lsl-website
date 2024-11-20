@@ -10,6 +10,7 @@ pub struct User {
     pub id: i64,
     pub username: String,
     pub permissions: HashSet<String>,
+    pub pfp: String,
 }
 
 // Explicitly is not Serialize/Deserialize!
@@ -24,6 +25,7 @@ impl Default for User {
             id: -1,
             username: "Guest".into(),
             permissions,
+            pfp: "default".into(),
         }
     }
 }
@@ -195,6 +197,7 @@ pub mod ssr {
         pub name: String,
         pub created_at: DateTime<Local>,
         pub password: String,
+        pub pfp: String,
     }
 
     impl PgUser {
@@ -214,6 +217,7 @@ pub mod ssr {
                     } else {
                         HashSet::<String>::new()
                     },
+                    pfp: self.pfp,
                 },
                 UserPasshash(self.password),
             )
