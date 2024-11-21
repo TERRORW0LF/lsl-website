@@ -1,11 +1,12 @@
 use crate::server::{
     api::{get_maps, ApiError, Map},
-    auth::{Login, Logout, Register, Submit, User},
+    auth::{Login, Logout, Register, Submit, Update, User},
 };
 use leptos::{either::*, prelude::*};
 use leptos_meta::Title;
 use leptos_router::{components::A, hooks::use_query_map};
-use web_sys::Event;
+use wasm_bindgen::JsCast;
+use web_sys::{Event, FormData, HtmlFormElement, SubmitEvent};
 
 #[component]
 pub fn Login(action: ServerAction<Login>) -> impl IntoView {
@@ -189,20 +190,6 @@ pub fn Register(action: ServerAction<Register>) -> impl IntoView {
                 <input type="submit" class="button" value="Sign Up" />
             </ActionForm>
         </section>
-    }
-}
-
-#[component]
-pub fn Logout(action: ServerAction<Logout>) -> impl IntoView {
-    view! {
-        <Title text="Log Out" />
-        <div id="loginbox">
-            <ActionForm action=action>
-                <button type="submit" class="button">
-                    "Log Out"
-                </button>
-            </ActionForm>
-        </div>
     }
 }
 
@@ -422,10 +409,17 @@ pub fn Submit() -> impl IntoView {
 #[component]
 pub fn Dashboard(
     user: Resource<Result<Option<User>, ServerFnError>>,
+    update: ServerAction<Update>,
+    update_pfp: Action<FormData, Result<(), ServerFnError<ApiError>>, LocalStorage>,
     logout: ServerAction<Logout>,
 ) -> impl IntoView {
+    let (show_name, set_show_name) = signal(false);
+    let (show_avatar, set_show_avatar) = signal(false);
     view! {
         <Title text="Dashboard" />
+        <div class="toner" class:hidden=move || !*show_name.read() && !*show_avatar.read() />
+        <Username action=update show=show_name />
+        <Avatar action=update_pfp show=show_avatar />
         <section id="dashboard">
             <Suspense fallback=|| view! { <h1>"Loading..."</h1> }>
                 <h1>"Dashboard"</h1>
@@ -445,8 +439,11 @@ pub fn Dashboard(
                                         .unwrap_or("default.jpg".into()),
                                 )
                             }
+                            on:click=move |_| set_show_avatar(true)
                         />
-                        <button class="primary">"Change Avatar"</button>
+                        <button class="primary" on:click=move |_| set_show_avatar(true)>
+                            "Change Avatar"
+                        </button>
                     </div>
                     <div class="row">
                         <div class="narrow">
@@ -458,7 +455,9 @@ pub fn Dashboard(
                                 }}
                             </h4>
                         </div>
-                        <button class="secondary">"Edit"</button>
+                        <button class="secondary" on:click=move |_| set_show_name(true)>
+                            "Edit"
+                        </button>
                     </div>
                     <div class="row">
                         <div class="narrow">
@@ -493,6 +492,130 @@ pub fn Dashboard(
                     <h2>"Submissions"</h2>
                 </div>
             </Suspense>
+        </section>
+    }
+}
+
+#[component]
+fn Username(action: ServerAction<Update>, show: ReadSignal<bool>) -> impl IntoView {
+    let result = Signal::derive(move || action.value().get().unwrap_or(Ok(())));
+    let (username, set_username) = signal(String::new());
+    view! {
+        <section id="box" class:hidden=move || !show.get()>
+            <h1>"Edit Username"</h1>
+            <ErrorBoundary fallback=|e| {
+                view! {
+                    <span class="error">
+                        {move || {
+                            let e = e.get().into_iter().next().unwrap().1;
+                            if e.is::<ServerFnError<ApiError>>() {
+                                let e = e.downcast_ref::<ServerFnError<ApiError>>().unwrap();
+                                match e {
+                                    ServerFnError::WrappedServerError(err) => {
+                                        match err {
+                                            ApiError::AlreadyExists => "🛈 Username already exists",
+                                            _ => "🛈 Something went wrong. Try again",
+                                        }
+                                    }
+                                    _ => "🛈 Something went wrong. Try again",
+                                }
+                            } else {
+                                "🛈 Something went wrong. Try again"
+                            }
+                        }}
+                    </span>
+                }
+            }>
+                <div class="hidden">{result}</div>
+            </ErrorBoundary>
+            <ActionForm action>
+                <div class="input-box">
+                    <input
+                        type="text"
+                        name="username"
+                        id="username"
+                        required
+                        minlength="2"
+                        maxlength="32"
+                        pattern="[a-zA-Z_\\-\\.]*"
+                        value=username
+                        on:input=move |e| set_username(event_target_value::<Event>(&e))
+                    />
+                    <label for="username" class="placeholder">
+                        "Username"
+                    </label>
+                    <label for="username" class="error">
+                        "Username must adhere to [a-zA-Z_-.]{2,32}."
+                    </label>
+                </div>
+                <input type="submit" class="button" value="Save" />
+            </ActionForm>
+        </section>
+    }
+}
+
+#[component]
+fn Avatar(
+    action: Action<FormData, Result<(), ServerFnError<ApiError>>, LocalStorage>,
+    show: ReadSignal<bool>,
+) -> impl IntoView {
+    let result = Signal::derive(move || action.value().get().unwrap_or(Ok(())));
+    let (username, set_username) = signal(String::new());
+    view! {
+        <section id="box" class:hidden=move || !show.get()>
+            <h1>"Change Avatar"</h1>
+            <ErrorBoundary fallback=|e| {
+                view! {
+                    <span class="error">
+                        {move || {
+                            let e = e.get().into_iter().next().unwrap().1;
+                            if e.is::<ServerFnError<ApiError>>() {
+                                let e = e.downcast_ref::<ServerFnError<ApiError>>().unwrap();
+                                match e {
+                                    ServerFnError::WrappedServerError(err) => {
+                                        match err {
+                                            ApiError::AlreadyExists => "🛈 Username already exists",
+                                            _ => "🛈 Something went wrong. Try again",
+                                        }
+                                    }
+                                    _ => "🛈 Something went wrong. Try again",
+                                }
+                            } else {
+                                "🛈 Something went wrong. Try again"
+                            }
+                        }}
+                    </span>
+                }
+            }>
+                <div class="hidden">{result}</div>
+            </ErrorBoundary>
+            <form on:submit=move |ev: SubmitEvent| {
+                ev.prevent_default();
+                let target = ev.target().unwrap().unchecked_into::<HtmlFormElement>();
+                let form_data = FormData::new_with_form(&target).unwrap();
+                action.dispatch_local(form_data);
+            }>
+                <div class="input-box">
+                    <input
+                        type="text"
+                        name="username"
+                        id="username"
+                        required
+                        minlength="2"
+                        maxlength="32"
+                        pattern="[a-zA-Z_\\-\\.]*"
+                        value=username
+                        on:input=move |e| set_username(event_target_value::<Event>(&e))
+                    />
+                    <label for="username" class="placeholder">
+                        "Username"
+                    </label>
+                    <label for="username" class="error">
+                        "Username must adhere to [a-zA-Z_-.]{2,32}."
+                    </label>
+                </div>
+                <input type="submit" class="button" value="Save" />
+            </form>
         </section>
     }
 }

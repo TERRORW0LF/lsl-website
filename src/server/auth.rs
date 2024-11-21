@@ -3,6 +3,7 @@ use http::HeaderValue;
 use leptos::prelude::{server, server_fn::codec::PostUrl, ServerFnError};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
+use server_fn::codec::{MultipartData, MultipartFormData};
 use std::collections::HashSet;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -52,6 +53,12 @@ struct YtJson {
     etag: String,
     items: Vec<YtVidJson>,
     page_info: YtPageInfo,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
+pub struct PasswordUpdate {
+    old: String,
+    new: String,
 }
 
 #[cfg(feature = "ssr")]
@@ -223,6 +230,20 @@ pub mod ssr {
             )
         }
     }
+
+    pub fn verify_password(
+        pass_hash: String,
+        password: String,
+    ) -> Result<(), ServerFnError<ApiError>> {
+        let pwd_parsed = PasswordHash::new(&pass_hash).map_err(|_| {
+            ServerFnError::ServerError("Login failed: Failed to hash password".to_string())
+        })?;
+
+        Argon2::default()
+            .verify_password(password.as_bytes(), &pwd_parsed)
+            .map_err(|_| ApiError::InvalidCredentials)?;
+        Ok(())
+    }
 }
 
 #[server(GetUser, prefix="/api", endpoint="user/get", input=PostUrl)]
@@ -298,13 +319,7 @@ pub async fn login(
         User::get_from_username_with_passhash(username, &pool)
             .await
             .ok_or(ApiError::InvalidCredentials)?;
-    let pwd_parsed = PasswordHash::new(&expected_passhash).map_err(|_| {
-        ServerFnError::ServerError("Login failed: Failed to hash password".to_string())
-    })?;
-
-    Argon2::default()
-        .verify_password(password.as_bytes(), &pwd_parsed)
-        .map_err(|_| ApiError::InvalidCredentials)?;
+    verify_password(expected_passhash, password)?;
 
     auth.login_user(user.id);
     auth.remember_user(remember.is_some());
@@ -313,6 +328,136 @@ pub async fn login(
         Err(_) => leptos_axum::redirect("/"),
     };
     Ok(())
+}
+
+#[server(Update, prefix="/api", endpoint="user/update", input=PostUrl)]
+pub async fn update(
+    username: Option<String>,
+    password: Option<PasswordUpdate>,
+) -> Result<(), ServerFnError<ApiError>> {
+    use self::ssr::*;
+
+    let auth = auth()?;
+    if !auth.current_user.is_some() {
+        Err(ApiError::Unauthenticated)?;
+    }
+    let curr_user = auth.current_user.as_ref().unwrap();
+    let pool = pool()?;
+
+    if let Some(name) = username {
+        sqlx::query(
+            r#"UPDATE "user"
+            SET name = $1
+            WHERE id = $2"#,
+        )
+        .bind(name)
+        .bind(curr_user.id)
+        .execute(&pool)
+        .await
+        .map_err(|_| ApiError::AlreadyExists)?;
+        auth.cache_clear_user(curr_user.id);
+    }
+    if let Some(pw) = password {
+        let (_, UserPasshash(expected_passhash)) =
+            User::get_from_username_with_passhash(curr_user.username.clone(), &pool)
+                .await
+                .ok_or(ApiError::InvalidCredentials)?;
+        verify_password(expected_passhash, pw.old)?;
+        sqlx::query(
+            r#"UPDATE "user"
+            SET password = $1
+            WHERE id = $2"#,
+        )
+        .bind(pw.new)
+        .bind(curr_user.id)
+        .execute(&pool)
+        .await
+        .map_err(|_| ServerFnError::<ApiError>::ServerError("Database update failed".into()))?;
+        auth.cache_clear_user(curr_user.id);
+    }
+    Ok(())
+}
+
+#[server(Pfp, prefix="/api", endpoint="user/update", input=MultipartFormData)]
+pub async fn pfp(data: MultipartData) -> Result<(), ServerFnError<ApiError>> {
+    use crate::server::auth::ssr::{auth, pool};
+    use rand::{distributions::Alphanumeric, thread_rng, Rng};
+    use std::fs::{remove_file, File};
+    use std::io::{BufWriter, Write};
+
+    let auth = auth()?;
+    let pool = pool()?;
+
+    if !auth.current_user.is_some() {
+        return Err(ApiError::Unauthenticated)?;
+    }
+    let user = auth.current_user.as_ref().unwrap();
+
+    let mut data = data.into_inner().unwrap();
+    let mut count = 0;
+
+    if let Ok(Some(mut pfp)) = data.next_field().await {
+        if pfp.name().unwrap_or_default() != "pfp" {
+            return Err(ServerFnError::<ApiError>::Args(
+                "Pfp must be only field".into(),
+            ));
+        }
+        if pfp.file_name().unwrap_or_default().ends_with(".jpg") {
+            return Err(ServerFnError::<ApiError>::Args("Must be jpg file".into()));
+        }
+
+        let name: String = thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(64)
+            .map(char::from)
+            .collect();
+        let file = File::options()
+            .append(true)
+            .create_new(true)
+            .open(format!("../cdn/users/{name}.jpg"));
+        match file {
+            Ok(file) => {
+                let mut writer = BufWriter::new(file);
+                while let Ok(Some(chunk)) = pfp.chunk().await {
+                    let len = chunk.len();
+                    count += len;
+                    if count > 1024 * 1024 {
+                        return Err(ServerFnError::<ApiError>::Args("Too big".into()));
+                    }
+                    writer.write_all(&chunk).map_err(|_| {
+                        ServerFnError::<ApiError>::ServerError("Failed to save file".into())
+                    })?;
+                }
+                writer.flush().map_err(|_| {
+                    ServerFnError::<ApiError>::ServerError("Failed to save file".into())
+                })?;
+                sqlx::query(
+                    r#"UPDATE "user"
+                    SET pfp = $1
+                    WHERE id = $2"#,
+                )
+                .bind("")
+                .bind("")
+                .execute(&pool)
+                .await
+                .map_err(|_| {
+                    let _ = remove_file(format!("../cdn/users/{name}.jpg"));
+                    ServerFnError::<ApiError>::ServerError("Database update failed".into())
+                })?;
+
+                let _ = remove_file(format!("../cdn/users/{}.jpg", user.pfp));
+                auth.cache_clear_user(user.id);
+                Ok(())
+            }
+            Err(_) => Err(ServerFnError::<ApiError>::ServerError(
+                "File creation failed".into(),
+            )),
+        }
+    } else {
+        Err(ServerFnError::<ApiError>::Args(
+            "Pfp must be only field".into(),
+        ))
+    }
 }
 
 #[server(Logout, prefix="/api", endpoint="user/logout", input=PostUrl)]

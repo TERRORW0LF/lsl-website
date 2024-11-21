@@ -5,7 +5,10 @@ use crate::{
         leaderboard::{Leaderboard, Section},
         user::{Dashboard, Login, Register, Submit},
     },
-    server::auth::{get_user, Login, Logout, Register, User},
+    server::{
+        api::ApiError,
+        auth::{get_user, pfp, Login, Logout, Register, Update, User},
+    },
 };
 use leptos::{either::*, prelude::*};
 use leptos_meta::MetaTags;
@@ -15,6 +18,7 @@ use leptos_router::{
     path, MatchNestedRoutes,
 };
 use wasm_bindgen::{prelude::Closure, JsCast};
+use web_sys::FormData;
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
@@ -45,12 +49,16 @@ pub fn App() -> impl IntoView {
     let login = ServerAction::<Login>::new();
     let logout = ServerAction::<Logout>::new();
     let register = ServerAction::<Register>::new();
+    let update = ServerAction::<Update>::new();
+    let update_pfp = Action::new_local(|data: &FormData| pfp(data.clone().into()));
     let user = Resource::new(
         move || {
             (
                 login.version().get(),
                 register.version().get(),
                 logout.version().get(),
+                update.version().get(),
+                update_pfp.version().get(),
             )
         },
         move |_| get_user(),
@@ -132,7 +140,7 @@ pub fn App() -> impl IntoView {
                 </nav>
             </header>
             <main>
-                <AppRouter register=register login=login logout=logout user=user />
+                <AppRouter register login update update_pfp logout user />
             </main>
         </Router>
     }
@@ -142,6 +150,8 @@ pub fn App() -> impl IntoView {
 fn AppRouter(
     register: ServerAction<Register>,
     login: ServerAction<Login>,
+    update: ServerAction<Update>,
+    update_pfp: Action<FormData, Result<(), ServerFnError<ApiError>>, LocalStorage>,
     logout: ServerAction<Logout>,
     user: Resource<Result<Option<User>, ServerFnError>>,
 ) -> impl IntoView {
@@ -168,7 +178,7 @@ fn AppRouter(
                 path=path!("dashboard")
                 condition=move || user.get().map(|n| n.map_or(false, |u| u.is_some()))
                 redirect_path=|| "/login?redirect=dashboard"
-                view=move || view! { <Dashboard user logout /> }
+                view=move || view! { <Dashboard user update update_pfp logout /> }
             />
             <ProtectedRoute
                 path=path!("submit")

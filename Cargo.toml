@@ -20,6 +20,7 @@ rust_decimal = "1.36.0"
 serde = { version = "1.0.188", features = ["derive"] }
 thiserror = "1.0.38"
 log = "0.4"
+server_fn = { version = "0.7.0-rc1", features = ["multipart"] }
 simple_logger = "5"
 strum = { version = "0.26", features = ["derive"] }
 wasm-bindgen = "=0.2.95"
@@ -31,6 +32,7 @@ axum_session = {version = "0.14.2", optional = true }
 axum_session_auth = { version = "0.14.1", optional = true }
 axum_session_sqlx = { version = "0.3.0", features = ["postgres", "tls-rustls"], optional = true }
 leptos_axum = { version = "0.7.0-rc1", optional = true }
+rand = { version = "0.8.5", optional = true }
 reqwest = { version = "0.12.9", features = ["json"], optional = true }
 rustls-acme = { version = "0.11.1", features = ["axum"], optional = true }
 sqlx = { version = "0.8.2", features = ["postgres", "runtime-tokio", "tls-rustls", "macros", "chrono", "rust_decimal"], optional = true }
@@ -51,6 +53,7 @@ ssr = [
     "dep:axum_session_auth",
     "dep:axum_session_sqlx",
     "dep:leptos_axum",
+    "dep:rand",
     "dep:reqwest",
     "dep:rustls-acme",
     "dep:sqlx",
@@ -63,6 +66,7 @@ ssr = [
     "leptos_meta/ssr", 
     "leptos_router/ssr",
 ]
+rand = ["dep:rand"]
 
 # Defines a size-optimized profile for the WASM bundle in release mode
 [profile.wasm-release]
