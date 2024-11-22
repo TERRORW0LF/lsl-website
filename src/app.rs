@@ -1,9 +1,10 @@
 use crate::{
     components::{
+        auth::{Login, Register, Submit},
+        dash::Dashboard,
         error_template::{AppError, ErrorTemplate},
         home::HomePage,
         leaderboard::{Leaderboard, Section},
-        user::{Dashboard, Login, Register, Submit},
     },
     server::{
         api::ApiError,

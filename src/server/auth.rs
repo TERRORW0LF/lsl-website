@@ -415,13 +415,24 @@ pub async fn pfp(data: MultipartData) -> Result<(), ServerFnError<ApiError>> {
             .append(true)
             .create_new(true)
             .open(format!("../cdn/users/{name}.jpg"));
-        match file {
+        let res = match file {
             Ok(file) => {
                 let mut writer = BufWriter::new(file);
+                let mut jpg = false;
                 while let Ok(Some(chunk)) = pfp.chunk().await {
                     let len = chunk.len();
                     count += len;
-                    if count > 1024 * 1024 {
+                    if !jpg {
+                        jpg = true;
+                        if !(chunk.len() > 2
+                            && chunk[0] == 0xFF
+                            && chunk[1] == 0xD8
+                            && chunk[2] == 0xFF)
+                        {
+                            return Err(ServerFnError::<ApiError>::Args("Must be jpg".into()));
+                        }
+                    }
+                    if count > 4 * 1024 * 1024 {
                         return Err(ServerFnError::<ApiError>::Args("Too big".into()));
                     }
                     writer.write_all(&chunk).map_err(|_| {
@@ -436,22 +447,30 @@ pub async fn pfp(data: MultipartData) -> Result<(), ServerFnError<ApiError>> {
                     SET pfp = $1
                     WHERE id = $2"#,
                 )
-                .bind("")
-                .bind("")
+                .bind(name.clone())
+                .bind(user.id)
                 .execute(&pool)
                 .await
                 .map_err(|_| {
-                    let _ = remove_file(format!("../cdn/users/{name}.jpg"));
                     ServerFnError::<ApiError>::ServerError("Database update failed".into())
                 })?;
 
-                let _ = remove_file(format!("../cdn/users/{}.jpg", user.pfp));
                 auth.cache_clear_user(user.id);
                 Ok(())
             }
             Err(_) => Err(ServerFnError::<ApiError>::ServerError(
                 "File creation failed".into(),
             )),
+        };
+        match res {
+            Ok(_) => {
+                let _ = remove_file(format!("../cdn/users/{}.jpg", user.pfp));
+                Ok(())
+            }
+            Err(err) => {
+                let _ = remove_file(format!("../cdn/users/{name}.jpg"));
+                Err(err)
+            }
         }
     } else {
         Err(ServerFnError::<ApiError>::Args(
