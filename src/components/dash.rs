@@ -14,19 +14,23 @@ pub fn Dashboard(
     update_pfp: Action<FormData, Result<(), ServerFnError<ApiError>>, LocalStorage>,
     logout: ServerAction<Logout>,
 ) -> impl IntoView {
-    let (show_name, set_show_name) = signal(false);
-    let (show_avatar, set_show_avatar) = signal(false);
+    let show_name = RwSignal::new(false);
+    let show_avatar = RwSignal::new(false);
+    let show_password = RwSignal::new(false);
     view! {
         <Title text="Dashboard" />
         <div
             class="toner"
-            class:hidden=move || !*show_name.read() && !*show_avatar.read()
+            class:hidden=move || {
+                !*show_name.read() && !*show_avatar.read() && !*show_password.read()
+            }
             on:click=move |_| {
-                set_show_name(false);
-                set_show_avatar(false);
+                show_name.set(false);
+                show_avatar.set(false);
             }
         />
         <Username action=update show=show_name />
+        <Password action=update show=show_password />
         <Avatar action=update_pfp show=show_avatar />
         <section id="dashboard">
             <Suspense fallback=|| view! { <h1>"Loading..."</h1> }>
@@ -47,9 +51,9 @@ pub fn Dashboard(
                                         .unwrap_or("default.jpg".into()),
                                 )
                             }
-                            on:click=move |_| set_show_avatar(true)
+                            on:click=move |_| show_avatar.set(true)
                         />
-                        <button class="primary" on:click=move |_| set_show_avatar(true)>
+                        <button class="primary" on:click=move |_| show_avatar.set(true)>
                             "Change Avatar"
                         </button>
                     </div>
@@ -63,7 +67,7 @@ pub fn Dashboard(
                                 }}
                             </h4>
                         </div>
-                        <button class="secondary" on:click=move |_| set_show_name(true)>
+                        <button class="secondary" on:click=move |_| show_name.set(true)>
                             "Edit"
                         </button>
                     </div>
@@ -105,7 +109,7 @@ pub fn Dashboard(
 }
 
 #[component]
-fn Username(action: ServerAction<Update>, show: ReadSignal<bool>) -> impl IntoView {
+fn Username(action: ServerAction<Update>, show: RwSignal<bool>) -> impl IntoView {
     let result = Signal::derive(move || action.value().get().unwrap_or(Ok(())));
     let (username, set_username) = signal(String::new());
     view! {
@@ -156,7 +160,115 @@ fn Username(action: ServerAction<Update>, show: ReadSignal<bool>) -> impl IntoVi
                         "Username must adhere to [a-zA-Z_-.]{2,32}."
                     </label>
                 </div>
-                <input type="submit" class="button" value="Save" />
+                <div class="row">
+                    <button
+                        class="secondary"
+                        on:click=move |_| {
+                            show.set(false);
+                        }
+                    >
+                        "Cancel"
+                    </button>
+                    <input type="submit" class="button" value="Save" />
+                </div>
+            </ActionForm>
+        </section>
+    }
+}
+
+#[component]
+fn Password(action: ServerAction<Update>, show: RwSignal<bool>) -> impl IntoView {
+    let result = Signal::derive(move || action.value().get().unwrap_or(Ok(())));
+    let (password, set_password) = signal(String::new());
+    let (password_new, set_password_new) = signal(String::new());
+    let (password_rep, set_password_rep) = signal(String::new());
+    view! {
+        <section id="box" class:hidden=move || !show.get()>
+            <h1>"Edit Password"</h1>
+            <ErrorBoundary fallback=|e| {
+                view! {
+                    <span class="error">
+                        {move || {
+                            let e = e.get().into_iter().next().unwrap().1;
+                            if e.is::<ServerFnError<ApiError>>() {
+                                let e = e.downcast_ref::<ServerFnError<ApiError>>().unwrap();
+                                match e {
+                                    ServerFnError::WrappedServerError(err) => {
+                                        match err {
+                                            ApiError::InvalidCredentials => "🛈 Incorrect password",
+                                            _ => "🛈 Something went wrong. Try again",
+                                        }
+                                    }
+                                    _ => "🛈 Something went wrong. Try again",
+                                }
+                            } else {
+                                "🛈 Something went wrong. Try again"
+                            }
+                        }}
+                    </span>
+                }
+            }>
+                <div class="hidden">{result}</div>
+            </ErrorBoundary>
+            <ActionForm action>
+                <div class="input-box">
+                    <input
+                        type="text"
+                        name="password[old]"
+                        id="password"
+                        required
+                        value=password
+                        on:input=move |e| set_password(event_target_value::<Event>(&e))
+                    />
+                    <label for="password" class="placeholder">
+                        "Current Password"
+                    </label>
+                </div>
+                <div class="input-box">
+                    <input
+                        type="password"
+                        name="password[new]"
+                        id="password"
+                        required
+                        minlength="8"
+                        maxlength="256"
+                        value=password_new
+                        on:input=move |e| set_password_new(event_target_value::<Event>(&e))
+                    />
+                    <label for="password" class="placeholder">
+                        "Password"
+                    </label>
+                    <label for="password" class="error">
+                        "Password must be between 8 and 256 characters long."
+                    </label>
+                </div>
+                <div class="input-box">
+                    <input
+                        type="password"
+                        id="password-repeat"
+                        required
+                        pattern=password_new
+                        value=password_rep
+                        on:input=move |e| set_password_rep(event_target_value::<Event>(&e))
+                    />
+                    <label for="password-repeat" class="placeholder">
+                        "Repeat password"
+                    </label>
+                    <label for="password-repeat" class="error">
+                        "Passwords must match."
+                    </label>
+                </div>
+                <div class="row">
+                    <button
+                        class="secondary"
+                        on:click=move |_| {
+                            show.set(false);
+                        }
+                    >
+                        "Cancel"
+                    </button>
+                    <input type="submit" class="button" value="Save" />
+                </div>
             </ActionForm>
         </section>
     }
@@ -165,10 +277,9 @@ fn Username(action: ServerAction<Update>, show: ReadSignal<bool>) -> impl IntoVi
 #[component]
 fn Avatar(
     action: Action<FormData, Result<(), ServerFnError<ApiError>>, LocalStorage>,
-    show: ReadSignal<bool>,
+    show: RwSignal<bool>,
 ) -> impl IntoView {
     let result = Signal::derive(move || action.value().get().unwrap_or(Ok(())));
-    let (username, set_username) = signal(String::new());
     view! {
         <section id="box" class:hidden=move || !show.get()>
             <h1>"Change Avatar"</h1>
@@ -180,7 +291,7 @@ fn Avatar(
                             if e.is::<ServerFnError<ApiError>>() {
                                 let e = e.downcast_ref::<ServerFnError<ApiError>>().unwrap();
                                 match e {
-                                    ServerFnError::Args(_) => "🛈 File must be jpg and under 1 MB",
+                                    ServerFnError::Args(_) => "🛈 File must be jpg and under 4 MB",
                                     _ => "🛈 Something went wrong. Try again",
                                 }
                             } else {
@@ -199,25 +310,26 @@ fn Avatar(
                 action.dispatch_local(form_data);
             }>
                 <div class="input-box">
-                    <input
-                        type="text"
-                        name="username"
-                        id="username"
-                        required
-                        minlength="2"
-                        maxlength="32"
-                        pattern="[a-zA-Z_\\-\\.]*"
-                        value=username
-                        on:input=move |e| set_username(event_target_value::<Event>(&e))
-                    />
-                    <label for="username" class="placeholder">
-                        "Username"
+                    <input type="file" name="avatar" id="avatar" required accept=".jpg" />
+                    <label for="avatar" class="file">
+                        <h6>"Drag and drop file here or click to open file selector"</h6>
+                        <p>"Accepts .jpg files under 4 MB"</p>
                     </label>
-                    <label for="username" class="error">
-                        "Username must adhere to [a-zA-Z_-.]{2,32}."
+                    <label for="avatar" class="error">
+                        "File must be jpg."
                     </label>
                 </div>
-                <input type="submit" class="button" value="Save" />
+                <div class="row">
+                    <button
+                        class="secondary"
+                        on:click=move |_| {
+                            show.set(false);
+                        }
+                    >
+                        "Cancel"
+                    </button>
+                    <input type="submit" class="button" value="Save" />
+                </div>
             </form>
         </section>
     }

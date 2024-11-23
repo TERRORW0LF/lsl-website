@@ -51,6 +51,36 @@
             background: transparent;
         }
 
+        input[type="file"] {
+            max-height: 0;
+            max-width: 0;
+            opacity: 0;
+        }
+
+        .file {
+            display: flex;
+            width: 100%;
+            aspect-ratio: 21/9;
+            padding: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--grey-0);
+            border: 1px solid var(--grey-200);
+            border-radius: 4px;
+            background: transparent;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+
+            h6 {
+                font-size: 0.8rem;
+            }
+
+            p {
+                font-size: 0.7rem;
+                color: var(--grey-200);
+            }
+        }
+
         input:focus {
             outline: var(--info) solid 3px;
             border-color: transparent;

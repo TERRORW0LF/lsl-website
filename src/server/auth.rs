@@ -397,13 +397,10 @@ pub async fn pfp(data: MultipartData) -> Result<(), ServerFnError<ApiError>> {
     let mut count = 0;
 
     if let Ok(Some(mut pfp)) = data.next_field().await {
-        if pfp.name().unwrap_or_default() != "pfp" {
+        if pfp.name().unwrap_or_default() != "avatar" {
             return Err(ServerFnError::<ApiError>::Args(
-                "Pfp must be only field".into(),
+                "Avatar must be only field".into(),
             ));
-        }
-        if pfp.file_name().unwrap_or_default().ends_with(".jpg") {
-            return Err(ServerFnError::<ApiError>::Args("Must be jpg file".into()));
         }
 
         let name: String = thread_rng()
