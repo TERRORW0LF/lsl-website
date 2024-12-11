@@ -86,4 +86,10 @@
         background-color: transparent;
         border: 2px solid var(--grey-500);
     }
+
+    .danger {
+        color: var(--grey-0);
+        background-color: var(--error);
+        border: 2px solid var(--error);
+    }
 }

@@ -1,11 +1,20 @@
 use crate::server::{
     api::ApiError,
-    auth::{Logout, Update, User},
+    auth::{discord_delete, discord_list, Discord, Logout, Update, User},
 };
-use leptos::prelude::*;
+use leptos::{prelude::*, task::spawn_local};
 use leptos_meta::Title;
 use wasm_bindgen::JsCast;
 use web_sys::{Event, FormData, HtmlFormElement, SubmitEvent};
+
+#[derive(PartialEq, Eq)]
+enum PopUp {
+    None,
+    Username,
+    Password,
+    Avatar,
+    Discord,
+}
 
 #[component]
 pub fn Dashboard(
@@ -14,24 +23,19 @@ pub fn Dashboard(
     update_pfp: Action<FormData, Result<(), ServerFnError<ApiError>>, LocalStorage>,
     logout: ServerAction<Logout>,
 ) -> impl IntoView {
-    let show_name = RwSignal::new(false);
-    let show_avatar = RwSignal::new(false);
-    let show_password = RwSignal::new(false);
+    let show = RwSignal::new(PopUp::None);
+    let discord = Resource::new(|| {}, |_| discord_list());
     view! {
         <Title text="Dashboard" />
         <div
             class="toner"
-            class:hidden=move || {
-                !*show_name.read() && !*show_avatar.read() && !*show_password.read()
-            }
-            on:click=move |_| {
-                show_name.set(false);
-                show_avatar.set(false);
-            }
+            class:hidden=move || { !(*show.read() == PopUp::None) }
+            on:click=move |_| { show.set(PopUp::None) }
         />
-        <Username action=update show=show_name />
-        <Password action=update show=show_password />
-        <Avatar action=update_pfp show=show_avatar />
+        <Username action=update show />
+        <Password action=update show />
+        <Avatar action=update_pfp show />
+        <DiscordList discord show />
         <section id="dashboard">
             <Suspense fallback=|| view! { <h1>"Loading..."</h1> }>
                 <h1>"Dashboard"</h1>
@@ -51,9 +55,9 @@ pub fn Dashboard(
                                         .unwrap_or("default.jpg".into()),
                                 )
                             }
-                            on:click=move |_| show_avatar.set(true)
+                            on:click=move |_| show.set(PopUp::Avatar)
                         />
-                        <button class="primary" on:click=move |_| show_avatar.set(true)>
+                        <button class="primary" on:click=move |_| show.set(PopUp::Avatar)>
                             "Change Avatar"
                         </button>
                     </div>
@@ -67,7 +71,7 @@ pub fn Dashboard(
                                 }}
                             </h4>
                         </div>
-                        <button class="secondary" on:click=move |_| show_name.set(true)>
+                        <button class="secondary" on:click=move |_| show.set(PopUp::Username)>
                             "Edit"
                         </button>
                     </div>
@@ -78,7 +82,19 @@ pub fn Dashboard(
                         </div>
                         <button class="secondary">"Edit"</button>
                     </div>
+                </div>
+                <div class="section">
                     <h2>"Account"</h2>
+                    <h3>"CONNECTIONS"</h3>
+                    <div>
+                        <h4>"Discord"</h4>
+                        <p>
+                            "Manage your connected Discord profiles or add a new one."
+                            "This allows you to easily submit and manage your runs from within Discord."
+                        </p>
+                        <button class="primary">"Manage"</button>
+                    </div>
+                    <h3>"MANAGEMENT"</h3>
                     <div>
                         <h4>"Log Out"</h4>
                         <p>"Logging out of your account will only affect this device."</p>
@@ -94,7 +110,7 @@ pub fn Dashboard(
                     <div>
                         <h4>"Account Removal"</h4>
                         <p>
-                            "Removing your account will anonymize your account and prevent"
+                            "Disabling your account will anonymize your account and prevent"
                             "you from logging in. This action will not delete runs from the leaderboard."
                         </p>
                         <button class="secondary">"Disable Account"</button>
@@ -102,6 +118,22 @@ pub fn Dashboard(
                 </div>
                 <div class="section">
                     <h2>"Submissions"</h2>
+                    <div>
+                        <h4>"Edit Submissions"</h4>
+                        <p>
+                            "Manage your submissions to the leaderboards."
+                            "This will redirect you to the submission management page."
+                        </p>
+                        <button class="primary">"Edit"</button>
+                    </div>
+                    <div>
+                        <h4>"Claim Submissions"</h4>
+                        <p>
+                            "Claim submissions made under the old Google Sheets method"
+                            "to your account. Requires moderator approval."
+                        </p>
+                        <button class="primary">"Claim"</button>
+                    </div>
                 </div>
             </Suspense>
         </section>
@@ -109,11 +141,11 @@ pub fn Dashboard(
 }
 
 #[component]
-fn Username(action: ServerAction<Update>, show: RwSignal<bool>) -> impl IntoView {
+fn Username(action: ServerAction<Update>, show: RwSignal<PopUp>) -> impl IntoView {
     let result = Signal::derive(move || action.value().get().unwrap_or(Ok(())));
     let (username, set_username) = signal(String::new());
     view! {
-        <section id="box" class:hidden=move || !show.get()>
+        <section id="box" class:hidden=move || !(*show.read() == PopUp::Username)>
             <h1>"Edit Username"</h1>
             <ErrorBoundary fallback=|e| {
                 view! {
@@ -164,7 +196,7 @@ fn Username(action: ServerAction<Update>, show: RwSignal<bool>) -> impl IntoView
                     <button
                         class="secondary"
                         on:click=move |_| {
-                            show.set(false);
+                            show.set(PopUp::None);
                         }
                     >
                         "Cancel"
@@ -177,13 +209,13 @@ fn Username(action: ServerAction<Update>, show: RwSignal<bool>) -> impl IntoView
 }
 
 #[component]
-fn Password(action: ServerAction<Update>, show: RwSignal<bool>) -> impl IntoView {
+fn Password(action: ServerAction<Update>, show: RwSignal<PopUp>) -> impl IntoView {
     let result = Signal::derive(move || action.value().get().unwrap_or(Ok(())));
     let (password, set_password) = signal(String::new());
     let (password_new, set_password_new) = signal(String::new());
     let (password_rep, set_password_rep) = signal(String::new());
     view! {
-        <section id="box" class:hidden=move || !show.get()>
+        <section id="box" class:hidden=move || !(*show.read() == PopUp::Password)>
             <h1>"Edit Password"</h1>
             <ErrorBoundary fallback=|e| {
                 view! {
@@ -262,7 +294,7 @@ fn Password(action: ServerAction<Update>, show: RwSignal<bool>) -> impl IntoView
                     <button
                         class="secondary"
                         on:click=move |_| {
-                            show.set(false);
+                            show.set(PopUp::None);
                         }
                     >
                         "Cancel"
@@ -277,11 +309,11 @@ fn Password(action: ServerAction<Update>, show: RwSignal<bool>) -> impl IntoView
 #[component]
 fn Avatar(
     action: Action<FormData, Result<(), ServerFnError<ApiError>>, LocalStorage>,
-    show: RwSignal<bool>,
+    show: RwSignal<PopUp>,
 ) -> impl IntoView {
     let result = Signal::derive(move || action.value().get().unwrap_or(Ok(())));
     view! {
-        <section id="box" class:hidden=move || !show.get()>
+        <section id="box" class:hidden=move || !(*show.read() == PopUp::Avatar)>
             <h1>"Change Avatar"</h1>
             <ErrorBoundary fallback=|e| {
                 view! {
@@ -323,7 +355,7 @@ fn Avatar(
                     <button
                         class="secondary"
                         on:click=move |_| {
-                            show.set(false);
+                            show.set(PopUp::None);
                         }
                     >
                         "Cancel"
@@ -331,6 +363,59 @@ fn Avatar(
                     <input type="submit" class="button" value="Save" />
                 </div>
             </form>
+        </section>
+    }
+}
+
+#[component]
+fn DiscordList(
+    discord: Resource<Result<Vec<Discord>, ServerFnError<ApiError>>>,
+    show: RwSignal<PopUp>,
+) -> impl IntoView {
+    view! {
+        <section id="box" class:hidden=move || !(*show.read() == PopUp::Discord)>
+            <h1>"Select Account"</h1>
+            <ErrorBoundary fallback=|_| {
+                view! { <span class="error">"🛈 Something went wrong. Try again"</span> }
+            }>
+                <Transition fallback=move || {
+                    view! { <p>"Loading..."</p> }
+                }>
+                    {move || {
+                        discord
+                            .get()
+                            .map(|data| {
+                                data.map(|conns| {
+                                    conns
+                                        .into_iter()
+                                        .map(|con| {
+                                            let con2 = con.clone();
+                                            view! {
+                                                <div class="discord row">
+                                                    <div>
+                                                        <h3>{con2.name}</h3>
+                                                        <p>{con2.snowflake}</p>
+                                                    </div>
+                                                    <button
+                                                        class="danger"
+                                                        on:click=move |_| {
+                                                            let con = con.clone();
+                                                            spawn_local(async {
+                                                                let _ = discord_delete(con.snowflake).await;
+                                                            });
+                                                        }
+                                                    >
+                                                        "Remove"
+                                                    </button>
+                                                </div>
+                                            }
+                                        })
+                                        .collect_view()
+                                })
+                            })
+                    }}
+                </Transition>
+            </ErrorBoundary>
         </section>
     }
 }

@@ -31,6 +31,13 @@ impl Default for User {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
+pub struct Discord {
+    pub name: String,
+    pub snowflake: String,
+}
+
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct YtVidJson {
@@ -330,7 +337,7 @@ pub async fn login(
     Ok(())
 }
 
-#[server(Update, prefix="/api", endpoint="user/update", input=PostUrl)]
+#[server(Update, prefix="/api", endpoint="user/update/credentials", input=PostUrl)]
 pub async fn update(
     username: Option<String>,
     password: Option<PasswordUpdate>,
@@ -378,7 +385,7 @@ pub async fn update(
     Ok(())
 }
 
-#[server(Pfp, prefix="/api", endpoint="user/update", input=MultipartFormData)]
+#[server(Pfp, prefix="/api", endpoint="user/update/avatar", input=MultipartFormData)]
 pub async fn pfp(data: MultipartData) -> Result<(), ServerFnError<ApiError>> {
     use crate::server::auth::ssr::{auth, pool};
     use rand::{distributions::Alphanumeric, thread_rng, Rng};
@@ -555,4 +562,92 @@ pub async fn submit(
             )),
         }
     }
+}
+
+#[server(DiscordList, prefix="/api", endpoint="user/discord/list", input=PostUrl)]
+pub async fn discord_list() -> Result<Vec<Discord>, ServerFnError<ApiError>> {
+    use self::ssr::*;
+
+    let auth = auth()?;
+    let user = auth.current_user.ok_or(ApiError::Unauthenticated)?;
+    let pool = pool()?;
+
+    sqlx::query_as::<_, Discord>(
+        r#"SELECT "name", discord_id
+        FROM discord
+        WHERE user_id = $1
+        LIMIT 5"#,
+    )
+    .bind(user.id)
+    .fetch_all(&pool)
+    .await
+    .map_err(|_| ServerFnError::ServerError("Database lookup failed".to_string()))
+}
+
+#[server(DiscordAdd, prefix="/api", endpoint="user/discord/add", input=PostUrl)]
+pub async fn discord_add(name: String, snowflake: String) -> Result<(), ServerFnError<ApiError>> {
+    use self::ssr::*;
+
+    let auth = auth()?;
+    let user = auth.current_user.ok_or(ApiError::Unauthenticated)?;
+    let pool = pool()?;
+
+    let discord = sqlx::query_as::<_, Discord>(
+        r#"SELECT "name", discord_id
+        FROM discord
+        WHERE user_id = $1
+        LIMIT 5"#,
+    )
+    .bind(user.id)
+    .fetch_all(&pool)
+    .await
+    .map_err(|_| ServerFnError::ServerError("Database lookup failed".to_string()))?;
+    if discord.len() >= 5 {
+        return Err(ApiError::AlreadyExists)?;
+    }
+    if discord.iter().any(|d| d.snowflake == snowflake) {
+        sqlx::query(
+            r#"UPDATE discord
+            SET "name" = $1
+            WHERE user_id = $2 AND snowflake = $3"#,
+        )
+        .bind(name)
+        .bind(user.id)
+        .bind(snowflake)
+        .execute(&pool)
+        .await
+        .map_err(|_| ServerFnError::ServerError("Database update failed".to_string()))?;
+    } else {
+        sqlx::query(
+            r#"INSERT INTO discord (user_id, "name", snowflake)
+            VALUES ($1, $2, $3)"#,
+        )
+        .bind(name)
+        .bind(user.id)
+        .bind(snowflake)
+        .execute(&pool)
+        .await
+        .map_err(|_| ServerFnError::ServerError("Database insert failed".to_string()))?;
+    }
+    Ok(())
+}
+
+#[server(DiscordDelete, prefix="/api", endpoint="user/discord/delete", input=PostUrl)]
+pub async fn discord_delete(snowflake: String) -> Result<(), ServerFnError<ApiError>> {
+    use self::ssr::*;
+
+    let auth = auth()?;
+    let user = auth.current_user.ok_or(ApiError::Unauthenticated)?;
+    let pool = pool()?;
+
+    let _ = sqlx::query(
+        r#"DELETE FROM discord
+        WHERE user_id = $1 AND snowflake = $2"#,
+    )
+    .bind(user.id)
+    .bind(snowflake)
+    .execute(&pool)
+    .await
+    .map_err(|_| ServerFnError::ServerError("Database delete failed".to_string()))?;
+    Ok(())
 }
