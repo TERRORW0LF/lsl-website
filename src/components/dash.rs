@@ -2,7 +2,7 @@ use crate::server::{
     api::ApiError,
     auth::{discord_delete, discord_list, Discord, Logout, Update, User},
 };
-use leptos::{prelude::*, task::spawn_local};
+use leptos::{either::Either, prelude::*};
 use leptos_meta::Title;
 use wasm_bindgen::JsCast;
 use web_sys::{Event, FormData, HtmlFormElement, SubmitEvent};
@@ -24,7 +24,18 @@ pub fn Dashboard(
     logout: ServerAction<Logout>,
 ) -> impl IntoView {
     let show = RwSignal::new(PopUp::None);
-    let discord = Resource::new(|| {}, |_| discord_list());
+    let discord_del = Action::new(|snowflake: &String| {
+        let snowflake = snowflake.to_owned();
+        async move { discord_delete(snowflake).await }
+    });
+    let discord_add = Action::new(|input: &String| {
+        let input = input.to_owned();
+        async move { discord_delete(input).await }
+    });
+    let discord_list = Resource::new(
+        move || (discord_del.version().get(), discord_add.version().get()),
+        |_| discord_list(),
+    );
     view! {
         <Title text="Dashboard" />
         <div
@@ -35,7 +46,7 @@ pub fn Dashboard(
         <Username action=update show />
         <Password action=update show />
         <Avatar action=update_pfp show />
-        <DiscordList discord show />
+        <DiscordList discord_list discord_del show />
         <section id="dashboard">
             <Suspense fallback=|| view! { <h1>"Loading..."</h1> }>
                 <h1>"Dashboard"</h1>
@@ -369,7 +380,8 @@ fn Avatar(
 
 #[component]
 fn DiscordList(
-    discord: Resource<Result<Vec<Discord>, ServerFnError<ApiError>>>,
+    discord_list: Resource<Result<Vec<Discord>, ServerFnError<ApiError>>>,
+    discord_del: Action<String, Result<(), ServerFnError<ApiError>>>,
     show: RwSignal<PopUp>,
 ) -> impl IntoView {
     view! {
@@ -382,35 +394,43 @@ fn DiscordList(
                     view! { <p>"Loading..."</p> }
                 }>
                     {move || {
-                        discord
+                        discord_list
                             .get()
                             .map(|data| {
                                 data.map(|conns| {
-                                    conns
-                                        .into_iter()
-                                        .map(|con| {
-                                            let con2 = con.clone();
-                                            view! {
-                                                <div class="discord row">
-                                                    <div>
-                                                        <h3>{con2.name}</h3>
-                                                        <p>{con2.snowflake}</p>
+                                    view! {
+                                        {conns
+                                            .clone()
+                                            .into_iter()
+                                            .map(|con| {
+                                                view! {
+                                                    <div class="discord row">
+                                                        <div>
+                                                            <h3>{con.name}</h3>
+                                                            <p>{con.snowflake.clone()}</p>
+                                                        </div>
+                                                        <button
+                                                            class="danger"
+                                                            on:click=move |_| {
+                                                                discord_del.dispatch(con.snowflake.clone());
+                                                            }
+                                                        >
+                                                            "Remove"
+                                                        </button>
                                                     </div>
-                                                    <button
-                                                        class="danger"
-                                                        on:click=move |_| {
-                                                            let con = con.clone();
-                                                            spawn_local(async {
-                                                                let _ = discord_delete(con.snowflake).await;
-                                                            });
-                                                        }
-                                                    >
-                                                        "Remove"
-                                                    </button>
-                                                </div>
-                                            }
-                                        })
-                                        .collect_view()
+                                                }
+                                            })
+                                            .collect_view()}
+                                        {if conns.len() < 5 {
+                                            Either::Left(
+                                                view! {
+                                                    <button class="discord-add row">"Add Account"</button>
+                                                },
+                                            )
+                                        } else {
+                                            Either::Right(())
+                                        }}
+                                    }
                                 })
                             })
                     }}
