@@ -4,13 +4,6 @@
     max-width: 100ch;
     font-size: 0.7rem;
 
-    .row {
-        display: flex;
-        gap: 1rem;
-        justify-content: space-between;
-        align-items: center;
-    }
-
     .pfp {
         width: 5rem;
         height: 5rem;
@@ -34,7 +27,7 @@
     }
 
     h3 {
-        margin-top: 1rem;
+        margin-top: 2rem;
         margin-bottom: 0.1rem;
         font-size: 0.7rem;
         font-weight: 700;
@@ -59,16 +52,23 @@
 
     .narrow {
         h3 {
+            margin-top: 0.2rem;
             margin-bottom: 0.2rem;
         }
 
         h4 {
             margin-top: 0.2rem;
         }
+
+        p {
+            margin-top: 0.1rem;
+            margin-bottom: 0.1rem;
+        }
     }
 
     button {
-        padding: 0.4rem 1.5rem;
+        min-width: 8ch;
+        padding: 0.4rem 1rem;
         font-size: 0.7rem;
         font-weight: 700;
         border-radius: 5px;
@@ -94,8 +94,21 @@
     }
 
     .discord {
-        height: 2rem;
+        margin-bottom: 0.5rem;
+        padding: 0.8rem;
+        height: 3rem;
         background-color: var(--grey-700);
         border-radius: 5px;
+    }
+
+    .discord-add {
+        height: 3rem;
+        width: 100%;
+        text-align: center;
+        justify-content: center;
+        color: var(--grey-500);
+        background-color: inherit;
+        border: 3px dashed var(--grey-700);
+        border-radius: 7px;
     }
 }

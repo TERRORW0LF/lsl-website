@@ -1,6 +1,6 @@
 use crate::server::{
     api::ApiError,
-    auth::{discord_delete, discord_list, Discord, Logout, Update, User},
+    auth::{discord_add, discord_delete, discord_list, Discord, Logout, Update, User},
 };
 use leptos::{either::Either, prelude::*};
 use leptos_meta::Title;
@@ -28,26 +28,23 @@ pub fn Dashboard(
         let snowflake = snowflake.to_owned();
         async move { discord_delete(snowflake).await }
     });
-    let discord_add = Action::new(|input: &String| {
-        let input = input.to_owned();
-        async move { discord_delete(input).await }
-    });
+    let discord_add = Action::new(|_: &()| async move { discord_add().await });
     let discord_list = Resource::new(
         move || (discord_del.version().get(), discord_add.version().get()),
         |_| discord_list(),
     );
     view! {
         <Title text="Dashboard" />
-        <div
-            class="toner"
-            class:hidden=move || { !(*show.read() == PopUp::None) }
-            on:click=move |_| { show.set(PopUp::None) }
-        />
-        <Username action=update show />
-        <Password action=update show />
-        <Avatar action=update_pfp show />
-        <DiscordList discord_list discord_del show />
         <section id="dashboard">
+            <div
+                class="toner"
+                class:hidden=move || { *show.read() == PopUp::None }
+                on:click=move |_| { show.set(PopUp::None) }
+            />
+            <Username action=update show />
+            <Password action=update show />
+            <Avatar action=update_pfp show />
+            <DiscordList discord_list discord_del discord_add show />
             <Suspense fallback=|| view! { <h1>"Loading..."</h1> }>
                 <h1>"Dashboard"</h1>
                 <div class="section">
@@ -63,7 +60,7 @@ pub fn Dashboard(
                                         .map(|res| {
                                             res.unwrap_or_default().unwrap_or_default().pfp
                                         })
-                                        .unwrap_or("default.jpg".into()),
+                                        .unwrap_or("default".into()),
                                 )
                             }
                             on:click=move |_| show.set(PopUp::Avatar)
@@ -72,6 +69,7 @@ pub fn Dashboard(
                             "Change Avatar"
                         </button>
                     </div>
+                    <div class="spacer-2"></div>
                     <div class="row">
                         <div class="narrow">
                             <h3>"USERNAME"</h3>
@@ -86,12 +84,15 @@ pub fn Dashboard(
                             "Edit"
                         </button>
                     </div>
+                    <div class="spacer-2"></div>
                     <div class="row">
                         <div class="narrow">
                             <h3>"PASSWORD"</h3>
                             <h4>"********"</h4>
                         </div>
-                        <button class="secondary">"Edit"</button>
+                        <button class="secondary" on:click=move |_| show.set(PopUp::Password)>
+                            "Edit"
+                        </button>
                     </div>
                 </div>
                 <div class="section">
@@ -100,17 +101,19 @@ pub fn Dashboard(
                     <div>
                         <h4>"Discord"</h4>
                         <p>
-                            "Manage your connected Discord profiles or add a new one."
+                            "Manage your connected Discord profiles or add a new one. "
                             "This allows you to easily submit and manage your runs from within Discord."
                         </p>
-                        <button class="primary">"Manage"</button>
+                        <button class="primary" on:click=move |_| show.set(PopUp::Discord)>
+                            "Manage"
+                        </button>
                     </div>
                     <h3>"MANAGEMENT"</h3>
                     <div>
                         <h4>"Log Out"</h4>
                         <p>"Logging out of your account will only affect this device."</p>
                         <button
-                            class="primary"
+                            class="secondary"
                             on:click=move |_| {
                                 let _ = logout.dispatch(Logout {});
                             }
@@ -121,10 +124,10 @@ pub fn Dashboard(
                     <div>
                         <h4>"Account Removal"</h4>
                         <p>
-                            "Disabling your account will anonymize your account and prevent"
+                            "Disabling your account will anonymize your account and prevent "
                             "you from logging in. This action will not delete runs from the leaderboard."
                         </p>
-                        <button class="secondary">"Disable Account"</button>
+                        <button class="danger">"Disable Account"</button>
                     </div>
                 </div>
                 <div class="section">
@@ -132,7 +135,7 @@ pub fn Dashboard(
                     <div>
                         <h4>"Edit Submissions"</h4>
                         <p>
-                            "Manage your submissions to the leaderboards."
+                            "Manage your submissions to the leaderboards. "
                             "This will redirect you to the submission management page."
                         </p>
                         <button class="primary">"Edit"</button>
@@ -140,10 +143,10 @@ pub fn Dashboard(
                     <div>
                         <h4>"Claim Submissions"</h4>
                         <p>
-                            "Claim submissions made under the old Google Sheets method"
+                            "Claim submissions made under the old Google Sheets method "
                             "to your account. Requires moderator approval."
                         </p>
-                        <button class="primary">"Claim"</button>
+                        <button class="secondary">"Claim"</button>
                     </div>
                 </div>
             </Suspense>
@@ -279,7 +282,7 @@ fn Password(action: ServerAction<Update>, show: RwSignal<PopUp>) -> impl IntoVie
                         on:input=move |e| set_password_new(event_target_value::<Event>(&e))
                     />
                     <label for="password" class="placeholder">
-                        "Password"
+                        "New Password"
                     </label>
                     <label for="password" class="error">
                         "Password must be between 8 and 256 characters long."
@@ -295,7 +298,7 @@ fn Password(action: ServerAction<Update>, show: RwSignal<PopUp>) -> impl IntoVie
                         on:input=move |e| set_password_rep(event_target_value::<Event>(&e))
                     />
                     <label for="password-repeat" class="placeholder">
-                        "Repeat password"
+                        "Repeat Password"
                     </label>
                     <label for="password-repeat" class="error">
                         "Passwords must match."
@@ -382,16 +385,17 @@ fn Avatar(
 fn DiscordList(
     discord_list: Resource<Result<Vec<Discord>, ServerFnError<ApiError>>>,
     discord_del: Action<String, Result<(), ServerFnError<ApiError>>>,
+    discord_add: Action<(), Result<(), ServerFnError<ApiError>>>,
     show: RwSignal<PopUp>,
 ) -> impl IntoView {
     view! {
         <section id="box" class:hidden=move || !(*show.read() == PopUp::Discord)>
-            <h1>"Select Account"</h1>
-            <ErrorBoundary fallback=|_| {
-                view! { <span class="error">"🛈 Something went wrong. Try again"</span> }
+            <h1>"Discord"</h1>
+            <Transition fallback=move || {
+                view! { <p>"Loading..."</p> }
             }>
-                <Transition fallback=move || {
-                    view! { <p>"Loading..."</p> }
+                <ErrorBoundary fallback=|_| {
+                    view! { <span class="error">"🛈 Something went wrong. Try again"</span> }
                 }>
                     {move || {
                         discord_list
@@ -405,8 +409,8 @@ fn DiscordList(
                                             .map(|con| {
                                                 view! {
                                                     <div class="discord row">
-                                                        <div>
-                                                            <h3>{con.name}</h3>
+                                                        <div class="narrow">
+                                                            <h4>{con.name}</h4>
                                                             <p>{con.snowflake.clone()}</p>
                                                         </div>
                                                         <button
@@ -424,7 +428,14 @@ fn DiscordList(
                                         {if conns.len() < 5 {
                                             Either::Left(
                                                 view! {
-                                                    <button class="discord-add row">"Add Account"</button>
+                                                    <button
+                                                        class="discord-add row"
+                                                        on:click=move |_| {
+                                                            discord_add.dispatch(());
+                                                        }
+                                                    >
+                                                        "Add Account"
+                                                    </button>
                                                 },
                                             )
                                         } else {
@@ -434,8 +445,8 @@ fn DiscordList(
                                 })
                             })
                     }}
-                </Transition>
-            </ErrorBoundary>
+                </ErrorBoundary>
+            </Transition>
         </section>
     }
 }

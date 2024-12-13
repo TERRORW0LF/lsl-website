@@ -3,7 +3,7 @@ use http::HeaderValue;
 use leptos::prelude::{server, server_fn::codec::PostUrl, ServerFnError};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use server_fn::codec::{MultipartData, MultipartFormData};
+use server_fn::codec::{GetUrl, MultipartData, MultipartFormData};
 use std::collections::HashSet;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -34,7 +34,9 @@ impl Default for User {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
 pub struct Discord {
+    #[serde(rename = "username")]
     pub name: String,
+    #[serde(rename = "id")]
     pub snowflake: String,
 }
 
@@ -81,6 +83,7 @@ pub mod ssr {
     pub use axum_session_auth::{Authentication, HasPermission};
     pub use axum_session_sqlx::SessionPgPool;
     pub use leptos::prelude::{server, use_context, ServerFnError};
+    use oauth2::basic::BasicClient;
     use sqlx::types::chrono::{DateTime, Local};
     pub use sqlx::{
         postgres::{PgConnectOptions, PgPoolOptions},
@@ -113,6 +116,11 @@ pub mod ssr {
     pub fn auth() -> Result<AuthSession, ServerFnError<ApiError>> {
         use_context::<AuthSession>()
             .ok_or_else(|| ServerFnError::ServerError("Auth session missing.".to_string()))
+    }
+
+    pub fn oauth() -> Result<BasicClient, ServerFnError<ApiError>> {
+        use_context::<BasicClient>()
+            .ok_or_else(|| ServerFnError::ServerError("OAuth client missing.".to_string()))
     }
 
     impl User {
@@ -573,7 +581,7 @@ pub async fn discord_list() -> Result<Vec<Discord>, ServerFnError<ApiError>> {
     let pool = pool()?;
 
     sqlx::query_as::<_, Discord>(
-        r#"SELECT "name", discord_id
+        r#"SELECT name, snowflake
         FROM discord
         WHERE user_id = $1
         LIMIT 5"#,
@@ -585,15 +593,74 @@ pub async fn discord_list() -> Result<Vec<Discord>, ServerFnError<ApiError>> {
 }
 
 #[server(DiscordAdd, prefix="/api", endpoint="user/discord/add", input=PostUrl)]
-pub async fn discord_add(name: String, snowflake: String) -> Result<(), ServerFnError<ApiError>> {
+pub async fn discord_add() -> Result<(), ServerFnError<ApiError>> {
     use self::ssr::*;
+    use oauth2::{CsrfToken, Scope};
+
+    let auth = auth()?;
+    if auth.current_user.is_none() {
+        return Err(ApiError::Unauthenticated)?;
+    }
+    let oauth = oauth()?;
+
+    let (auth_url, csrf_token) = oauth
+        .authorize_url(CsrfToken::new_random)
+        .add_scope(Scope::new("identify".to_string()))
+        .url();
+
+    auth.session.set("csrf", csrf_token);
+    leptos_axum::redirect(auth_url.as_ref());
+    Ok(())
+}
+
+#[server(DiscordAuth, prefix="/api", endpoint="user/discord/auth", input=GetUrl)]
+pub async fn discord_auth(code: String, state: String) -> Result<(), ServerFnError<ApiError>> {
+    use self::ssr::*;
+    use oauth2::{reqwest::async_http_client, AuthorizationCode, CsrfToken, TokenResponse};
+
+    leptos_axum::redirect("/dashboard");
 
     let auth = auth()?;
     let user = auth.current_user.ok_or(ApiError::Unauthenticated)?;
+    let oauth = oauth()?;
+    let csrf = auth
+        .session
+        .get_remove::<CsrfToken>("csrf")
+        .ok_or(ApiError::Unauthenticated)?;
+    if *csrf.secret() != state {
+        return Err(ApiError::InvalidCredentials)?;
+    }
+    let token = oauth
+        .exchange_code(AuthorizationCode::new(code))
+        .request_async(async_http_client)
+        .await
+        .map_err(|_| ServerFnError::ServerError("Token exchange failed".into()))?;
+
+    // Fetch user data from discord
+    let client = reqwest::Client::new();
+    let discord_data: Discord = client
+        // https://discord.com/developers/docs/resources/user#get-current-user
+        .get("https://discordapp.com/api/users/@me")
+        .bearer_auth(token.access_token().secret())
+        .send()
+        .await
+        .map_err(|_| ServerFnError::ServerError("Discord fetch failed".into()))?
+        .json::<Discord>()
+        .await
+        .map_err(|_| ServerFnError::ServerError("Discord reponse invalid".into()))?;
+    let name = discord_data.name;
+    let snowflake = discord_data.snowflake;
+
+    let _ = oauth
+        .revoke_token(token.access_token().into())
+        .unwrap()
+        .request_async(async_http_client)
+        .await;
+
     let pool = pool()?;
 
     let discord = sqlx::query_as::<_, Discord>(
-        r#"SELECT "name", discord_id
+        r#"SELECT name, snowflake
         FROM discord
         WHERE user_id = $1
         LIMIT 5"#,
@@ -602,13 +669,14 @@ pub async fn discord_add(name: String, snowflake: String) -> Result<(), ServerFn
     .fetch_all(&pool)
     .await
     .map_err(|_| ServerFnError::ServerError("Database lookup failed".to_string()))?;
+
     if discord.len() >= 5 {
         return Err(ApiError::AlreadyExists)?;
     }
     if discord.iter().any(|d| d.snowflake == snowflake) {
         sqlx::query(
             r#"UPDATE discord
-            SET "name" = $1
+            SET name = $1
             WHERE user_id = $2 AND snowflake = $3"#,
         )
         .bind(name)
@@ -617,17 +685,21 @@ pub async fn discord_add(name: String, snowflake: String) -> Result<(), ServerFn
         .execute(&pool)
         .await
         .map_err(|_| ServerFnError::ServerError("Database update failed".to_string()))?;
+
+        leptos::logging::log!("Update done");
     } else {
         sqlx::query(
-            r#"INSERT INTO discord (user_id, "name", snowflake)
+            r#"INSERT INTO discord (user_id, name, snowflake)
             VALUES ($1, $2, $3)"#,
         )
-        .bind(name)
         .bind(user.id)
+        .bind(name)
         .bind(snowflake)
         .execute(&pool)
         .await
         .map_err(|_| ServerFnError::ServerError("Database insert failed".to_string()))?;
+
+        leptos::logging::log!("Insert done");
     }
     Ok(())
 }

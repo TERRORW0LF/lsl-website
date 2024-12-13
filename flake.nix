@@ -38,6 +38,7 @@
             cargo-deny
             cargo-edit
             cargo-watch
+            cargo-leptos
             dart-sass
             rust-analyzer
             leptosfmt

@@ -1,7 +1,4 @@
-use axum_session::SessionLayer;
-use axum_session_auth::AuthSessionLayer;
-use lsl_website::{server::auth::ssr::AuthSession, state::AppState};
-use tower::ServiceBuilder;
+use lsl_website::state::oauth_client;
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 use axum::{
@@ -11,18 +8,18 @@ use axum::{
     routing::get,
     Extension, Router,
 };
-use axum_session_auth::{AuthConfig};
-use axum_session_sqlx::SessionPgPool;
+use axum_session::{SessionConfig, SessionLayer};
+use axum_session_auth::{AuthConfig, AuthSessionLayer};
+use axum_session_sqlx::{SessionPgPool, SessionPgSessionStore};
 use http::Request;
 use leptos::prelude::*;
 use leptos_axum::{generate_route_list, handle_server_fns_with_context, LeptosRoutes};
 use leptos_router::RouteListing;
-use lsl_website::{app::*, server::auth::ssr::{connect_to_database, User},};
+use lsl_website::{app::*, server::auth::ssr::{AuthSession, connect_to_database, User}, state::AppState};
 use rustls_acme::{caches::DirCache, AcmeConfig};
 use sqlx::PgPool;
 use tokio_stream::StreamExt;
-use axum_session::SessionConfig;
-use axum_session_sqlx::SessionPgSessionStore;
+use tower::ServiceBuilder;
 
 async fn leptos_handler(
     state: State<AppState>,
@@ -50,6 +47,7 @@ async fn server_handler(
     handle_server_fns_with_context(
         move || {
             provide_context(state.pool.clone());
+            provide_context(state.oauth.clone());
             provide_context(session.clone());
         },
         request,
@@ -101,6 +99,7 @@ async fn main() {
         leptos_options,
         pool: pool.clone(),
         routes: routes.clone(),
+        oauth: oauth_client(),
     };
 
     // build our application with a route
