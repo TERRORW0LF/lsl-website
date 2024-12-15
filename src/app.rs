@@ -4,7 +4,7 @@ use crate::{
         dash::Dashboard,
         error_template::{AppError, ErrorTemplate},
         home::HomePage,
-        leaderboard::{Leaderboard, Section},
+        leaderboard::{Leaderboard, Map, Section},
     },
     server::{
         api::ApiError,
@@ -19,7 +19,7 @@ use leptos_router::{
     path, MatchNestedRoutes,
 };
 use wasm_bindgen::{prelude::Closure, JsCast};
-use web_sys::FormData;
+use web_sys::{js_sys, FormData};
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
@@ -88,6 +88,24 @@ pub fn App() -> impl IntoView {
             a.as_ref().unchecked_ref(),
             false,
         );
+        a.forget();
+    });
+    let (width, set_width) = signal::<i32>(0);
+    provide_context(width);
+    Effect::new(move |_| {
+        let a = Closure::<dyn FnMut(js_sys::Array, web_sys::ResizeObserver)>::new(
+            move |entries: js_sys::Array, _| {
+                set_width.set(
+                    entries.to_vec()[0]
+                        .clone()
+                        .unchecked_into::<web_sys::ResizeObserverEntry>()
+                        .content_rect()
+                        .width() as i32,
+                );
+            },
+        );
+        let obs = web_sys::ResizeObserver::new(a.as_ref().unchecked_ref()).unwrap();
+        obs.observe(&document().body().unwrap().into());
         a.forget();
     });
 
@@ -197,17 +215,31 @@ fn LeaderboardRouter() -> impl MatchNestedRoutes + Clone {
     let (patch, set_patch) = signal(String::new());
     let (layout, set_layout) = signal(String::new());
     let (category, set_category) = signal(String::new());
+    let (map, set_map) = signal::<Option<String>>(None);
 
     view! {
         <ParentRoute
             path=path!("leaderboard")
-            view=move || view! { <Section patch=patch layout=layout category=category /> }
+            view=move || view! { <Section patch layout category map /> }
         >
+            <Route
+                path=path!(":patch/:layout/:category/:map")
+                view=move || {
+                    view! {
+                        <Map patch=set_patch layout=set_layout category=set_category map=set_map />
+                    }
+                }
+            />
             <Route
                 path=path!(":patch/:layout/:category")
                 view=move || {
                     view! {
-                        <Leaderboard patch=set_patch layout=set_layout category=set_category />
+                        <Leaderboard
+                            patch=set_patch
+                            layout=set_layout
+                            category=set_category
+                            map=set_map
+                        />
                     }
                 }
             />

@@ -1,5 +1,12 @@
 use std::{cmp::Ordering, collections::HashMap};
 
+use charming::{
+    component::{Axis, DataZoom, Feature, Grid, Legend, Toolbox, ToolboxDataZoom},
+    element::{AxisType, Tooltip, Trigger},
+    series::Line,
+    theme::Theme,
+    Chart, HtmlRenderer,
+};
 use leptos::{either::*, prelude::*};
 use leptos_meta::Title;
 use leptos_router::{
@@ -8,13 +15,14 @@ use leptos_router::{
 };
 use rust_decimal::Decimal;
 
-use crate::server::api::{get_runs_category, MapRuns, PartialRun};
+use crate::server::api::{get_runs_category, get_runs_id, MapRuns, PartialRun};
 
 #[component]
 pub fn Section(
     patch: ReadSignal<String>,
     layout: ReadSignal<String>,
     category: ReadSignal<String>,
+    map: ReadSignal<Option<String>>,
 ) -> impl IntoView {
     let layouts = move || match patch.get().as_str() {
         "1.00" => vec![1, 2],
@@ -45,8 +53,13 @@ pub fn Section(
                             children=move |l| {
                                 view! {
                                     <A href=move || {
-                                        patch.get() + "/" + &l.to_string() + "/" + &category.get()
-                                            + &query.get().to_query_string()
+                                        format!(
+                                            "{}/{l}/{}{}{}",
+                                            patch.get(),
+                                            category.get(),
+                                            map.get().map_or(String::new(), |m| format!("/{m}")),
+                                            query.get().to_query_string(),
+                                        )
                                     }>
                                         <span class="text">"Layout " {l}</span>
                                     </A>
@@ -56,14 +69,24 @@ pub fn Section(
                     </div>
                     <div class="right-row-nav">
                         <A href=move || {
-                            patch.get() + "/" + &layout.get() + "/standard"
-                                + &query.get().to_query_string()
+                            format!(
+                                "{}/{}/standard{}{}",
+                                patch.get(),
+                                layout.get(),
+                                map.get().map_or(String::new(), |m| format!("/{m}")),
+                                query.get().to_query_string(),
+                            )
                         }>
                             <span class="text">"Standard"</span>
                         </A>
                         <A href=move || {
-                            patch.get() + "/" + &layout.get() + "/gravspeed"
-                                + &query.get().to_query_string()
+                            format!(
+                                "{}/{}/gravspeed{}{}",
+                                patch.get(),
+                                layout.get(),
+                                map.get().map_or(String::new(), |m| format!("/{m}")),
+                                query.get().to_query_string(),
+                            )
                         }>
                             <span class="text">"Gravspeed"</span>
                         </A>
@@ -124,23 +147,23 @@ pub fn Leaderboard(
     patch: WriteSignal<String>,
     layout: WriteSignal<String>,
     category: WriteSignal<String>,
+    map: WriteSignal<Option<String>>,
 ) -> impl IntoView {
     let params = use_params_map();
     Effect::new(move |_| {
-        params.with(|params| {
-            patch.set(params.get("patch").unwrap());
-            layout.set(params.get("layout").unwrap());
-            category.set(params.get("category").unwrap());
-        })
+        let params = params.read();
+        patch.set(params.get("patch").unwrap());
+        layout.set(params.get("layout").unwrap());
+        category.set(params.get("category").unwrap());
+        map.set(None);
     });
     let selection = Memo::new(move |_| {
-        params.with(|params| {
-            (
-                params.get("patch").unwrap(),
-                params.get("layout").unwrap(),
-                params.get("category").unwrap(),
-            )
-        })
+        let params = params.read();
+        (
+            params.get("patch").unwrap(),
+            params.get("layout").unwrap(),
+            params.get("category").unwrap(),
+        )
     });
     let maps = Resource::new(selection, |mut s| {
         get_runs_category(s.0, s.1, format!("{}{}", s.2.remove(0).to_uppercase(), s.2))
@@ -262,10 +285,14 @@ pub fn LeaderboardEntry(map: MapRuns) -> impl IntoView {
     let (sel_run, set_sel_run) = signal::<Option<PartialRun>>(None);
     let (play, set_play) = signal::<bool>(false);
 
+    let map_name = map.map.clone();
+
     view! {
         <div class="lb_entry">
             <div class="header">
-                <h2>{map.map.clone()}</h2>
+                <A href=map.id.to_string()>
+                    <h2>{map_name}</h2>
+                </A>
                 {move || match runs().get(0) {
                     Some((_, r)) => {
                         set_top_run(Some(r.clone()));
@@ -390,4 +417,82 @@ pub fn LeaderboardEntry(map: MapRuns) -> impl IntoView {
             </div>
         </div>
     }
+}
+
+#[component]
+pub fn Map(
+    patch: WriteSignal<String>,
+    layout: WriteSignal<String>,
+    category: WriteSignal<String>,
+    map: WriteSignal<Option<String>>,
+) -> impl IntoView {
+    let params = use_params_map();
+    Effect::new(move |_| {
+        let params = params.read();
+        patch.set(params.get("patch").unwrap());
+        layout.set(params.get("layout").unwrap());
+        category.set(params.get("category").unwrap());
+        map.set(Some(params.get("map").unwrap()));
+    });
+    let selection = Memo::new(move |_| {
+        params
+            .read()
+            .get("map")
+            .unwrap()
+            .parse::<i32>()
+            .unwrap_or(0)
+    });
+    let map = Resource::new(selection, |s| get_runs_id(s));
+    let width = use_context::<ReadSignal<i32>>().unwrap();
+    let (height, _) = signal(200);
+
+    view! {
+        <Transition fallback=move || {
+            view! { <p>"Loading..."</p> }
+        }>
+            <ErrorBoundary fallback=|_| {
+                view! { <span class="error">"🛈 Something went wrong. Try again"</span> }
+            }>
+                {move || {
+                    map.get()
+                        .map(|data| {
+                            data.map(|runs| {
+                                view! {
+                                    <div id="map">
+                                        <h1>{runs.map}</h1>
+                                        <Chart width height runs=runs.runs />
+                                    </div>
+                                }
+                            })
+                        })
+                }}
+            </ErrorBoundary>
+        </Transition>
+    }
+}
+
+#[component]
+fn Chart(width: ReadSignal<i32>, height: ReadSignal<i32>, runs: Vec<PartialRun>) -> impl IntoView {
+    let chart = Chart::new()
+        .tooltip(Tooltip::new().trigger(Trigger::Axis))
+        .legend(Legend::new())
+        .grid(Grid::new().contain_label(true))
+        .toolbox(
+            Toolbox::new()
+                .feature(Feature::new().data_zoom(ToolboxDataZoom::new().y_axis_index("none"))),
+        )
+        .data_zoom(DataZoom::new().show(true).realtime(true).start(0).end(100))
+        .x_axis(Axis::new().type_(AxisType::Time).boundary_gap(false))
+        .y_axis(Axis::new().type_(AxisType::Value))
+        .series(Line::new().name("Test").data(vec![0]));
+    let (html, set_html) = signal::<Option<String>>(None);
+    Effect::new(move |_| {
+        set_html.set(
+            HtmlRenderer::new("Test", width.get() as u64, height.get() as u64)
+                .theme(Theme::Dark)
+                .render(&chart)
+                .ok(),
+        );
+    });
+    view! { <div id="chart" inner_html=html.get()></div> }
 }
