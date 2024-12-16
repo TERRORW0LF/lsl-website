@@ -1,8 +1,8 @@
 use std::{cmp::Ordering, collections::HashMap};
 
 use charming::{
-    component::{Axis, DataZoom, Feature, Grid, Legend, Toolbox, ToolboxDataZoom},
-    element::{AxisType, Tooltip, Trigger},
+    component::{Axis, DataZoom, FilterMode, Grid, Legend},
+    element::{AxisType, BoundaryGap, Formatter, Label, Tooltip, Trigger},
     series::Line,
     theme::Theme,
     Chart, HtmlRenderer,
@@ -13,7 +13,7 @@ use leptos_router::{
     components::{Form, Outlet, A},
     hooks::{use_params_map, use_query_map},
 };
-use rust_decimal::Decimal;
+use rust_decimal::{prelude::ToPrimitive, Decimal};
 
 use crate::server::api::{get_runs_category, get_runs_id, MapRuns, PartialRun};
 
@@ -460,7 +460,7 @@ pub fn Map(
                                 view! {
                                     <div id="map">
                                         <h1>{runs.map}</h1>
-                                        <Chart width height runs=runs.runs />
+                                        <Chart width height runs=runs.runs.clone() />
                                     </div>
                                 }
                             })
@@ -472,19 +472,57 @@ pub fn Map(
 }
 
 #[component]
-fn Chart(width: ReadSignal<i32>, height: ReadSignal<i32>, runs: Vec<PartialRun>) -> impl IntoView {
-    let chart = Chart::new()
-        .tooltip(Tooltip::new().trigger(Trigger::Axis))
+fn Chart(
+    width: ReadSignal<i32>,
+    height: ReadSignal<i32>,
+    mut runs: Vec<PartialRun>,
+) -> impl IntoView {
+    runs.sort_by_key(|r| r.created_at);
+    let mut users = HashMap::<String, Vec<f64>>::new();
+    for run in runs {
+        if let Some(user) = users.get_mut(&run.username) {
+            user.push(run.time.to_f64().unwrap());
+        } else {
+            users.insert(run.username.clone(), vec![run.time.to_f64().unwrap()]);
+        }
+    }
+    let mut chart = Chart::new()
+        .tooltip(
+            Tooltip::new()
+                .trigger(Trigger::Item)
+                .formatter(Formatter::Function(
+                    "function(params) {
+                        return `${params.seriesName}<br>${params.data[1].toFixed(3)} sec`
+                    }"
+                    .into(),
+                )),
+        )
         .legend(Legend::new())
         .grid(Grid::new().contain_label(true))
-        .toolbox(
-            Toolbox::new()
-                .feature(Feature::new().data_zoom(ToolboxDataZoom::new().y_axis_index("none"))),
+        .data_zoom(
+            DataZoom::new()
+                .show(true)
+                .realtime(true)
+                .start(0)
+                .end(100)
+                .filter_mode(FilterMode::None),
         )
-        .data_zoom(DataZoom::new().show(true).realtime(true).start(0).end(100))
-        .x_axis(Axis::new().type_(AxisType::Time).boundary_gap(false))
-        .y_axis(Axis::new().type_(AxisType::Value))
-        .series(Line::new().name("Test").data(vec![0]));
+        .x_axis(Axis::new().type_(AxisType::Time))
+        .y_axis(
+            Axis::new()
+                .type_(AxisType::Value)
+                .boundary_gap(BoundaryGap::NonCategoryAxis("5%".into(), "5%".into())),
+        );
+    for user in users {
+        chart = chart.series(
+            Line::new()
+                .name(user.0)
+                .data(user.1)
+                .label(Label::new().formatter(Formatter::Function(
+                    "function (d) { return d.toFixed(3); }".into(),
+                ))),
+        );
+    }
     let (html, set_html) = signal::<Option<String>>(None);
     Effect::new(move |_| {
         set_html.set(
