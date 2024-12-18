@@ -2,18 +2,24 @@ use std::{cmp::Ordering, collections::HashMap};
 
 use charming::{
     component::{Axis, DataZoom, FilterMode, Grid, Legend},
-    element::{AxisType, BoundaryGap, Formatter, Label, Tooltip, Trigger},
+    datatype::CompositeValue,
+    element::{AxisType, Tooltip, Trigger},
     series::Line,
     theme::Theme,
-    Chart, HtmlRenderer,
+    Chart, WasmRenderer,
 };
-use leptos::{either::*, prelude::*};
-use leptos_meta::Title;
+use leptos::{either::*, html::Div, prelude::*};
+use leptos_meta::{Script, Title};
 use leptos_router::{
     components::{Form, Outlet, A},
     hooks::{use_params_map, use_query_map},
 };
-use rust_decimal::{prelude::ToPrimitive, Decimal};
+use rust_decimal::{
+    prelude::{FromPrimitive, ToPrimitive},
+    Decimal,
+};
+use wasm_bindgen::{prelude::Closure, JsCast};
+use web_sys::js_sys;
 
 use crate::server::api::{get_runs_category, get_runs_id, MapRuns, PartialRun};
 
@@ -96,7 +102,14 @@ pub fn Section(
             <div role="definition" id="filters" class="content">
                 <Form
                     method="GET"
-                    action=move || patch.get() + "/" + &layout.get() + "/" + &category.get()
+                    action=move || {
+                        format!(
+                            "{}/{}/gravspeed{}",
+                            patch.get(),
+                            layout.get(),
+                            map.get().map_or(String::new(), |m| format!("/{m}")),
+                        )
+                    }
                 >
                     <div class="group">
                         <h6>"Patch"</h6>
@@ -281,11 +294,10 @@ pub fn LeaderboardEntry(map: MapRuns) -> impl IntoView {
             .collect::<Vec<(usize, PartialRun)>>()
     };
     let runs2 = runs.clone();
+    let map_name = map.map.clone();
     let (top_run, set_top_run) = signal::<Option<PartialRun>>(None);
     let (sel_run, set_sel_run) = signal::<Option<PartialRun>>(None);
     let (play, set_play) = signal::<bool>(false);
-
-    let map_name = map.map.clone();
 
     view! {
         <div class="lb_entry">
@@ -349,7 +361,7 @@ pub fn LeaderboardEntry(map: MapRuns) -> impl IntoView {
                                                 "Open in new Tab"
                                             </a>
                                         </div>
-                                        <div class="toner">
+                                        <div class="no-vid">
                                             <img
                                                 src=format!("/cdn/maps/{}.jpg", map.map)
                                                 alt=format!("Picture of {}", map.map)
@@ -361,7 +373,7 @@ pub fn LeaderboardEntry(map: MapRuns) -> impl IntoView {
                         } else {
                             EitherOf3::C(
                                 view! {
-                                    <div class="toner">
+                                    <div class="no-vid">
                                         <img
                                             src=format!("/cdn/maps/{}.jpg", map.map)
                                             alt=format!("Picture of {}", map.map)
@@ -443,62 +455,73 @@ pub fn Map(
             .unwrap_or(0)
     });
     let map = Resource::new(selection, |s| get_runs_id(s));
-    let width = use_context::<ReadSignal<i32>>().unwrap();
-    let (height, _) = signal(200);
+    let (height, _) = signal(400);
 
     view! {
-        <Transition fallback=move || {
-            view! { <p>"Loading..."</p> }
-        }>
-            <ErrorBoundary fallback=|_| {
-                view! { <span class="error">"🛈 Something went wrong. Try again"</span> }
+        <Script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js" />
+        <Script src="https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js" />
+        <section id="map">
+            <Transition fallback=move || {
+                view! { <p>"Loading..."</p> }
             }>
-                {move || {
-                    map.get()
-                        .map(|data| {
-                            data.map(|runs| {
-                                view! {
-                                    <div id="map">
-                                        <h1>{runs.map}</h1>
-                                        <Chart width height runs=runs.runs.clone() />
-                                    </div>
-                                }
+                <ErrorBoundary fallback=|_| {
+                    view! { <span class="error">"🛈 Something went wrong. Try again"</span> }
+                }>
+                    {move || {
+                        map.get()
+                            .map(|data| {
+                                data.map(|runs| {
+                                    view! {
+                                        <div>
+                                            <h1>{runs.map}</h1>
+                                            <Chart height runs=runs.runs.clone() />
+                                        </div>
+                                    }
+                                })
                             })
-                        })
-                }}
-            </ErrorBoundary>
-        </Transition>
+                    }}
+                </ErrorBoundary>
+            </Transition>
+        </section>
     }
 }
 
 #[component]
-fn Chart(
-    width: ReadSignal<i32>,
-    height: ReadSignal<i32>,
-    mut runs: Vec<PartialRun>,
-) -> impl IntoView {
+fn Chart(height: ReadSignal<i32>, mut runs: Vec<PartialRun>) -> impl IntoView {
     runs.sort_by_key(|r| r.created_at);
-    let mut users = HashMap::<String, Vec<f64>>::new();
+    let mut users = HashMap::<String, Vec<CompositeValue>>::new();
+    let mut min = Decimal::from_i32(90).unwrap();
+    let mut max = Decimal::ZERO;
     for run in runs {
+        if run.time < min {
+            min = run.time;
+        }
+        if run.time > max && run.time <= Decimal::from_i32(90).unwrap() {
+            max = run.time;
+        }
         if let Some(user) = users.get_mut(&run.username) {
-            user.push(run.time.to_f64().unwrap());
+            user.push(CompositeValue::Array(vec![
+                CompositeValue::String(run.created_at.to_rfc3339()),
+                CompositeValue::Number(charming::datatype::NumericValue::Float(
+                    run.time.to_f64().unwrap(),
+                )),
+            ]));
         } else {
-            users.insert(run.username.clone(), vec![run.time.to_f64().unwrap()]);
+            users.insert(
+                run.username.clone(),
+                vec![CompositeValue::Array(vec![
+                    CompositeValue::String(run.created_at.to_rfc3339()),
+                    CompositeValue::Number(charming::datatype::NumericValue::Float(
+                        run.time.to_f64().unwrap(),
+                    )),
+                ])],
+            );
         }
     }
     let mut chart = Chart::new()
-        .tooltip(
-            Tooltip::new()
-                .trigger(Trigger::Item)
-                .formatter(Formatter::Function(
-                    "function(params) {
-                        return `${params.seriesName}<br>${params.data[1].toFixed(3)} sec`
-                    }"
-                    .into(),
-                )),
-        )
+        .tooltip(Tooltip::new().trigger(Trigger::Item))
         .legend(Legend::new())
-        .grid(Grid::new().contain_label(true))
+        .grid(Grid::new().contain_label(true).left(40).right(5))
         .data_zoom(
             DataZoom::new()
                 .show(true)
@@ -507,30 +530,57 @@ fn Chart(
                 .end(100)
                 .filter_mode(FilterMode::None),
         )
-        .x_axis(Axis::new().type_(AxisType::Time))
+        .x_axis(Axis::new().type_(AxisType::Time).boundary_gap(false))
         .y_axis(
             Axis::new()
                 .type_(AxisType::Value)
-                .boundary_gap(BoundaryGap::NonCategoryAxis("5%".into(), "5%".into())),
+                .min(min.floor().to_i32().unwrap())
+                .max(max.ceil().to_i32().unwrap()),
         );
     for user in users {
-        chart = chart.series(
-            Line::new()
-                .name(user.0)
-                .data(user.1)
-                .label(Label::new().formatter(Formatter::Function(
-                    "function (d) { return d.toFixed(3); }".into(),
-                ))),
-        );
+        chart = chart.series(Line::new().name(user.0).data(user.1));
     }
-    let (html, set_html) = signal::<Option<String>>(None);
+    let chart_elem: NodeRef<Div> = NodeRef::new();
+    let (width, set_width) = signal::<i32>(0);
     Effect::new(move |_| {
-        set_html.set(
-            HtmlRenderer::new("Test", width.get() as u64, height.get() as u64)
-                .theme(Theme::Dark)
-                .render(&chart)
-                .ok(),
-        );
+        if let Some(elem) = chart_elem.get() {
+            elem.set_inner_html("");
+            let _ = elem.remove_attribute("_echarts_instance_");
+        }
+        WasmRenderer::new(width.get() as u32, height.get() as u32)
+            .theme(Theme::Walden)
+            .render("chart", &chart)
     });
-    view! { <div id="chart" inner_html=html.get()></div> }
+    let mut obs_init = true;
+    let mut chart_init = true;
+    let mut obs: Option<web_sys::ResizeObserver> = None;
+    Effect::new(move |_| {
+        if obs_init {
+            let a = Closure::<dyn FnMut(js_sys::Array, web_sys::ResizeObserver)>::new(
+                move |entries: js_sys::Array, _| {
+                    set_width(
+                        entries.to_vec()[0]
+                            .clone()
+                            .unchecked_into::<web_sys::ResizeObserverEntry>()
+                            .content_rect()
+                            .width() as i32,
+                    );
+                },
+            );
+            obs = web_sys::ResizeObserver::new(a.as_ref().unchecked_ref()).ok();
+            a.forget();
+            obs_init = false;
+        }
+        if let Some(observer) = obs.clone() {
+            if let Some(elem) = chart_elem.get() {
+                if chart_init {
+                    observer.observe(&elem.into());
+                    chart_init = false;
+                } else {
+                    chart_init = true;
+                }
+            }
+        }
+    });
+    view! { <div id="chart" node_ref=chart_elem></div> }
 }

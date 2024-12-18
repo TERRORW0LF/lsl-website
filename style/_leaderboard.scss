@@ -204,7 +204,7 @@
                         width: 100%;
                     }
 
-                    .toner {
+                    .no-vid {
                         background-color: var(--black);
                         opacity: 0.5;
 
@@ -305,6 +305,18 @@
                     }
                 }
             }
+        }
+    }
+
+    #map {
+        margin: 1rem 2rem;
+
+        #chart {
+            margin-top: 1rem;
+        }
+
+        h1 {
+            text-align: center;
         }
     }
 }
