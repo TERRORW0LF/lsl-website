@@ -410,9 +410,9 @@ pub fn Map(
                                 data.map(|runs| {
                                     view! {
                                         <div>
-                                            <h1>{runs.map}</h1>
+                                            <h1>{runs.map.clone()}</h1>
                                             <Chart height runs=runs.runs.clone() />
-                                            <MapRunList runs=runs.runs />
+                                            <MapRunList map=runs.map runs=runs.runs />
                                         </div>
                                     }
                                 })
@@ -554,76 +554,7 @@ fn Chart(height: ReadSignal<i32>, mut runs: Vec<PartialRun>) -> impl IntoView {
 }
 
 #[component]
-fn Player(
-    yt_id: Signal<Option<String>>,
-    url: Signal<Option<String>>,
-    cover: String,
-) -> impl IntoView {
-    let (play, set_play) = signal(false);
-    Effect::new(move |old: Option<Option<String>>| {
-        if old.flatten() != *url.read() {
-            set_play(false);
-        }
-        url.get()
-    });
-    view! {
-        <div class="video">
-            {move || {
-                if *play.read() && yt_id.read().is_some() {
-                    EitherOf3::A(
-                        view! {
-                            <iframe
-                                src=format!(
-                                    "https://www.youtube.com/embed/{}?autoplay=1&rel=0&modestbranding=1&showinfo=0",
-                                    yt_id.get().unwrap(),
-                                )
-                                allowfullscreen
-                            ></iframe>
-                        },
-                    )
-                } else if let Some(url) = url.get() {
-                    let url2 = url.clone();
-                    if *play.read() {
-                        Effect::new(move |_| { window().open_with_url_and_target(&url, "_blank") });
-                    }
-                    EitherOf3::B(
-                        view! {
-                            <div class="buttons">
-                                <button class="play-wrapper" on:click=move |_| { set_play(true) }>
-                                    <div></div>
-                                </button>
-                                <br />
-                                <a class="external" href=url2 target="_blank">
-                                    "Open in new Tab"
-                                </a>
-                            </div>
-                            <div class="no-vid">
-                                <img
-                                    src=format!("/cdn/maps/{}.jpg", cover)
-                                    alt=format!("Picture of {}", cover)
-                                />
-                            </div>
-                        },
-                    )
-                } else {
-                    EitherOf3::C(
-                        view! {
-                            <div class="no-vid">
-                                <img
-                                    src=format!("/cdn/maps/{}.jpg", cover)
-                                    alt=format!("Picture of {}", cover)
-                                />
-                            </div>
-                        },
-                    )
-                }
-            }}
-        </div>
-    }
-}
-
-#[component]
-fn MapRunList(runs: Vec<PartialRun>) -> impl IntoView {
+fn MapRunList(map: String, runs: Vec<PartialRun>) -> impl IntoView {
     fn filter<'a>(
         r: &'a PartialRun,
         f: Option<String>,
@@ -711,27 +642,138 @@ fn MapRunList(runs: Vec<PartialRun>) -> impl IntoView {
             each=runs_disp
             key=|r| r.1.id
             children=move |(i, r)| {
+                let username = r.username.clone();
                 view! {
-                    <div class="lb_entry_rank">
-                        <span class="rank">
-                            {move || match sort_key() {
-                                Some(k) => {
-                                    if k == "time" {
-                                        "#".to_string() + &(i + 1).to_string()
-                                    } else {
-                                        format!("{}", r.created_at.format("%d/%m/%y"))
-                                    }
-                                }
-                                None => "#".to_string() + &(i + 1).to_string(),
-                            }}
-                        </span>
-                        <span class="name">
-                            <A href=format!("/user/{}", r.user_id)>{r.username}</A>
-                        </span>
-                        <span class="time">{r.time.to_string()} " s"</span>
+                    <details>
+                        <summary>
+                            <div
+                                class="lb_entry_rank"
+                                role="term"
+                                aria-details=format!("run_{}", r.id)
+                            >
+                                <span class="rank">
+                                    {move || match sort_key() {
+                                        Some(k) => {
+                                            if k == "time" {
+                                                "#".to_string() + &(i + 1).to_string()
+                                            } else {
+                                                format!("{}", r.created_at.format("%d/%m/%y"))
+                                            }
+                                        }
+                                        None => "#".to_string() + &(i + 1).to_string(),
+                                    }}
+                                </span>
+                                <span class="name">
+                                    <A href=format!("/user/{}", r.user_id)>{username}</A>
+                                </span>
+                                <span class="time">{r.time.to_string()} " s"</span>
+                            </div>
+                        </summary>
+                    </details>
+                    <div role="definition" id=format!("run_{}", r.id) class="row">
+                        <Player
+                            yt_id=r.yt_id.into()
+                            url=Some(r.proof.clone()).into()
+                            cover=map.clone()
+                        />
+                        <div class="run-data">
+                            <div class="entry">
+                                <h3>"RANK"</h3>
+                                <p>{i}</p>
+                            </div>
+                            <div class="entry">
+                                <h3>"DATE"</h3>
+                                <p>{r.created_at.format("%a %d %b %Y %k:%M:%S").to_string()}</p>
+                            </div>
+                            <div class="entry">
+                                <h3>"USER"</h3>
+                                <p>{r.username}</p>
+                            </div>
+                            <div class="entry">
+                                <h3>"TIME"</h3>
+                                <p>{r.time.to_string()}</p>
+                            </div>
+                            <div class="entry">
+                                <h3>"PROOF"</h3>
+                                <p>
+                                    <a href=r.proof target="_blank">
+                                        "link"
+                                    </a>
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 }
             }
         />
+    }
+}
+
+#[component]
+fn Player(
+    yt_id: Signal<Option<String>>,
+    url: Signal<Option<String>>,
+    cover: String,
+) -> impl IntoView {
+    let (play, set_play) = signal(false);
+    Effect::new(move |old: Option<Option<String>>| {
+        if old.flatten() != *url.read() {
+            set_play(false);
+        }
+        url.get()
+    });
+    view! {
+        <div class="video">
+            {move || {
+                if *play.read() && yt_id.read().is_some() {
+                    EitherOf3::A(
+                        view! {
+                            <iframe
+                                src=format!(
+                                    "https://www.youtube.com/embed/{}?autoplay=1&rel=0&modestbranding=1&showinfo=0",
+                                    yt_id.get().unwrap(),
+                                )
+                                allowfullscreen
+                            ></iframe>
+                        },
+                    )
+                } else if let Some(url) = url.get() {
+                    let url2 = url.clone();
+                    if *play.read() {
+                        Effect::new(move |_| { window().open_with_url_and_target(&url, "_blank") });
+                    }
+                    EitherOf3::B(
+                        view! {
+                            <div class="buttons">
+                                <button class="play-wrapper" on:click=move |_| { set_play(true) }>
+                                    <div></div>
+                                </button>
+                                <br />
+                                <a class="external" href=url2 target="_blank">
+                                    "Open in new Tab"
+                                </a>
+                            </div>
+                            <div class="no-vid">
+                                <img
+                                    src=format!("/cdn/maps/{}.jpg", cover)
+                                    alt=format!("Picture of {}", cover)
+                                />
+                            </div>
+                        },
+                    )
+                } else {
+                    EitherOf3::C(
+                        view! {
+                            <div class="no-vid">
+                                <img
+                                    src=format!("/cdn/maps/{}.jpg", cover)
+                                    alt=format!("Picture of {}", cover)
+                                />
+                            </div>
+                        },
+                    )
+                }
+            }}
+        </div>
     }
 }
