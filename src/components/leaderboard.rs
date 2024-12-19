@@ -9,7 +9,7 @@ use charming::{
     Chart, WasmRenderer,
 };
 use leptos::{either::*, html::Div, prelude::*};
-use leptos_meta::{Script, Title};
+use leptos_meta::Title;
 use leptos_router::{
     components::{Form, Outlet, A},
     hooks::{use_params_map, use_query_map},
@@ -297,7 +297,8 @@ pub fn LeaderboardEntry(map: MapRuns) -> impl IntoView {
     let map_name = map.map.clone();
     let (top_run, set_top_run) = signal::<Option<PartialRun>>(None);
     let (sel_run, set_sel_run) = signal::<Option<PartialRun>>(None);
-    let (play, set_play) = signal::<bool>(false);
+    let yt_id = Signal::derive(move || sel_run.get().map(|r| r.yt_id).flatten());
+    let fallback_url = Signal::derive(move || sel_run.get().map(|r| r.proof));
 
     view! {
         <div class="lb_entry">
@@ -322,68 +323,7 @@ pub fn LeaderboardEntry(map: MapRuns) -> impl IntoView {
                 }}
             </div>
             <div class="content">
-                <div class="video">
-                    {move || {
-                        let v = play.get();
-                        let r = sel_run.get();
-                        if r.is_some() {
-                            let r = r.unwrap();
-                            if v && r.yt_id.is_some() {
-                                EitherOf3::A(
-                                    view! {
-                                        <iframe
-                                            src=format!(
-                                                "https://www.youtube.com/embed/{}?autoplay=1&rel=0&modestbranding=1&showinfo=0",
-                                                r.yt_id.clone().unwrap(),
-                                            )
-                                            allowfullscreen
-                                        ></iframe>
-                                    },
-                                )
-                            } else {
-                                let proof = r.proof.clone();
-                                if v {
-                                    Effect::new(move |_| {
-                                        window().open_with_url_and_target(&r.proof, "_blank")
-                                    });
-                                }
-                                EitherOf3::B(
-                                    view! {
-                                        <div class="buttons">
-                                            <button
-                                                class="play-wrapper"
-                                                on:click=move |_| { set_play(true) }
-                                            >
-                                                <div></div>
-                                            </button>
-                                            <br />
-                                            <a class="external" href=proof target="_blank">
-                                                "Open in new Tab"
-                                            </a>
-                                        </div>
-                                        <div class="no-vid">
-                                            <img
-                                                src=format!("/cdn/maps/{}.jpg", map.map)
-                                                alt=format!("Picture of {}", map.map)
-                                            />
-                                        </div>
-                                    },
-                                )
-                            }
-                        } else {
-                            EitherOf3::C(
-                                view! {
-                                    <div class="no-vid">
-                                        <img
-                                            src=format!("/cdn/maps/{}.jpg", map.map)
-                                            alt=format!("Picture of {}", map.map)
-                                        />
-                                    </div>
-                                },
-                            )
-                        }
-                    }}
-                </div>
+                <Player yt_id url=fallback_url cover=map.map />
                 <div class="lb_entry_ranks">
                     <Show
                         when=move || top_run.with(|r| r.is_some())
@@ -399,7 +339,6 @@ pub fn LeaderboardEntry(map: MapRuns) -> impl IntoView {
                                     <div
                                         class="lb_entry_rank"
                                         on:click=move |_| {
-                                            set_play(false);
                                             set_sel_run(Some(run.clone()));
                                         }
                                         class:selected=selected
@@ -458,8 +397,6 @@ pub fn Map(
     let (height, _) = signal(400);
 
     view! {
-        <Script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js" />
-        <Script src="https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js" />
         <section id="map">
             <Transition fallback=move || {
                 view! { <p>"Loading..."</p> }
@@ -475,6 +412,7 @@ pub fn Map(
                                         <div>
                                             <h1>{runs.map}</h1>
                                             <Chart height runs=runs.runs.clone() />
+                                            <MapRunList runs=runs.runs />
                                         </div>
                                     }
                                 })
@@ -488,7 +426,23 @@ pub fn Map(
 
 #[component]
 fn Chart(height: ReadSignal<i32>, mut runs: Vec<PartialRun>) -> impl IntoView {
+    let mut old_times = HashMap::<i64, Decimal>::new();
     runs.sort_by_key(|r| r.created_at);
+    runs = runs
+        .into_iter()
+        .filter(|r| {
+            if &r.time
+                < old_times
+                    .get(&r.user_id)
+                    .unwrap_or(&Decimal::new(999999, 3))
+            {
+                old_times.insert(r.user_id, r.time);
+                true
+            } else {
+                false
+            }
+        })
+        .collect();
     let mut users = HashMap::<String, Vec<CompositeValue>>::new();
     let mut min = Decimal::from_i32(90).unwrap();
     let mut max = Decimal::ZERO;
@@ -530,12 +484,26 @@ fn Chart(height: ReadSignal<i32>, mut runs: Vec<PartialRun>) -> impl IntoView {
                 .end(100)
                 .filter_mode(FilterMode::None),
         )
-        .x_axis(Axis::new().type_(AxisType::Time).boundary_gap(false))
+        .x_axis(Axis::new().type_(AxisType::Time))
         .y_axis(
             Axis::new()
                 .type_(AxisType::Value)
-                .min(min.floor().to_i32().unwrap())
-                .max(max.ceil().to_i32().unwrap()),
+                .min(
+                    min.round_dp_with_strategy(
+                        1,
+                        rust_decimal::RoundingStrategy::ToNegativeInfinity,
+                    )
+                    .to_f64()
+                    .unwrap(),
+                )
+                .max(
+                    max.round_dp_with_strategy(
+                        1,
+                        rust_decimal::RoundingStrategy::ToPositiveInfinity,
+                    )
+                    .to_f64()
+                    .unwrap(),
+                ),
         );
     for user in users {
         chart = chart.series(Line::new().name(user.0).data(user.1));
@@ -583,4 +551,187 @@ fn Chart(height: ReadSignal<i32>, mut runs: Vec<PartialRun>) -> impl IntoView {
         }
     });
     view! { <div id="chart" node_ref=chart_elem></div> }
+}
+
+#[component]
+fn Player(
+    yt_id: Signal<Option<String>>,
+    url: Signal<Option<String>>,
+    cover: String,
+) -> impl IntoView {
+    let (play, set_play) = signal(false);
+    Effect::new(move |old: Option<Option<String>>| {
+        if old.flatten() != *url.read() {
+            set_play(false);
+        }
+        url.get()
+    });
+    view! {
+        <div class="video">
+            {move || {
+                if *play.read() && yt_id.read().is_some() {
+                    EitherOf3::A(
+                        view! {
+                            <iframe
+                                src=format!(
+                                    "https://www.youtube.com/embed/{}?autoplay=1&rel=0&modestbranding=1&showinfo=0",
+                                    yt_id.get().unwrap(),
+                                )
+                                allowfullscreen
+                            ></iframe>
+                        },
+                    )
+                } else if let Some(url) = url.get() {
+                    let url2 = url.clone();
+                    if *play.read() {
+                        Effect::new(move |_| { window().open_with_url_and_target(&url, "_blank") });
+                    }
+                    EitherOf3::B(
+                        view! {
+                            <div class="buttons">
+                                <button class="play-wrapper" on:click=move |_| { set_play(true) }>
+                                    <div></div>
+                                </button>
+                                <br />
+                                <a class="external" href=url2 target="_blank">
+                                    "Open in new Tab"
+                                </a>
+                            </div>
+                            <div class="no-vid">
+                                <img
+                                    src=format!("/cdn/maps/{}.jpg", cover)
+                                    alt=format!("Picture of {}", cover)
+                                />
+                            </div>
+                        },
+                    )
+                } else {
+                    EitherOf3::C(
+                        view! {
+                            <div class="no-vid">
+                                <img
+                                    src=format!("/cdn/maps/{}.jpg", cover)
+                                    alt=format!("Picture of {}", cover)
+                                />
+                            </div>
+                        },
+                    )
+                }
+            }}
+        </div>
+    }
+}
+
+#[component]
+fn MapRunList(runs: Vec<PartialRun>) -> impl IntoView {
+    fn filter<'a>(
+        r: &'a PartialRun,
+        f: Option<String>,
+        t: &'a mut Decimal,
+        ts: &'a mut HashMap<i64, Decimal>,
+    ) -> bool {
+        match f {
+            Some(f) => match f.as_str() {
+                "verified" => r.verified,
+                "was_pb" => {
+                    if &r.time < ts.get(&r.user_id).unwrap_or(&Decimal::new(999999, 3)) {
+                        ts.insert(r.user_id, r.time);
+                        true
+                    } else {
+                        false
+                    }
+                }
+                "is_pb" => r.is_pb,
+                "was_wr" => {
+                    if r.time < *t {
+                        *t = r.time;
+                        true
+                    } else {
+                        false
+                    }
+                }
+                "is_wr" => r.is_wr,
+                _ => true,
+            },
+            None => r.is_pb,
+        }
+    }
+    let sort = |s: Option<String>| match s {
+        Some(s) => match s.as_str() {
+            "date" => move |r1: &PartialRun, r2: &PartialRun| -> Ordering {
+                if r1.created_at > r2.created_at {
+                    Ordering::Less
+                } else {
+                    Ordering::Greater
+                }
+            },
+            _ => move |r1: &PartialRun, r2: &PartialRun| -> Ordering {
+                if r1.time == r2.time {
+                    if r1.created_at < r2.created_at {
+                        Ordering::Less
+                    } else {
+                        Ordering::Greater
+                    }
+                } else {
+                    if r1.time < r2.time {
+                        Ordering::Less
+                    } else {
+                        Ordering::Greater
+                    }
+                }
+            },
+        },
+        None => move |r1: &PartialRun, r2: &PartialRun| -> Ordering {
+            if r1.time < r2.time {
+                Ordering::Less
+            } else {
+                Ordering::Greater
+            }
+        },
+    };
+
+    let filter_key = || use_query_map().with(|q| q.get("filter").map(|s| s.to_owned()));
+    let sort_key = || use_query_map().with(|q| q.get("sort").map(|s| s.to_owned()));
+    let runs_disp = Signal::derive(move || {
+        let mut old_time = Decimal::new(999999, 3);
+        let mut old_times = HashMap::<i64, Decimal>::new();
+        let r = runs.clone();
+        let mut runs: Vec<PartialRun> = r
+            .into_iter()
+            .filter(|r| filter(r, filter_key(), &mut old_time, &mut old_times))
+            .collect();
+        runs.sort_unstable_by(sort(sort_key()));
+        runs.into_iter()
+            .enumerate()
+            .collect::<Vec<(usize, PartialRun)>>()
+    });
+
+    view! {
+        <For
+            each=runs_disp
+            key=|r| r.1.id
+            children=move |(i, r)| {
+                view! {
+                    <div class="lb_entry_rank">
+                        <span class="rank">
+                            {move || match sort_key() {
+                                Some(k) => {
+                                    if k == "time" {
+                                        "#".to_string() + &(i + 1).to_string()
+                                    } else {
+                                        format!("{}", r.created_at.format("%d/%m/%y"))
+                                    }
+                                }
+                                None => "#".to_string() + &(i + 1).to_string(),
+                            }}
+                        </span>
+                        <span class="name">
+                            <A href=format!("/user/{}", r.user_id)>{r.username}</A>
+                        </span>
+                        <span class="time">{r.time.to_string()} " s"</span>
+                    </div>
+                }
+            }
+        />
+    }
 }
