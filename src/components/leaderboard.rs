@@ -45,7 +45,7 @@ pub fn Section(
         <section id="leaderboard">
             <details>
                 <summary>
-                    <span role="term" aria-details="filters">
+                    <span role="term" aria-details="filters" class="icon">
                         ""
                     </span>
                 </summary>
@@ -644,62 +644,82 @@ fn MapRunList(map: String, runs: Vec<PartialRun>) -> impl IntoView {
             children=move |(i, r)| {
                 let username = r.username.clone();
                 view! {
-                    <details>
-                        <summary>
-                            <div
-                                class="lb_entry_rank"
-                                role="term"
-                                aria-details=format!("run_{}", r.id)
-                            >
-                                <span class="rank">
-                                    {move || match sort_key() {
-                                        Some(k) => {
-                                            if k == "time" {
-                                                "#".to_string() + &(i + 1).to_string()
+                    <div class="map-entry">
+                        <details>
+                            <summary>
+                                <div class="row" role="term" aria-details=format!("run_{}", r.id)>
+                                    <div class="row">
+                                        <span class="icon">""</span>
+                                        <span class="rank">
+                                            {move || match sort_key() {
+                                                Some(k) => {
+                                                    if k == "time" {
+                                                        "#".to_string() + &(i + 1).to_string()
+                                                    } else {
+                                                        format!("{}", r.created_at.format("%d/%m/%y"))
+                                                    }
+                                                }
+                                                None => "#".to_string() + &(i + 1).to_string(),
+                                            }}
+                                        </span>
+                                    </div>
+                                    <span class="name">
+                                        <A href=format!("/user/{}", r.user_id)>{username}</A>
+                                    </span>
+                                    <span class="time">{r.time.to_string()} " s"</span>
+                                </div>
+                            </summary>
+                        </details>
+                        <div role="definition" id=format!("run_{}", r.id) class="content row">
+                            <Player
+                                yt_id=r.yt_id.into()
+                                url=Some(r.proof.clone()).into()
+                                cover=map.clone()
+                            />
+                            <div class="run-data">
+                                <div class="grid">
+                                    <div class="entry">
+                                        <h3>"RANK"</h3>
+                                        <p>"#"{i + 1}</p>
+                                    </div>
+                                    <div class="entry">
+                                        <h3>"DATE"</h3>
+                                        <p>
+                                            {r.created_at.format("%a %d %b %Y %k:%M:%S").to_string()}
+                                        </p>
+                                    </div>
+                                    <div class="entry">
+                                        <h3>"USER"</h3>
+                                        <p>{r.username}</p>
+                                    </div>
+                                    <div class="entry">
+                                        <h3>"TIME"</h3>
+                                        <p>{r.time.to_string()} " sec"</p>
+                                    </div>
+                                    <div class="entry">
+                                        <h3>"STATUS"</h3>
+                                        <p>
+                                            {if r.is_wr {
+                                                "World Record"
+                                            } else if r.is_pb {
+                                                "Personal Best"
+                                            } else if r.verified {
+                                                "Verified"
                                             } else {
-                                                format!("{}", r.created_at.format("%d/%m/%y"))
-                                            }
-                                        }
-                                        None => "#".to_string() + &(i + 1).to_string(),
-                                    }}
-                                </span>
-                                <span class="name">
-                                    <A href=format!("/user/{}", r.user_id)>{username}</A>
-                                </span>
-                                <span class="time">{r.time.to_string()} " s"</span>
-                            </div>
-                        </summary>
-                    </details>
-                    <div role="definition" id=format!("run_{}", r.id) class="row">
-                        <Player
-                            yt_id=r.yt_id.into()
-                            url=Some(r.proof.clone()).into()
-                            cover=map.clone()
-                        />
-                        <div class="run-data">
-                            <div class="entry">
-                                <h3>"RANK"</h3>
-                                <p>{i}</p>
-                            </div>
-                            <div class="entry">
-                                <h3>"DATE"</h3>
-                                <p>{r.created_at.format("%a %d %b %Y %k:%M:%S").to_string()}</p>
-                            </div>
-                            <div class="entry">
-                                <h3>"USER"</h3>
-                                <p>{r.username}</p>
-                            </div>
-                            <div class="entry">
-                                <h3>"TIME"</h3>
-                                <p>{r.time.to_string()}</p>
-                            </div>
-                            <div class="entry">
-                                <h3>"PROOF"</h3>
-                                <p>
-                                    <a href=r.proof target="_blank">
-                                        "link"
-                                    </a>
-                                </p>
+                                                "Unverified"
+                                            }}
+                                        </p>
+                                    </div>
+                                    <div class="entry">
+                                        <h3>"PROOF"</h3>
+                                        <p>
+                                            <a href=r.proof target="_blank">
+                                                "link"
+                                            </a>
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="id">{r.id}</div>
                             </div>
                         </div>
                     </div>
