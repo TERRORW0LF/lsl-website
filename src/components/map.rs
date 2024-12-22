@@ -81,10 +81,14 @@ pub fn Map(
 
 #[component]
 fn Chart(height: ReadSignal<i32>, mut runs: Vec<PartialRun>) -> impl IntoView {
+    let user = Memo::new(|_| use_params_map().read().get("id"));
     let mut old_times = HashMap::<i64, Decimal>::new();
     runs.sort_by_key(|r| r.created_at);
     runs = runs
         .into_iter()
+        .filter(|r| {
+            user().is_none() || r.user_id == user.get().unwrap().parse::<i64>().unwrap_or(-1)
+        })
         .filter(|r| {
             if &r.time
                 < old_times
@@ -210,14 +214,18 @@ fn Chart(height: ReadSignal<i32>, mut runs: Vec<PartialRun>) -> impl IntoView {
 
 #[component]
 fn MapRunList(map: String, runs: Vec<PartialRun>) -> impl IntoView {
-    let filter_key = || use_query_map().with(|q| q.get("filter").map(|s| s.to_owned()));
-    let sort_key = || use_query_map().with(|q| q.get("sort").map(|s| s.to_owned()));
+    let filter_key = Memo::new(|_| use_query_map().read().get("filter"));
+    let sort_key = Memo::new(|_| use_query_map().read().get("sort"));
+    let user = Memo::new(|_| use_params_map().read().get("id"));
     let runs_disp = Signal::derive(move || {
         let mut old_time = Decimal::new(999999, 3);
         let mut old_times = HashMap::<i64, Decimal>::new();
         let r = runs.clone();
         let mut runs: Vec<PartialRun> = r
             .into_iter()
+            .filter(|r| {
+                user().is_none() || r.user_id == user.get().unwrap().parse::<i64>().unwrap_or(-1)
+            })
             .filter(|r| filter(r, filter_key(), &mut old_time, &mut old_times))
             .collect();
         runs.sort_unstable_by(sort(sort_key()));

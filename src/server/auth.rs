@@ -10,8 +10,9 @@ use std::collections::HashSet;
 pub struct User {
     pub id: i64,
     pub username: String,
-    pub permissions: HashSet<String>,
+    pub bio: Option<String>,
     pub pfp: String,
+    pub permissions: HashSet<String>,
 }
 
 // Explicitly is not Serialize/Deserialize!
@@ -25,6 +26,7 @@ impl Default for User {
         Self {
             id: -1,
             username: "Guest".into(),
+            bio: None,
             permissions,
             pfp: "default".into(),
         }
@@ -217,6 +219,7 @@ pub mod ssr {
     pub struct PgUser {
         pub id: i64,
         pub name: String,
+        pub bio: Option<String>,
         pub created_at: DateTime<Local>,
         pub password: String,
         pub pfp: String,
@@ -231,6 +234,7 @@ pub mod ssr {
                 User {
                     id: self.id,
                     username: self.name,
+                    bio: self.bio,
                     permissions: if let Some(user_perms) = pg_user_perms {
                         user_perms
                             .into_iter()
@@ -262,12 +266,14 @@ pub mod ssr {
 }
 
 #[server(GetUser, prefix="/api", endpoint="user/get", input=PostUrl)]
-pub async fn get_user() -> Result<Option<User>, ServerFnError> {
+pub async fn get_user() -> Result<User, ServerFnError<ApiError>> {
     use self::ssr::*;
 
     let auth = auth()?;
-
-    Ok(auth.current_user)
+    match auth.current_user {
+        Some(u) => Ok(u),
+        None => Err(ApiError::Unauthenticated)?,
+    }
 }
 
 #[server(Register, prefix="/api", endpoint="user/register", input=PostUrl)]

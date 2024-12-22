@@ -6,6 +6,7 @@ use crate::{
         home::HomePage,
         leaderboard::{Leaderboard, Section},
         map::Map,
+        user::Profile,
     },
     server::{
         api::ApiError,
@@ -117,19 +118,11 @@ pub fn App() -> impl IntoView {
                             {move || {
                                 user.get()
                                     .map(|user| match user {
-                                        Err(e) => {
-                                            EitherOf3::A(
-                                                view! {
-                                                    <A href="/login">"Login"</A>
-                                                    <span>{format!("Login error: {}", e)}</span>
-                                                },
-                                            )
+                                        Err(_) => {
+                                            Either::Left(view! { <A href="/login">"Login"</A> })
                                         }
-                                        Ok(None) => {
-                                            EitherOf3::B(view! { <A href="/login">"Login"</A> })
-                                        }
-                                        Ok(Some(user)) => {
-                                            EitherOf3::C(
+                                        Ok(user) => {
+                                            Either::Right(
                                                 view! {
                                                     <A href="/dashboard">
                                                         <img src=format!("/cdn/users/{}.jpg", user.pfp) />
@@ -157,7 +150,7 @@ fn AppRouter(
     update: ServerAction<Update>,
     update_pfp: Action<FormData, Result<(), ServerFnError<ApiError>>, LocalStorage>,
     logout: ServerAction<Logout>,
-    user: Resource<Result<Option<User>, ServerFnError>>,
+    user: Resource<Result<User, ServerFnError<ApiError>>>,
 ) -> impl IntoView {
     view! {
         <Routes fallback=|| {
@@ -180,13 +173,13 @@ fn AppRouter(
             <Route path=path!("login") view=move || view! { <Login action=login /> } />
             <ProtectedRoute
                 path=path!("dashboard")
-                condition=move || user.get().map(|n| n.map_or(false, |u| u.is_some()))
+                condition=move || user.get().map(|n| n.is_ok())
                 redirect_path=|| "/login?redirect=dashboard"
                 view=move || view! { <Dashboard user update update_pfp logout /> }
             />
             <ProtectedRoute
                 path=path!("submit")
-                condition=move || user.get().map(|n| n.map_or(false, |u| u.is_some()))
+                condition=move || user.get().map(|n| n.is_ok())
                 redirect_path=|| "/login?redirect=submit"
                 view=Submit
             />
@@ -206,6 +199,50 @@ fn LeaderboardRouter() -> impl MatchNestedRoutes + Clone {
         <ParentRoute
             path=path!("leaderboard")
             view=move || view! { <Section patch layout category map /> }
+        >
+            <Route
+                path=path!(":patch/:layout/:category/:map")
+                view=move || {
+                    view! {
+                        <Map patch=set_patch layout=set_layout category=set_category map=set_map />
+                    }
+                }
+            />
+            <Route
+                path=path!(":patch/:layout/:category")
+                view=move || {
+                    view! {
+                        <Leaderboard
+                            patch=set_patch
+                            layout=set_layout
+                            category=set_category
+                            map=set_map
+                        />
+                    }
+                }
+            />
+            <Route path=path!("") view=|| view! { <Redirect path="2.00/1/standard" /> } />
+            <Route
+                path=path!(":patch")
+                view=|| {
+                    view! { <Redirect path="1/standard" /> }
+                }
+            />
+            <Route
+                path=path!(":patch/:layout")
+                view=|| {
+                    view! { <Redirect path="standard" /> }
+                }
+            />
+        </ParentRoute>
+        <ParentRoute
+            path=path!("user/:id/leaderboard")
+            view=move || {
+                view! {
+                    <Profile />
+                    <Section patch layout category map />
+                }
+            }
         >
             <Route
                 path=path!(":patch/:layout/:category/:map")

@@ -18,7 +18,7 @@ enum PopUp {
 
 #[component]
 pub fn Dashboard(
-    user: Resource<Result<Option<User>, ServerFnError>>,
+    user: Resource<Result<User, ServerFnError<ApiError>>>,
     update: ServerAction<Update>,
     update_pfp: Action<FormData, Result<(), ServerFnError<ApiError>>, LocalStorage>,
     logout: ServerAction<Logout>,
@@ -57,9 +57,7 @@ pub fn Dashboard(
                                     "/cdn/users/{}.jpg",
                                     user
                                         .get()
-                                        .map(|res| {
-                                            res.unwrap_or_default().unwrap_or_default().pfp
-                                        })
+                                        .map(|res| { res.unwrap_or_default().pfp })
                                         .unwrap_or("default".into()),
                                 )
                             }
@@ -74,10 +72,7 @@ pub fn Dashboard(
                         <div class="narrow">
                             <h3>"USERNAME"</h3>
                             <h4>
-                                {move || {
-                                    user.get()
-                                        .map(|user| user.map(|user| user.map(|user| user.username)))
-                                }}
+                                {move || { user.get().map(|user| user.map(|user| user.username)) }}
                             </h4>
                         </div>
                         <button class="secondary" on:click=move |_| show.set(PopUp::Username)>

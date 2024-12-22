@@ -90,9 +90,10 @@ pub fn Section(
                     method="GET"
                     action=move || {
                         format!(
-                            "{}/{}/gravspeed{}",
+                            "{}/{}/{}{}",
                             patch.get(),
                             layout.get(),
+                            category.get(),
                             map.get().map_or(String::new(), |m| format!("/{m}")),
                         )
                     }
@@ -198,17 +199,21 @@ pub fn Leaderboard(
 
 #[component]
 pub fn LeaderboardEntry(map: MapRuns) -> impl IntoView {
-    let filter_key = || use_query_map().with(|q| q.get("filter").map(|s| s.to_owned()));
-    let sort_key = || use_query_map().with(|q| q.get("sort").map(|s| s.to_owned()));
+    let filter_key = Memo::new(|_| use_query_map().read().get("filter"));
+    let sort_key = Memo::new(|_| use_query_map().read().get("sort"));
+    let user = Memo::new(|_| use_params_map().read().get("id"));
     let runs = move || {
         let mut old_time = Decimal::new(999999, 3);
         let mut old_times = HashMap::<i64, Decimal>::new();
         let r = map.runs.clone();
         let mut runs: Vec<PartialRun> = r
             .into_iter()
-            .filter(|r| filter(r, filter_key(), &mut old_time, &mut old_times))
+            .filter(|r| {
+                user().is_none() || r.user_id == user.get().unwrap().parse::<i64>().unwrap_or(-1)
+            })
+            .filter(|r| filter(r, filter_key.get(), &mut old_time, &mut old_times))
             .collect();
-        runs.sort_unstable_by(sort(sort_key()));
+        runs.sort_unstable_by(sort(sort_key.get()));
         runs.into_iter()
             .enumerate()
             .collect::<Vec<(usize, PartialRun)>>()

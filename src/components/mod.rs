@@ -5,3 +5,4 @@ pub mod home;
 pub mod leaderboard;
 pub mod map;
 pub mod ranking;
+pub mod user;
