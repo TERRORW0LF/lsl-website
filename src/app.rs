@@ -4,7 +4,8 @@ use crate::{
         dash::Dashboard,
         error_template::{AppError, ErrorTemplate},
         home::HomePage,
-        leaderboard::{Leaderboard, Map, Section},
+        leaderboard::{Leaderboard, Section},
+        map::Map,
     },
     server::{
         api::ApiError,
