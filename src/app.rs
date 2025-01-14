@@ -6,6 +6,7 @@ use crate::{
         home::HomePage,
         leaderboard::{Leaderboard, Section},
         map::Map,
+        ranking::Ranking,
         user::Profile,
     },
     server::{
@@ -105,7 +106,7 @@ pub fn App() -> impl IntoView {
                 <nav class="split-row-nav">
                     <div class="left-row-nav">
                         <A href="/home">"Home"</A>
-                        <A href="/leaderboard/2.00/1/standard">"Leaderboard"</A>
+                        <A href="/leaderboard">"Leaderboard"</A>
                         <A href="/ranking">"Ranking"</A>
                         <a href="https://discord.com/invite/G9QBCDY" rel="external">
                             "Discord"
@@ -183,6 +184,7 @@ fn AppRouter(
                 redirect_path=|| "/login?redirect=submit"
                 view=Submit
             />
+            <Route path=path!("ranking") view=Ranking />
             <LeaderboardRouter />
         </Routes>
     }
@@ -221,7 +223,7 @@ fn LeaderboardRouter() -> impl MatchNestedRoutes + Clone {
                     }
                 }
             />
-            <Route path=path!("") view=|| view! { <Redirect path="2.00/1/standard" /> } />
+            <Route path=path!("") view=|| view! { <Redirect path="2.13/1/standard" /> } />
             <Route
                 path=path!(":patch")
                 view=|| {
@@ -265,7 +267,7 @@ fn LeaderboardRouter() -> impl MatchNestedRoutes + Clone {
                     }
                 }
             />
-            <Route path=path!("") view=|| view! { <Redirect path="2.00/1/standard" /> } />
+            <Route path=path!("") view=|| view! { <Redirect path="2.13/1/standard" /> } />
             <Route
                 path=path!(":patch")
                 view=|| {

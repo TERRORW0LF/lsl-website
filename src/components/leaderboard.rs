@@ -21,6 +21,7 @@ pub fn Section(
         "1.41" => vec![1, 2, 3, 4],
         "1.50" => vec![1, 2, 3, 4, 5],
         "2.00" => vec![1, 2, 3, 4, 5],
+        "2.13" => vec![1, 2, 3, 4, 5],
         _ => vec![],
     };
 
@@ -104,7 +105,8 @@ pub fn Section(
                             <A href="1.00">"1.00"</A>
                             <A href="1.41">"1.41"</A>
                             <A href="1.50">"1.50"</A>
-                            <A href="2.00">"Current"</A>
+                            <A href="2.00">"2.00"</A>
+                            <A href="2.13">"Current"</A>
                         </div>
                     </div>
                     <div class="group">

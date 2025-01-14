@@ -531,7 +531,7 @@ pub async fn submit(
     let section_id = sqlx::query_as::<_, SectionId>(
         r#"SELECT id
         FROM section
-        WHERE patch='2.00' AND layout=$1 AND category=$2 AND map=$3"#,
+        WHERE patch='2.13' AND layout=$1 AND category=$2 AND map=$3"#,
     )
     .bind(layout)
     .bind(category)

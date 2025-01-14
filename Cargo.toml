@@ -13,7 +13,7 @@ chrono = { version = "0.4.38", features = ["serde"] }
 console_error_panic_hook = "0.1"
 console_log = "1"
 http = "1.1.0"
-leptos = { version = "0.7", features = ["nightly", "hydration"] }
+leptos = { version = "0.7", features = ["nightly"] }
 leptos_meta = "0.7"
 leptos_router = "0.7"
 rust_decimal = "1.36.0"
@@ -23,7 +23,7 @@ log = "0.4"
 server_fn = { version = "0.7", features = ["multipart"] }
 simple_logger = "5"
 strum = { version = "0.26", features = ["derive"] }
-wasm-bindgen = "0.2.95"
+wasm-bindgen = "=0.2.95"
 web-sys = {version ="0.3", features = ["DomRectReadOnly", "ResizeObserver", "ResizeObserverEntry"] }
 argon2 = { version = "0.5.3", optional = true }
 axum = { version = "0.7.5", features = ["macros"], optional = true }

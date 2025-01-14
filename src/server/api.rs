@@ -94,6 +94,7 @@ pub struct Map {
 
 #[server(GetRunsId, prefix="/api", endpoint="runs/id", input=GetUrl)]
 pub async fn get_runs_id(id: i32) -> Result<MapRuns, ServerFnError<ApiError>> {
+    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
     let pool = crate::server::auth::ssr::pool()?;
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let runs = sqlx::query_as::<_, MapRuns>(
@@ -103,8 +104,8 @@ pub async fn get_runs_id(id: i32) -> Result<MapRuns, ServerFnError<ApiError>> {
                     ORDER BY r.created_at ASC)
                     FILTER(WHERE r.id IS NOT NULL), '{NULL}'), '{}') AS runs
             FROM section s
-            INNER JOIN run r ON section_id = s.id
-            INNER JOIN "user" u ON user_id = u.id
+            LEFT JOIN run r ON section_id = s.id
+            LEFT JOIN "user" u ON user_id = u.id
             WHERE s.id = $1
             GROUP BY s.id, patch, layout, category, map"#,
     )

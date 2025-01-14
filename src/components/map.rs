@@ -8,7 +8,7 @@ use charming::{
     theme::Theme,
     Chart, WasmRenderer,
 };
-use leptos::{html::Div, prelude::*};
+use leptos::{either::Either, html::Div, prelude::*};
 use leptos_router::{
     components::A,
     hooks::{use_params_map, use_query_map},
@@ -235,93 +235,109 @@ fn MapRunList(map: String, runs: Vec<PartialRun>) -> impl IntoView {
     });
 
     view! {
-        <For
-            each=runs_disp
-            key=|r| r.1.id
-            children=move |(i, r)| {
-                let username = r.username.clone();
+        {if runs_disp.read().is_empty() {
+            Either::Left(view! { <h2>"No Runs Found"</h2> })
+        } else {
+            Either::Right(
                 view! {
-                    <div class="map-entry">
-                        <details>
-                            <summary>
-                                <div class="row" role="term" aria-details=format!("run_{}", r.id)>
-                                    <div class="row">
-                                        <span class="icon">""</span>
-                                        <span class="rank">
-                                            {move || match sort_key() {
-                                                Some(k) => {
-                                                    if k == "time" {
-                                                        "#".to_string() + &(i + 1).to_string()
-                                                    } else {
-                                                        format!("{}", r.created_at.format("%d/%m/%y"))
-                                                    }
-                                                }
-                                                None => "#".to_string() + &(i + 1).to_string(),
-                                            }}
-                                        </span>
+                    <For
+                        each=runs_disp
+                        key=|r| r.1.id
+                        children=move |(i, r)| {
+                            let username = r.username.clone();
+                            view! {
+                                <div class="map-entry">
+                                    <details>
+                                        <summary>
+                                            <div
+                                                class="row"
+                                                role="term"
+                                                aria-details=format!("run_{}", r.id)
+                                            >
+                                                <div class="row">
+                                                    <span class="icon">""</span>
+                                                    <span class="rank">
+                                                        {move || match sort_key() {
+                                                            Some(k) => {
+                                                                if k == "time" {
+                                                                    "#".to_string() + &(i + 1).to_string()
+                                                                } else {
+                                                                    format!("{}", r.created_at.format("%d/%m/%y"))
+                                                                }
+                                                            }
+                                                            None => "#".to_string() + &(i + 1).to_string(),
+                                                        }}
+                                                    </span>
+                                                </div>
+                                                <span class="name">
+                                                    <A href=format!("/user/{}", r.user_id)>{username}</A>
+                                                </span>
+                                                <span class="time">{r.time.to_string()} " s"</span>
+                                            </div>
+                                        </summary>
+                                    </details>
+                                    <div
+                                        role="definition"
+                                        id=format!("run_{}", r.id)
+                                        class="content row"
+                                    >
+                                        <Player
+                                            yt_id=r.yt_id.into()
+                                            url=Some(r.proof.clone()).into()
+                                            cover=map.clone()
+                                        />
+                                        <div class="run-data">
+                                            <div class="grid">
+                                                <div class="entry">
+                                                    <h3>"RANK"</h3>
+                                                    <p>"#"{i + 1}</p>
+                                                </div>
+                                                <div class="entry">
+                                                    <h3>"DATE"</h3>
+                                                    <p>
+                                                        {r.created_at.format("%a %d %b %Y %k:%M:%S").to_string()}
+                                                    </p>
+                                                </div>
+                                                <div class="entry">
+                                                    <h3>"USER"</h3>
+                                                    <p>{r.username}</p>
+                                                </div>
+                                                <div class="entry">
+                                                    <h3>"TIME"</h3>
+                                                    <p>{r.time.to_string()} " sec"</p>
+                                                </div>
+                                                <div class="entry">
+                                                    <h3>"STATUS"</h3>
+                                                    <p>
+                                                        {if r.is_wr {
+                                                            "World Record"
+                                                        } else if r.is_pb {
+                                                            "Personal Best"
+                                                        } else if r.verified {
+                                                            "Verified"
+                                                        } else {
+                                                            "Unverified"
+                                                        }}
+                                                    </p>
+                                                </div>
+                                                <div class="entry">
+                                                    <h3>"PROOF"</h3>
+                                                    <p>
+                                                        <a href=r.proof target="_blank">
+                                                            "link"
+                                                        </a>
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div class="id">{r.id}</div>
+                                        </div>
                                     </div>
-                                    <span class="name">
-                                        <A href=format!("/user/{}", r.user_id)>{username}</A>
-                                    </span>
-                                    <span class="time">{r.time.to_string()} " s"</span>
                                 </div>
-                            </summary>
-                        </details>
-                        <div role="definition" id=format!("run_{}", r.id) class="content row">
-                            <Player
-                                yt_id=r.yt_id.into()
-                                url=Some(r.proof.clone()).into()
-                                cover=map.clone()
-                            />
-                            <div class="run-data">
-                                <div class="grid">
-                                    <div class="entry">
-                                        <h3>"RANK"</h3>
-                                        <p>"#"{i + 1}</p>
-                                    </div>
-                                    <div class="entry">
-                                        <h3>"DATE"</h3>
-                                        <p>
-                                            {r.created_at.format("%a %d %b %Y %k:%M:%S").to_string()}
-                                        </p>
-                                    </div>
-                                    <div class="entry">
-                                        <h3>"USER"</h3>
-                                        <p>{r.username}</p>
-                                    </div>
-                                    <div class="entry">
-                                        <h3>"TIME"</h3>
-                                        <p>{r.time.to_string()} " sec"</p>
-                                    </div>
-                                    <div class="entry">
-                                        <h3>"STATUS"</h3>
-                                        <p>
-                                            {if r.is_wr {
-                                                "World Record"
-                                            } else if r.is_pb {
-                                                "Personal Best"
-                                            } else if r.verified {
-                                                "Verified"
-                                            } else {
-                                                "Unverified"
-                                            }}
-                                        </p>
-                                    </div>
-                                    <div class="entry">
-                                        <h3>"PROOF"</h3>
-                                        <p>
-                                            <a href=r.proof target="_blank">
-                                                "link"
-                                            </a>
-                                        </p>
-                                    </div>
-                                </div>
-                                <div class="id">{r.id}</div>
-                            </div>
-                        </div>
-                    </div>
-                }
-            }
-        />
+                            }
+                        }
+                    />
+                },
+            )
+        }}
     }
 }
