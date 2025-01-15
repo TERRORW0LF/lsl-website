@@ -11,7 +11,7 @@ use crate::{
     },
     server::{
         api::ApiError,
-        auth::{get_user, pfp, Login, Logout, Register, Update, User},
+        auth::{get_current_user, pfp, Login, Logout, Register, Update, User},
     },
 };
 use leptos::{either::*, prelude::*};
@@ -67,7 +67,7 @@ pub fn App() -> impl IntoView {
                 update_pfp.version().get(),
             )
         },
-        move |_| get_user(),
+        move |_| get_current_user(),
     );
 
     // Provides context that manages stylesheets, titles, meta tags, etc.

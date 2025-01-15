@@ -6,6 +6,8 @@ use serde::{Deserialize, Serialize};
 use strum::EnumString;
 use thiserror::Error;
 
+use super::auth::User;
+
 #[derive(Clone, Debug, Error, EnumString, Serialize, Deserialize)]
 pub enum ApiError {
     #[error("Unauthenticated")]
@@ -23,6 +25,9 @@ pub enum ApiError {
     #[error("Already Exists")]
     #[strum(to_string = "Already Exists")]
     AlreadyExists,
+    #[error("Not Found")]
+    #[strum(to_string = "Not Found")]
+    NotFound,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -216,4 +221,10 @@ pub async fn get_maps(
 
     res_opts.append_header(CACHE_CONTROL, HeaderValue::from_static("max-age=604800"));
     Ok(maps)
+}
+
+#[server(GetUser, prefix="/api", endpoint="user/get", input=GetUrl)]
+pub async fn get_user(id: i64) -> Result<User, ServerFnError<ApiError>> {
+    let pool = crate::server::auth::ssr::pool()?;
+    Ok(User::get(id, &pool).await.ok_or(ApiError::NotFound)?)
 }

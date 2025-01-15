@@ -258,22 +258,16 @@ pub mod ssr {
             ServerFnError::ServerError("Login failed: Failed to hash password".to_string())
         })?;
 
-        Argon2::default()
+        Ok(Argon2::default()
             .verify_password(password.as_bytes(), &pwd_parsed)
-            .map_err(|_| ApiError::InvalidCredentials)?;
-        Ok(())
+            .map_err(|_| ApiError::InvalidCredentials)?)
     }
 }
 
-#[server(GetUser, prefix="/api", endpoint="user/get", input=PostUrl)]
-pub async fn get_user() -> Result<User, ServerFnError<ApiError>> {
+#[server(GetCurrentUser, prefix="/api", endpoint="user/@me/get", input=PostUrl)]
+pub async fn get_current_user() -> Result<User, ServerFnError<ApiError>> {
     use self::ssr::*;
-
-    let auth = auth()?;
-    match auth.current_user {
-        Some(u) => Ok(u),
-        None => Err(ApiError::Unauthenticated)?,
-    }
+    Ok(auth()?.current_user.ok_or(ApiError::Unauthenticated)?)
 }
 
 #[server(Register, prefix="/api", endpoint="user/register", input=PostUrl)]

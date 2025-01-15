@@ -1,11 +1,14 @@
-use crate::server::auth::get_user;
+use crate::server::api::get_user;
 use leptos::prelude::*;
 use leptos_router::hooks::use_params_map;
 
 #[component]
 pub fn Profile() -> impl IntoView {
     let user_id = Signal::derive(|| use_params_map().get().get("id"));
-    let user = Resource::new(move || user_id.get(), |_| get_user());
+    let user = Resource::new(
+        move || user_id.get().unwrap().parse::<i64>().unwrap_or(0),
+        |id: i64| get_user(id),
+    );
     view! {
         <Suspense fallback=|| { "Fetching User" }>
             <section id="profile">
@@ -16,7 +19,7 @@ pub fn Profile() -> impl IntoView {
                                 view! {
                                     <img src=u.pfp />
                                     <h1>{u.username}</h1>
-                                    <p>{u.bio}</p>
+                                    <p>{u.bio.unwrap_or("This user has no about me.".into())}</p>
                                 }
                             })
                         })
