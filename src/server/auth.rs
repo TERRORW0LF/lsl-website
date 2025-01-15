@@ -6,13 +6,26 @@ use serde::{Deserialize, Serialize};
 use server_fn::codec::{GetUrl, MultipartData, MultipartFormData};
 use std::collections::HashSet;
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[cfg_attr(feature = "ssr", derive(sqlx::Type), sqlx(type_name = "Permissions"))]
+pub enum Permissions {
+    View,
+    Submit,
+    Trusted,
+    Delete,
+    Verify,
+    ManageRuns,
+    ManageUsers,
+    Administrator,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct User {
     pub id: i64,
     pub username: String,
     pub bio: Option<String>,
     pub pfp: String,
-    pub permissions: HashSet<String>,
+    pub permissions: HashSet<Permissions>,
 }
 
 // Explicitly is not Serialize/Deserialize!
@@ -76,6 +89,7 @@ pub struct PasswordUpdate {
 pub mod ssr {
     use crate::server::api::ApiError;
 
+    use super::Permissions;
     pub use super::{User, UserPasshash};
     pub use argon2::{
         password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
@@ -134,7 +148,7 @@ pub mod ssr {
                 .ok()?;
 
             //lets just get all the tokens the user can use, we will only use the full permissions if modifying them.
-            let pg_user_perms = sqlx::query_as::<_, PgPermissionTokens>(
+            let pg_user_perms = sqlx::query_as::<_, PgPermissionToken>(
                 "SELECT token FROM permission WHERE user_id = $1;",
             )
             .bind(id)
@@ -162,7 +176,7 @@ pub mod ssr {
                 .ok()?;
 
             //lets just get all the tokens the user can use, we will only use the full permissions if modifying them.
-            let pg_user_perms = sqlx::query_as::<_, PgPermissionTokens>(
+            let pg_user_perms = sqlx::query_as::<_, PgPermissionToken>(
                 "SELECT token FROM permission WHERE user_id = $1;",
             )
             .bind(pg_user.id)
@@ -178,11 +192,16 @@ pub mod ssr {
                 .await
                 .map(|(user, _)| user)
         }
+
+        pub fn has(&self, perm: &Permissions) -> bool {
+            self.permissions.contains(&Permissions::Administrator)
+                || self.permissions.contains(perm)
+        }
     }
 
     #[derive(sqlx::FromRow, Clone)]
-    pub struct PgPermissionTokens {
-        pub token: String,
+    pub struct PgPermissionToken {
+        pub token: Permissions,
     }
 
     #[async_trait]
@@ -208,13 +227,6 @@ pub mod ssr {
         }
     }
 
-    #[async_trait]
-    impl HasPermission<PgPool> for User {
-        async fn has(&self, perm: &str, _pool: &Option<&PgPool>) -> bool {
-            self.permissions.contains(perm)
-        }
-    }
-
     #[derive(sqlx::FromRow, Clone)]
     pub struct PgUser {
         pub id: i64,
@@ -228,7 +240,7 @@ pub mod ssr {
     impl PgUser {
         pub fn into_user(
             self,
-            pg_user_perms: Option<Vec<PgPermissionTokens>>,
+            pg_user_perms: Option<Vec<PgPermissionToken>>,
         ) -> (User, UserPasshash) {
             (
                 User {
@@ -239,9 +251,9 @@ pub mod ssr {
                         user_perms
                             .into_iter()
                             .map(|x| x.token)
-                            .collect::<HashSet<String>>()
+                            .collect::<HashSet<Permissions>>()
                     } else {
-                        HashSet::<String>::new()
+                        HashSet::<Permissions>::new()
                     },
                     pfp: self.pfp,
                 },
@@ -251,16 +263,28 @@ pub mod ssr {
     }
 
     pub fn verify_password(
-        pass_hash: String,
-        password: String,
+        pass_hash: &String,
+        password: &String,
     ) -> Result<(), ServerFnError<ApiError>> {
-        let pwd_parsed = PasswordHash::new(&pass_hash).map_err(|_| {
+        let pwd_parsed = PasswordHash::new(pass_hash).map_err(|_| {
             ServerFnError::ServerError("Login failed: Failed to hash password".to_string())
         })?;
 
         Ok(Argon2::default()
             .verify_password(password.as_bytes(), &pwd_parsed)
             .map_err(|_| ApiError::InvalidCredentials)?)
+    }
+
+    pub fn check_password(password: &String) -> bool {
+        password.len() >= 8 && password.len() <= 256
+    }
+
+    pub fn check_username(username: &String) -> bool {
+        username.len() >= 2
+            && username.len() <= 32
+            && username
+                .chars()
+                .all(|c| c.is_alphanumeric() || c == '_' || c == '-' || c == '.')
     }
 }
 
@@ -279,8 +303,11 @@ pub async fn register(
 ) -> Result<(), ServerFnError<ApiError>> {
     use self::ssr::*;
 
+    if !check_password(&password) || !check_username(&username) {
+        Err(ApiError::InvalidCredentials)?;
+    }
     if password != password_confirm {
-        return Err(ApiError::InvalidCredentials.into());
+        Err(ApiError::InvalidCredentials)?;
     }
 
     let pool = pool()?;
@@ -297,7 +324,7 @@ pub async fn register(
         }
     };
 
-    sqlx::query("INSERT INTO \"user\" (name, password) VALUES ($1,$2)")
+    sqlx::query("INSERT INTO \"user\" (name, password) VALUES ($1, $2)")
         .bind(username.clone())
         .bind(pwd_hash)
         .execute(&pool)
@@ -309,6 +336,18 @@ pub async fn register(
         .ok_or_else(|| {
             ServerFnError::ServerError("Signup failed: User does not exist.".to_string())
         })?;
+
+    let _ = sqlx::query(
+        r#"INSERT INTO permission (user_id, token) 
+            VALUES ($1, $2), ($1, $3), ($1, $4), ($1, $5)"#,
+    )
+    .bind(user.id)
+    .bind(Permissions::View)
+    .bind(Permissions::Submit)
+    .bind(Permissions::Trusted)
+    .bind(Permissions::Delete)
+    .execute(&pool)
+    .await;
 
     auth.login_user(user.id);
     auth.remember_user(remember.is_some());
@@ -334,7 +373,7 @@ pub async fn login(
         User::get_from_username_with_passhash(username, &pool)
             .await
             .ok_or(ApiError::InvalidCredentials)?;
-    verify_password(expected_passhash, password)?;
+    verify_password(&expected_passhash, &password)?;
 
     auth.login_user(user.id);
     auth.remember_user(remember.is_some());
@@ -360,6 +399,9 @@ pub async fn update(
     let pool = pool()?;
 
     if let Some(name) = username {
+        if !check_username(&name) {
+            Err(ApiError::InvalidCredentials)?;
+        }
         sqlx::query(
             r#"UPDATE "user"
             SET name = $1
@@ -377,7 +419,11 @@ pub async fn update(
             User::get_from_username_with_passhash(curr_user.username.clone(), &pool)
                 .await
                 .ok_or(ApiError::InvalidCredentials)?;
-        verify_password(expected_passhash, pw.old)?;
+        verify_password(&expected_passhash, &pw.old)?;
+        if !check_password(&pw.new) {
+            Err(ApiError::InvalidCredentials)?;
+        }
+
         sqlx::query(
             r#"UPDATE "user"
             SET password = $1
@@ -522,6 +568,10 @@ pub async fn submit(
     let pool = pool()?;
 
     let u = auth.current_user.ok_or(ApiError::Unauthenticated)?;
+    if !u.has(&Permissions::Submit) {
+        return Err(ApiError::Unauthorized)?;
+    }
+
     let section_id = sqlx::query_as::<_, SectionId>(
         r#"SELECT id
         FROM section
@@ -559,7 +609,7 @@ pub async fn submit(
         .bind(time)
         .bind(proof)
         .bind(yt_id)
-        .bind(true)
+        .bind(u.has(&Permissions::Trusted))
         .execute(&pool)
         .await;
 
@@ -570,6 +620,54 @@ pub async fn submit(
             )),
         }
     }
+}
+
+#[server(Verify, prefix="/api", endpoint="runs/verify", input=PostUrl)]
+pub async fn verify(id: i32) -> Result<(), ServerFnError<ApiError>> {
+    use self::ssr::*;
+
+    let auth = auth()?;
+    let pool = pool()?;
+
+    let u = auth.current_user.ok_or(ApiError::Unauthenticated)?;
+    if !u.has(&Permissions::Verify) {
+        return Err(ApiError::Unauthorized)?;
+    }
+
+    sqlx::query(
+        r#"UPDATE run
+        SET verified = TRUE
+        WHERE id = $1"#,
+    )
+    .bind(id)
+    .execute(&pool)
+    .await
+    .map_err(|_| ApiError::NotFound)?;
+    Ok(())
+}
+
+#[server(Delete, prefix="/api", endpoint="runs/delete", input=PostUrl)]
+pub async fn delete(id: i32) -> Result<(), ServerFnError<ApiError>> {
+    use self::ssr::*;
+
+    let auth = auth()?;
+    let pool = pool()?;
+
+    let u = auth.current_user.ok_or(ApiError::Unauthenticated)?;
+    if !u.has(&Permissions::Delete) {
+        return Err(ApiError::Unauthorized)?;
+    }
+
+    sqlx::query(
+        r#"DELETE FROM run
+        WHERE id = $1 AND user_id = $2 AND section_id >= 1093"#,
+    )
+    .bind(id)
+    .bind(u.id)
+    .execute(&pool)
+    .await
+    .map_err(|_| ApiError::NotFound)?;
+    Ok(())
 }
 
 #[server(DiscordList, prefix="/api", endpoint="user/discord/list", input=PostUrl)]

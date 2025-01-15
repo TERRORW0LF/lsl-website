@@ -190,7 +190,7 @@ fn Username(action: ServerAction<Update>, show: RwSignal<PopUp>) -> impl IntoVie
                         required
                         minlength="2"
                         maxlength="32"
-                        pattern="[a-zA-Z_\\-\\.]*"
+                        pattern="[a-zA-Z0-9_\\-\\.]*"
                         value=username
                         on:input=move |e| set_username(event_target_value::<Event>(&e))
                     />
@@ -198,7 +198,7 @@ fn Username(action: ServerAction<Update>, show: RwSignal<PopUp>) -> impl IntoVie
                         "Username"
                     </label>
                     <label for="username" class="error">
-                        "Username must adhere to [a-zA-Z_-.]{2,32}."
+                        "Username must adhere to [a-zA-Z0-9_-.]{2,32}."
                     </label>
                 </div>
                 <div class="row">

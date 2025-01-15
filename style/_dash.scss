@@ -94,9 +94,10 @@
     }
 
     .discord {
-        margin-bottom: 0.5rem;
-        padding: 0.8rem;
         height: 3rem;
+        margin-bottom: 0.5rem;
+        padding: 0 0.6rem;
+        align-items: center;
         background-color: var(--grey-700);
         border-radius: 5px;
     }

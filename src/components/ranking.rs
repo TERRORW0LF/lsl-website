@@ -5,7 +5,7 @@ pub fn Ranking() -> impl IntoView {
     view! {
         <section id="ranking">
             <h1>"Coming"</h1>
-            <img src="/soontm.jpg" alt="soon tm" />
+            <img src="/soon.jpg" alt="soon tm" />
         </section>
     }
 }

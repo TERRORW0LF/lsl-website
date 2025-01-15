@@ -10,6 +10,9 @@ use super::auth::User;
 
 #[derive(Clone, Debug, Error, EnumString, Serialize, Deserialize)]
 pub enum ApiError {
+    #[error("Unauthorized")]
+    #[strum(to_string = "Unauthorized")]
+    Unauthorized,
     #[error("Unauthenticated")]
     #[strum(to_string = "Unauthenticated")]
     Unauthenticated,
