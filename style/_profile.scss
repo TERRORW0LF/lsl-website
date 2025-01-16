@@ -1,0 +1,21 @@
+#profile {
+    margin: 2rem;
+
+    .row {
+        justify-content: left;
+        align-items: start;
+    }
+
+    h1 {
+        display: block;
+        margin: auto;
+        margin-bottom: 1rem;
+        text-align: center;
+    }
+
+    .avatar {
+        width: 25ch;
+        aspect-ratio: 1;
+        border-radius: 50%;
+    }
+}

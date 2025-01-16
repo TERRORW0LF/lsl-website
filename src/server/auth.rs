@@ -577,8 +577,8 @@ pub async fn submit(
         FROM section
         WHERE patch='2.13' AND layout=$1 AND category=$2 AND map=$3"#,
     )
-    .bind(layout)
-    .bind(category)
+    .bind(&layout)
+    .bind(&category)
     .bind(map)
     .fetch_one(&pool)
     .await
@@ -600,7 +600,7 @@ pub async fn submit(
         Err(ApiError::InvalidYtId.into())
     } else {
         let proof = format!("https://youtube.com/watch?v={yt_id}");
-        let res = sqlx::query(
+        let _ = sqlx::query(
             r#"INSERT INTO run (section_id, user_id, time, proof, yt_id, verified)
                                     VALUES ($1, $2, $3, $4, $5, $6)"#,
         )
@@ -611,14 +611,15 @@ pub async fn submit(
         .bind(yt_id)
         .bind(u.has(&Permissions::Trusted))
         .execute(&pool)
-        .await;
+        .await
+        .map_err(|_| ServerFnError::ServerError("Database insert failed".to_string()))?;
 
-        match res {
-            Ok(_) => Ok(()),
-            Err(_) => Err(ServerFnError::ServerError(
-                "Database insert failed".to_string(),
-            )),
-        }
+        leptos_axum::redirect(&format!(
+            "/leaderboard/2.13/{layout}/{}/{}",
+            category.to_lowercase(),
+            section_id.id
+        ));
+        Ok(())
     }
 }
 

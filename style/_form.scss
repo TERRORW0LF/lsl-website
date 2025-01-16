@@ -1,7 +1,9 @@
 #box {
     box-sizing: border-box;
     position: fixed;
-    top: 50%;
+    max-height: calc(100% - 3rem);
+    overflow-y: scroll;
+    top: calc(50% + 1.5rem);
     left: 50%;
     transform: translate(-50%, -50%);
     width: 25rem;
@@ -56,6 +58,8 @@
 
         .file {
             display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
             width: 100%;
             aspect-ratio: 21/9;
             padding: 0.5rem;
@@ -66,6 +70,7 @@
             background: transparent;
             justify-content: center;
             align-items: center;
+            text-align: center;
             cursor: pointer;
 
             h6 {

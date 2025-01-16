@@ -43,7 +43,7 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
                 <HydrationScripts options />
                 <MetaTags />
             </head>
-            <body>
+            <body tabindex="-1">
                 <App />
             </body>
         </html>
@@ -104,37 +104,94 @@ pub fn App() -> impl IntoView {
         <Router>
             <header>
                 <nav class="split-row-nav">
-                    <div class="left-row-nav">
-                        <A href="/home">"Home"</A>
-                        <A href="/leaderboard">"Leaderboard"</A>
-                        <A href="/ranking">"Ranking"</A>
-                        <a href="https://discord.com/invite/G9QBCDY" rel="external">
-                            "Discord"
-                        </a>
-                    </div>
-                    <div class="right-row-nav">
+                    <ul class="left-row-nav">
+                        <li>
+                            <A href="/home">"Home"</A>
+                        </li>
+                        <li>
+                            <A href="/leaderboard">"Leaderboard"</A>
+                        </li>
+                        <li>
+                            <A href="/ranking">"Ranking"</A>
+                        </li>
+                        <li>
+                            <a href="https://discord.com/invite/G9QBCDY" rel="external">
+                                "Discord"
+                            </a>
+                        </li>
+                    </ul>
+                    <ul class="right-row-nav">
                         <Transition fallback=move || {
-                            view! { <span>"Loading..."</span> }
+                            view! {
+                                <li>
+                                    <span>"Loading..."</span>
+                                </li>
+                            }
                         }>
                             {move || {
                                 user.get()
                                     .map(|user| match user {
                                         Err(_) => {
-                                            Either::Left(view! { <A href="/login">"Login"</A> })
+                                            Either::Left(
+                                                view! {
+                                                    <li>
+                                                        <A href="/login">"Login"</A>
+                                                    </li>
+                                                },
+                                            )
                                         }
                                         Ok(user) => {
                                             Either::Right(
                                                 view! {
-                                                    <A href="/dashboard">
-                                                        <img src=format!("/cdn/users/{}.jpg", user.pfp) />
-                                                    </A>
+                                                    <li>
+                                                        <A href=format!("/user/{}/leaderboard", user.id)>
+                                                            <img src=format!("/cdn/users/{}.jpg", user.pfp) />
+                                                        </A>
+                                                    </li>
+                                                    <li class="dropdown">
+                                                        <button
+                                                            type="button"
+                                                            class="dropdown-title"
+                                                            aria-controls="user-dropdown"
+                                                        >
+                                                            "▼"
+                                                        </button>
+                                                        <ul class="dropdown-menu" id="user-dropdown">
+                                                            <li>
+                                                                <A href=format!(
+                                                                    "/user/{}/leaderboard",
+                                                                    user.id,
+                                                                )>"Profile"</A>
+                                                            </li>
+                                                            <li>
+                                                                <A href="/submit">"Submit"</A>
+                                                            </li>
+                                                            <li>
+                                                                <A href="/user/@me/dashboard">"Dashboard"</A>
+                                                            </li>
+                                                            <li>
+                                                                <A href="/user/@me/manage">"Manage Runs"</A>
+                                                            </li>
+                                                            <li>
+                                                                <button
+                                                                    type="button"
+                                                                    class="dropdown-title"
+                                                                    on:click=move |_| {
+                                                                        let _ = logout.dispatch(Logout {});
+                                                                    }
+                                                                >
+                                                                    "Log Out"
+                                                                </button>
+                                                            </li>
+                                                        </ul>
+                                                    </li>
                                                 },
                                             )
                                         }
                                     })
                             }}
                         </Transition>
-                    </div>
+                    </ul>
                 </nav>
             </header>
             <main>
@@ -173,9 +230,15 @@ fn AppRouter(
             <Route path=path!("register") view=move || view! { <Register action=register /> } />
             <Route path=path!("login") view=move || view! { <Login action=login /> } />
             <ProtectedRoute
-                path=path!("dashboard")
+                path=path!("user/@me/dashboard")
                 condition=move || user.get().map(|n| n.is_ok())
-                redirect_path=|| "/login?redirect=dashboard"
+                redirect_path=|| "/login?redirect=user/@me/dashboard"
+                view=move || view! { <Dashboard user update update_pfp logout /> }
+            />
+            <ProtectedRoute
+                path=path!("user/@me/manage")
+                condition=move || user.get().map(|n| n.is_ok())
+                redirect_path=|| "/login?redirect=user/@me/manage"
                 view=move || view! { <Dashboard user update update_pfp logout /> }
             />
             <ProtectedRoute

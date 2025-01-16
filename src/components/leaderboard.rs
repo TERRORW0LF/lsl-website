@@ -39,51 +39,57 @@ pub fn Section(
             </details>
             <header id="lb_header">
                 <nav class="split-row-nav">
-                    <div class="left-row-nav">
+                    <ul class="left-row-nav">
                         <For
                             each=layouts
                             key=|l| l.to_owned()
                             children=move |l| {
                                 view! {
-                                    <A href=move || {
-                                        format!(
-                                            "{}/{l}/{}{}{}",
-                                            patch.get(),
-                                            category.get(),
-                                            map.get().map_or(String::new(), |m| format!("/{m}")),
-                                            query.get().to_query_string(),
-                                        )
-                                    }>
-                                        <span class="text">"Layout " {l}</span>
-                                    </A>
+                                    <li>
+                                        <A href=move || {
+                                            format!(
+                                                "{}/{l}/{}{}{}",
+                                                patch.get(),
+                                                category.get(),
+                                                map.get().map_or(String::new(), |m| format!("/{m}")),
+                                                query.get().to_query_string(),
+                                            )
+                                        }>
+                                            <span class="text">"Layout " {l}</span>
+                                        </A>
+                                    </li>
                                 }
                             }
                         />
-                    </div>
-                    <div class="right-row-nav">
-                        <A href=move || {
-                            format!(
-                                "{}/{}/standard{}{}",
-                                patch.get(),
-                                layout.get(),
-                                map.get().map_or(String::new(), |m| format!("/{m}")),
-                                query.get().to_query_string(),
-                            )
-                        }>
-                            <span class="text">"Standard"</span>
-                        </A>
-                        <A href=move || {
-                            format!(
-                                "{}/{}/gravspeed{}{}",
-                                patch.get(),
-                                layout.get(),
-                                map.get().map_or(String::new(), |m| format!("/{m}")),
-                                query.get().to_query_string(),
-                            )
-                        }>
-                            <span class="text">"Gravspeed"</span>
-                        </A>
-                    </div>
+                    </ul>
+                    <ul class="right-row-nav">
+                        <li>
+                            <A href=move || {
+                                format!(
+                                    "{}/{}/standard{}{}",
+                                    patch.get(),
+                                    layout.get(),
+                                    map.get().map_or(String::new(), |m| format!("/{m}")),
+                                    query.get().to_query_string(),
+                                )
+                            }>
+                                <span class="text">"Standard"</span>
+                            </A>
+                        </li>
+                        <li>
+                            <A href=move || {
+                                format!(
+                                    "{}/{}/gravspeed{}{}",
+                                    patch.get(),
+                                    layout.get(),
+                                    map.get().map_or(String::new(), |m| format!("/{m}")),
+                                    query.get().to_query_string(),
+                                )
+                            }>
+                                <span class="text">"Gravspeed"</span>
+                            </A>
+                        </li>
+                    </ul>
                 </nav>
             </header>
             <div role="definition" id="filters" class="content">

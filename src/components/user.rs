@@ -17,9 +17,16 @@ pub fn Profile() -> impl IntoView {
                         .map(|res| {
                             res.map(|u| {
                                 view! {
-                                    <img src=u.pfp />
                                     <h1>{u.username}</h1>
-                                    <p>{u.bio.unwrap_or("This user has no about me.".into())}</p>
+                                    <div class="row">
+                                        <img
+                                            class="avatar"
+                                            src=format!("/cdn/users/{}.jpg", u.pfp)
+                                        />
+                                        <p>
+                                            {u.bio.unwrap_or("This user has no about me.".into())}
+                                        </p>
+                                    </div>
                                 }
                             })
                         })
