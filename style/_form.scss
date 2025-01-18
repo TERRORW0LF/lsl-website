@@ -17,6 +17,10 @@
         font-weight: 700;
     }
 
+    .row {
+        flex-wrap: nowrap;
+    }
+
     .text {
         padding-top: 1rem;
         font-size: 0.8rem;
