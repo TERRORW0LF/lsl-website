@@ -472,7 +472,7 @@ pub async fn pfp(data: MultipartData) -> Result<(), ServerFnError<ApiError>> {
         let file = File::options()
             .append(true)
             .create_new(true)
-            .open(format!("../cdn/users/{name}.jpg"));
+            .open(format!("target/site/cdn/users/{name}.jpg"));
         let res = match file {
             Ok(file) => {
                 let mut writer = BufWriter::new(file);

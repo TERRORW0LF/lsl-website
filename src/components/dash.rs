@@ -2,7 +2,7 @@ use crate::server::{
     api::ApiError,
     auth::{discord_add, discord_delete, discord_list, Discord, Logout, Update, User},
 };
-use leptos::{either::Either, prelude::*};
+use leptos::{either::Either, html::Input, prelude::*};
 use leptos_meta::Title;
 use wasm_bindgen::JsCast;
 use web_sys::{Event, FormData, HtmlFormElement, SubmitEvent};
@@ -321,6 +321,7 @@ fn Avatar(
     show: RwSignal<PopUp>,
 ) -> impl IntoView {
     let result = Signal::derive(move || action.value().get().unwrap_or(Ok(())));
+    let input_ref = NodeRef::<Input>::new();
     view! {
         <section id="box" class:hidden=move || !(*show.read() == PopUp::Avatar)>
             <h1>"Change Avatar"</h1>
@@ -351,8 +352,27 @@ fn Avatar(
                 action.dispatch_local(form_data);
             }>
                 <div class="input-box">
-                    <input type="file" name="avatar" id="avatar" required accept=".jpg" />
-                    <label for="avatar" class="file">
+                    <input
+                        node_ref=input_ref
+                        type="file"
+                        name="avatar"
+                        id="avatar"
+                        required
+                        accept=".jpg"
+                    />
+                    <label
+                        for="avatar"
+                        class="file"
+                        on:dragover=move |ev| ev.prevent_default()
+                        on:drop=move |ev| {
+                            ev.prevent_default();
+                            if let Some(dt) = ev.data_transfer() {
+                                if let Some(input) = input_ref.get_untracked() {
+                                    input.set_files(dt.files().as_ref());
+                                }
+                            }
+                        }
+                    >
                         <h6>"Drag and drop file here or click to open file selector"</h6>
                         <p>"Accepts .jpg files under 4 MB"</p>
                     </label>
