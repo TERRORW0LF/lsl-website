@@ -7,7 +7,7 @@ use crate::{
         leaderboard::{Leaderboard, Section},
         map::Map,
         ranking::Ranking,
-        user::Profile,
+        user::{ManageRuns, Profile},
     },
     server::{
         api::ApiError,
@@ -23,6 +23,9 @@ use leptos_router::{
 };
 use wasm_bindgen::{prelude::Closure, JsCast};
 use web_sys::FormData;
+
+pub type UserResource = Resource<Result<User, ServerFnError<ApiError>>>;
+pub type UpdatePfpAction = Action<FormData, Result<(), ServerFnError<ApiError>>, LocalStorage>;
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
@@ -72,6 +75,12 @@ pub fn App() -> impl IntoView {
 
     // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context();
+    provide_context(user);
+    provide_context(register);
+    provide_context(login);
+    provide_context(logout);
+    provide_context(update);
+    provide_context(update_pfp);
 
     Effect::new(|_| {
         document()
@@ -195,21 +204,15 @@ pub fn App() -> impl IntoView {
                 </nav>
             </header>
             <main>
-                <AppRouter register login update update_pfp logout user />
+                <AppRouter />
             </main>
         </Router>
     }
 }
 
 #[component(transparent)]
-fn AppRouter(
-    register: ServerAction<Register>,
-    login: ServerAction<Login>,
-    update: ServerAction<Update>,
-    update_pfp: Action<FormData, Result<(), ServerFnError<ApiError>>, LocalStorage>,
-    logout: ServerAction<Logout>,
-    user: Resource<Result<User, ServerFnError<ApiError>>>,
-) -> impl IntoView {
+fn AppRouter() -> impl IntoView {
+    let user = use_context::<UserResource>().unwrap();
     view! {
         <Routes fallback=|| {
             let mut outside_errors = Errors::default();
@@ -227,19 +230,19 @@ fn AppRouter(
                     ""
                 }
             />
-            <Route path=path!("register") view=move || view! { <Register action=register /> } />
-            <Route path=path!("login") view=move || view! { <Login action=login /> } />
+            <Route path=path!("register") view=Register />
+            <Route path=path!("login") view=Login />
             <ProtectedRoute
                 path=path!("user/@me/dashboard")
                 condition=move || user.get().map(|n| n.is_ok())
                 redirect_path=|| "/login?redirect=user/@me/dashboard"
-                view=move || view! { <Dashboard user update update_pfp logout /> }
+                view=Dashboard
             />
             <ProtectedRoute
                 path=path!("user/@me/manage")
                 condition=move || user.get().map(|n| n.is_ok())
                 redirect_path=|| "/login?redirect=user/@me/manage"
-                view=move || view! { <Dashboard user update update_pfp logout /> }
+                view=ManageRuns
             />
             <ProtectedRoute
                 path=path!("submit")

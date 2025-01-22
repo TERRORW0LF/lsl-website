@@ -33,6 +33,35 @@ pub enum ApiError {
     NotFound,
 }
 
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
+pub struct RunFilters {
+    pub before: Option<DateTime<Local>>,
+    pub after: Option<DateTime<Local>>,
+    pub layout: Option<String>,
+    pub category: Option<String>,
+    pub map: Option<String>,
+    pub faster: Option<Decimal>,
+    pub slower: Option<Decimal>,
+    pub sort: String,
+    pub ascending: bool,
+}
+
+impl Default for RunFilters {
+    fn default() -> Self {
+        Self {
+            before: None,
+            after: None,
+            layout: None,
+            category: None,
+            map: None,
+            faster: None,
+            slower: None,
+            sort: String::from("created_at"),
+            ascending: false,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
 pub struct Run {
@@ -43,6 +72,7 @@ pub struct Run {
     pub category: String,
     pub map: String,
     pub user_id: i64,
+    #[cfg_attr(feature = "ssr", sqlx(rename = "name"))]
     pub username: String,
     pub time: Decimal,
     pub proof: String,
@@ -158,16 +188,37 @@ pub async fn get_runs_category(
 }
 
 #[server(GetRunsLatest, prefix="/api", endpoint="runs/latest", input=GetUrl)]
-pub async fn get_runs_latest(
-    user_id: Option<i64>,
+pub async fn get_runs_latest(offset: i32) -> Result<Vec<Run>, ServerFnError<ApiError>> {
+    let pool = crate::server::auth::ssr::pool()?;
+    let res_opts = expect_context::<leptos_axum::ResponseOptions>();
+    let runs = sqlx::query_as::<_, Run>(
+        r#"SELECT run.id, run.created_at, section_id, patch, layout, 
+                    category, map, user_id, "name", time, proof, yt_id, verified, is_pb, is_wr
+                FROM run
+                INNER JOIN section ON section_id = section.id
+                INNER JOIN "user" ON user_id = u.id
+                ORDER BY run.created_at DESC
+                LIMIT 50 OFFSET $1"#,
+    )
+    .bind(offset)
+    .fetch_all(&pool)
+    .await
+    .map_err(|_| ServerFnError::ServerError("Database lookup failed".to_string()))?;
+
+    res_opts.append_header(CACHE_CONTROL, HeaderValue::from_static("max-age=300"));
+    Ok(runs)
+}
+
+#[server(GetRunsUser, prefix="/api", endpoint="runs/user", input=GetUrl)]
+pub async fn get_runs_user(
+    user_id: i64,
+    filter: RunFilters,
     offset: i32,
 ) -> Result<Vec<Run>, ServerFnError<ApiError>> {
     let pool = crate::server::auth::ssr::pool()?;
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
-    let runs = match user_id {
-        Some(id) => {
-            sqlx::query_as::<_, Run>(
-                r#"SELECT run.id, run.created_at, section_id, patch, layout, 
+    let runs = sqlx::query_as::<_, Run>(
+        r#"SELECT run.id, run.created_at, section_id, patch, layout, 
                     category, map, user_id, "name", time, proof, yt_id, verified, is_pb, is_wr
                 FROM run
                 INNER JOIN section s ON section_id = s.id
@@ -175,28 +226,12 @@ pub async fn get_runs_latest(
                 WHERE user_id = $1
                 ORDER BY run.created_at DESC
                 LIMIT 50 OFFSET $2"#,
-            )
-            .bind(id)
-            .bind(offset)
-            .fetch_all(&pool)
-            .await
-        }
-        None => {
-            sqlx::query_as::<_, Run>(
-                r#"SELECT run.id, run.created_at, section_id, patch, layout, 
-                    category, map, user_id, "name", time, proof, yt_id, verified, is_pb, is_wr
-                FROM run
-                INNER JOIN section ON section_id = section.id
-                INNER JOIN "user" ON user_id = u.id
-                ORDER BY run.created_at DESC
-                LIMIT 50 OFFSET $1"#,
-            )
-            .bind(offset)
-            .fetch_all(&pool)
-            .await
-        }
-    }
-    .map_err(|_| ServerFnError::ServerError("Database lookup failed".to_string()))?;
+    )
+    .bind(user_id)
+    .bind(offset)
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| ServerFnError::ServerError("Database lookup failed".to_string()))?;
 
     res_opts.append_header(CACHE_CONTROL, HeaderValue::from_static("max-age=300"));
     Ok(runs)

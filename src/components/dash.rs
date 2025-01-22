@@ -1,6 +1,9 @@
-use crate::server::{
-    api::ApiError,
-    auth::{discord_add, discord_delete, discord_list, Discord, Logout, Update, User},
+use crate::{
+    app::{UpdatePfpAction, UserResource},
+    server::{
+        api::ApiError,
+        auth::{discord_add, discord_delete, discord_list, Logout, Update},
+    },
 };
 use leptos::{either::Either, html::Input, prelude::*};
 use leptos_meta::Title;
@@ -17,22 +20,11 @@ enum PopUp {
 }
 
 #[component]
-pub fn Dashboard(
-    user: Resource<Result<User, ServerFnError<ApiError>>>,
-    update: ServerAction<Update>,
-    update_pfp: Action<FormData, Result<(), ServerFnError<ApiError>>, LocalStorage>,
-    logout: ServerAction<Logout>,
-) -> impl IntoView {
+pub fn Dashboard() -> impl IntoView {
+    let user = expect_context::<UserResource>();
+    let logout = expect_context::<ServerAction<Logout>>();
+
     let show = RwSignal::new(PopUp::None);
-    let discord_del = Action::new(|snowflake: &String| {
-        let snowflake = snowflake.to_owned();
-        async move { discord_delete(snowflake).await }
-    });
-    let discord_add = Action::new(|_: &()| async move { discord_add().await });
-    let discord_list = Resource::new(
-        move || (discord_del.version().get(), discord_add.version().get()),
-        |_| discord_list(),
-    );
     view! {
         <Title text="Dashboard" />
         <section id="dashboard">
@@ -41,10 +33,10 @@ pub fn Dashboard(
                 class:hidden=move || { *show.read() == PopUp::None }
                 on:click=move |_| { show.set(PopUp::None) }
             />
-            <Username action=update show />
-            <Password action=update show />
-            <Avatar action=update_pfp show />
-            <DiscordList discord_list discord_del discord_add show />
+            <Username show />
+            <Password show />
+            <Avatar show />
+            <DiscordList show />
             <Suspense fallback=|| view! { <h1>"Loading..."</h1> }>
                 <h1>"Dashboard"</h1>
                 <div class="section">
@@ -150,7 +142,8 @@ pub fn Dashboard(
 }
 
 #[component]
-fn Username(action: ServerAction<Update>, show: RwSignal<PopUp>) -> impl IntoView {
+fn Username(show: RwSignal<PopUp>) -> impl IntoView {
+    let action = expect_context::<ServerAction<Update>>();
     let result = Signal::derive(move || action.value().get().unwrap_or(Ok(())));
     let (username, set_username) = signal(String::new());
     view! {
@@ -218,7 +211,8 @@ fn Username(action: ServerAction<Update>, show: RwSignal<PopUp>) -> impl IntoVie
 }
 
 #[component]
-fn Password(action: ServerAction<Update>, show: RwSignal<PopUp>) -> impl IntoView {
+fn Password(show: RwSignal<PopUp>) -> impl IntoView {
+    let action = expect_context::<ServerAction<Update>>();
     let result = Signal::derive(move || action.value().get().unwrap_or(Ok(())));
     let (password, set_password) = signal(String::new());
     let (password_new, set_password_new) = signal(String::new());
@@ -316,10 +310,8 @@ fn Password(action: ServerAction<Update>, show: RwSignal<PopUp>) -> impl IntoVie
 }
 
 #[component]
-fn Avatar(
-    action: Action<FormData, Result<(), ServerFnError<ApiError>>, LocalStorage>,
-    show: RwSignal<PopUp>,
-) -> impl IntoView {
+fn Avatar(show: RwSignal<PopUp>) -> impl IntoView {
+    let action = expect_context::<UpdatePfpAction>();
     let result = Signal::derive(move || action.value().get().unwrap_or(Ok(())));
     let input_ref = NodeRef::<Input>::new();
     view! {
@@ -397,12 +389,16 @@ fn Avatar(
 }
 
 #[component]
-fn DiscordList(
-    discord_list: Resource<Result<Vec<Discord>, ServerFnError<ApiError>>>,
-    discord_del: Action<String, Result<(), ServerFnError<ApiError>>>,
-    discord_add: Action<(), Result<(), ServerFnError<ApiError>>>,
-    show: RwSignal<PopUp>,
-) -> impl IntoView {
+fn DiscordList(show: RwSignal<PopUp>) -> impl IntoView {
+    let discord_del = Action::new(|snowflake: &String| {
+        let snowflake = snowflake.to_owned();
+        async move { discord_delete(snowflake).await }
+    });
+    let discord_add = Action::new(|_: &()| async move { discord_add().await });
+    let discord_list = Resource::new(
+        move || (discord_del.version().get(), discord_add.version().get()),
+        |_| discord_list(),
+    );
     view! {
         <section id="box" class:hidden=move || !(*show.read() == PopUp::Discord)>
             <h1>"Discord"</h1>

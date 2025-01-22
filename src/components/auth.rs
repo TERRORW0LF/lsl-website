@@ -8,7 +8,8 @@ use leptos_router::{components::A, hooks::use_query_map};
 use web_sys::Event;
 
 #[component]
-pub fn Login(action: ServerAction<Login>) -> impl IntoView {
+pub fn Login() -> impl IntoView {
+    let action = expect_context::<ServerAction<Login>>();
     let result = Signal::derive(move || action.value().get().unwrap_or(Ok(())));
     let (username, set_username) = signal(String::new());
     let (password, set_password) = signal(String::new());
@@ -93,7 +94,8 @@ pub fn Login(action: ServerAction<Login>) -> impl IntoView {
 }
 
 #[component]
-pub fn Register(action: ServerAction<Register>) -> impl IntoView {
+pub fn Register() -> impl IntoView {
+    let action = expect_context::<ServerAction<Register>>();
     let result = Signal::derive(move || action.value().get().unwrap_or(Ok(())));
     let (username, set_username) = signal(String::new());
     let (password, set_password) = signal(String::new());
