@@ -64,21 +64,21 @@ pub fn ManageRuns() -> impl IntoView {
                 <span>"map"</span>
                 <span>"proof"</span>
                 <span>"time"</span>
-            </div>
-            <Suspense fallback=|| { "Fetching Runs" }>
-                <ErrorBoundary fallback=|_| {
-                    view! { <div class="error-display">"You are not logged in"</div> }
-                }>
-                    {move || {
-                        user.get()
-                            .map(|res| {
-                                res.map(|user| {
-                                    view! { <ManageRunsList user filters /> }
+                <Suspense fallback=|| { "Fetching Runs" }>
+                    <ErrorBoundary fallback=|_| {
+                        view! { <div class="error-display">"You are not logged in"</div> }
+                    }>
+                        {move || {
+                            user.get()
+                                .map(|res| {
+                                    res.map(|user| {
+                                        view! { <ManageRunsList user filters /> }
+                                    })
                                 })
-                            })
-                    }}
-                </ErrorBoundary>
-            </Suspense>
+                        }}
+                    </ErrorBoundary>
+                </Suspense>
+            </div>
         </section>
     }
 }

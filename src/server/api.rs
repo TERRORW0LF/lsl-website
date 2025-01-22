@@ -215,23 +215,61 @@ pub async fn get_runs_user(
     filter: RunFilters,
     offset: i32,
 ) -> Result<Vec<Run>, ServerFnError<ApiError>> {
+    use sqlx::{Postgres, QueryBuilder};
+
     let pool = crate::server::auth::ssr::pool()?;
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
-    let runs = sqlx::query_as::<_, Run>(
+    let mut query = QueryBuilder::<Postgres>::new(
         r#"SELECT run.id, run.created_at, section_id, patch, layout, 
                     category, map, user_id, "name", time, proof, yt_id, verified, is_pb, is_wr
                 FROM run
                 INNER JOIN section s ON section_id = s.id
-                INNER JOIN "user" u ON user_id = u.id
-                WHERE user_id = $1
-                ORDER BY run.created_at DESC
-                LIMIT 50 OFFSET $2"#,
-    )
-    .bind(user_id)
-    .bind(offset)
-    .fetch_all(&pool)
-    .await
-    .map_err(|e| ServerFnError::ServerError("Database lookup failed".to_string()))?;
+                INNER JOIN "user" u ON user_id = u.id 
+                WHERE patch = '2.13'"#,
+    );
+    query.push(" AND user_id = ").push_bind(user_id);
+    if let Some(before) = filter.before {
+        query.push(" AND run.created_at <= ").push_bind(before);
+    }
+    if let Some(after) = filter.after {
+        query.push(" AND run.created_at >= ").push_bind(after);
+    }
+    if let Some(layout) = filter.layout {
+        query.push(" AND layout = ").push_bind(layout);
+    }
+    if let Some(category) = filter.category {
+        query.push(" AND category = ").push_bind(category);
+    }
+    if let Some(map) = filter.map {
+        query.push(" AND map = ").push_bind(map);
+    }
+    if let Some(faster) = filter.faster {
+        query.push(" AND time <= ").push_bind(faster);
+    }
+    if let Some(slower) = filter.slower {
+        query.push(" AND time >= ").push_bind(slower);
+    }
+    query
+        .push(" ORDER BY ")
+        .push(match filter.sort.as_str() {
+            "section" => "layout, category, map",
+            "time" => "time",
+            _ => "run.created_at",
+        })
+        .push(match filter.ascending {
+            true => " ASC",
+            false => " DESC",
+        })
+        .push(" LIMIT 50 OFFSET ")
+        .push_bind(offset);
+    let runs = query
+        .build_query_as::<Run>()
+        .fetch_all(&pool)
+        .await
+        .map_err(|e| {
+            leptos::logging::log!("{}", e);
+            ServerFnError::ServerError("Database lookup failed".to_string())
+        })?;
 
     res_opts.append_header(CACHE_CONTROL, HeaderValue::from_static("max-age=300"));
     Ok(runs)

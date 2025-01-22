@@ -234,7 +234,7 @@ pub fn Submit() -> impl IntoView {
                 <div class="hidden">{result}</div>
             </ErrorBoundary>
             <ActionForm action=action>
-                <div class="row">
+                <div class="row no-wrap">
                     <div class="input-box">
                         <input
                             type="text"
@@ -291,7 +291,7 @@ pub fn Submit() -> impl IntoView {
                         </label>
                     </div>
                 </div>
-                <div class="row">
+                <div class="row no-wrap">
                     <div class="input-box">
                         <select
                             required

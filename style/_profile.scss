@@ -22,3 +22,21 @@
         margin-bottom: 1rem;
     }
 }
+
+#manage-runs {
+    margin: 2rem;
+
+    .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
+        row-gap: 1rem;
+
+        .body {
+            grid-column: 1 / 8;
+        }
+
+        a {
+            color: var(--info);
+        }
+    }
+}
