@@ -2,7 +2,7 @@ use crate::{
     app::UserResource,
     server::{
         api::{get_runs_user, get_user, RunFilters},
-        auth::User,
+        auth::{Delete, User},
     },
 };
 use leptos::prelude::*;
@@ -57,13 +57,15 @@ pub fn ManageRuns() -> impl IntoView {
         <section id="manage-runs">
             <div>"filters"</div>
             <div class="grid">
-                <span>"id"</span>
-                <span>"date"</span>
-                <span>"layout"</span>
-                <span>"category"</span>
-                <span>"map"</span>
-                <span>"proof"</span>
-                <span>"time"</span>
+                <span class="heading">"id"</span>
+                <span class="heading">"date"</span>
+                <span class="heading">"layout"</span>
+                <span class="heading">"category"</span>
+                <span class="heading">"map"</span>
+                <span class="heading">"proof"</span>
+                <span class="heading">"time"</span>
+                <span></span>
+                <div class="divider header"></div>
                 <Suspense fallback=|| { "Fetching Runs" }>
                     <ErrorBoundary fallback=|_| {
                         view! { <div class="error-display">"You are not logged in"</div> }
@@ -85,7 +87,11 @@ pub fn ManageRuns() -> impl IntoView {
 
 #[component]
 fn ManageRunsList(user: User, filters: ReadSignal<RunFilters>) -> impl IntoView {
-    let runs = Resource::new(move || filters.get(), move |f| get_runs_user(user.id, f, 0));
+    let delete = ServerAction::<Delete>::new();
+    let runs = Resource::new(
+        move || (filters.get(), delete.version().get()),
+        move |f| get_runs_user(user.id, f.0, 0),
+    );
     view! {
         <Suspense fallback=|| {
             "Fetching Runs"
@@ -108,7 +114,14 @@ fn ManageRunsList(user: User, filters: ReadSignal<RunFilters>) -> impl IntoView 
                                             <a href=r.proof>"link"</a>
                                         </span>
                                         <span>{r.time.to_string()} " sec"</span>
-                                        <div class="body">{r.id}</div>
+                                        <ActionForm action=delete>
+                                            <input type="text" hidden readonly name="id" value=r.id />
+                                            <label class="delete">
+                                                <input hidden type="submit" />
+                                                <div></div>
+                                            </label>
+                                        </ActionForm>
+                                        <div class="divider"></div>
                                     }
                                 })
                                 .collect::<Vec<_>>()
