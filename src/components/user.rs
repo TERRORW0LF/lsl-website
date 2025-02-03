@@ -124,7 +124,7 @@ pub fn ManageRuns() -> impl IntoView {
                     <div class="input-box">
                         <input type="datetime-local" name="after" id="after" />
                         <label for="after" class="indicator">
-                            "Before"
+                            "After"
                         </label>
                     </div>
                     <div class="input-box">
