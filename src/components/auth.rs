@@ -351,14 +351,7 @@ pub fn Submit() -> impl IntoView {
                         on:input=move |e| set_map(event_target_value::<Event>(&e))
                     />
                     <datalist id="maps">
-                        <Await
-                            future=get_maps(
-                                "2.00".to_string(),
-                                "1".to_string(),
-                                "Standard".to_string(),
-                            )
-                            let:maps
-                        >
+                        <Await future=get_maps() let:maps>
                             {match maps {
                                 Ok(v) => {
                                     set_maps(Some(v.clone()));

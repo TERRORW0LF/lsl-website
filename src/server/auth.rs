@@ -1,10 +1,12 @@
-use crate::server::api::ApiError;
+use crate::server::api::{get_runs_user, ApiError, RunFilters};
 use http::HeaderValue;
 use leptos::prelude::{server, server_fn::codec::PostUrl, ServerFnError};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use server_fn::codec::{GetUrl, MultipartData, MultipartFormData};
 use std::collections::HashSet;
+
+use super::api::Run;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]
 #[cfg_attr(feature = "ssr", derive(sqlx::Type), sqlx(type_name = "Permissions"))]
@@ -552,6 +554,19 @@ pub async fn logout() -> Result<(), ServerFnError<ApiError>> {
 #[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
 struct SectionId {
     id: i32,
+}
+
+#[server(GetRunsCurrentUser, prefix="/api", endpoint="runs/user/@me", input=PostUrl)]
+pub async fn get_runs_current_user(
+    filter: RunFilters,
+    offset: i32,
+) -> Result<Vec<Run>, ServerFnError<ApiError>> {
+    use self::ssr::*;
+
+    leptos::logging::log!("{:?}", filter);
+    let auth = auth()?;
+    let u = auth.current_user.ok_or(ApiError::Unauthenticated)?;
+    get_runs_user(u.id, filter, offset).await
 }
 
 #[server(Submit, prefix="/api", endpoint="runs/submit", input=PostUrl)]

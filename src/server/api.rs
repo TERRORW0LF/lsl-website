@@ -276,21 +276,14 @@ pub async fn get_runs_user(
 }
 
 #[server(GetMaps, prefix="/api", endpoint="maps", input=GetUrl)]
-pub async fn get_maps(
-    patch: String,
-    layout: String,
-    category: String,
-) -> Result<Vec<Map>, ServerFnError<ApiError>> {
+pub async fn get_maps() -> Result<Vec<Map>, ServerFnError<ApiError>> {
     let pool = crate::server::auth::ssr::pool()?;
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let maps = sqlx::query_as::<_, Map>(
         r#"SELECT map, code
         FROM section
-        WHERE patch=$1 AND layout=$2 AND category=$3"#,
+        WHERE patch='2.13' AND layout='1' AND category='Standard'"#,
     )
-    .bind(patch)
-    .bind(layout)
-    .bind(category)
     .fetch_all(&pool)
     .await
     .map_err(|_| ServerFnError::ServerError("Database lookup failed".to_string()))?;

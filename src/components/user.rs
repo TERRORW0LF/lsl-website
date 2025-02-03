@@ -1,13 +1,13 @@
 use crate::{
     app::UserResource,
     server::{
-        api::{get_runs_user, get_user, RunFilters},
-        auth::{Delete, User},
+        api::{get_maps, get_runs_user, get_user, RunFilters},
+        auth::Delete,
     },
 };
-use leptos::prelude::*;
+use leptos::{either::Either, prelude::*};
 use leptos_router::{
-    components::A,
+    components::{Form, A},
     hooks::{use_params_map, use_query_map},
 };
 
@@ -53,9 +53,22 @@ pub fn Profile() -> impl IntoView {
 
 #[component]
 pub fn ManageRuns() -> impl IntoView {
-    let (filters, set_filters) = signal(RunFilters::default());
-    let offset = Signal::derive(|| {
-        use_query_map()
+    let params = use_query_map();
+    let filters = Signal::derive(move || {
+        params.with(|p| RunFilters {
+            sort: p.get("sort").unwrap_or("date".into()),
+            ascending: !p.get("order").is_none_or(|s| s == "desc"),
+            layout: p.get("layout"),
+            category: p.get("category"),
+            map: p.get("map"),
+            faster: p.get("faster").map(|s| s.parse().ok()).flatten(),
+            slower: p.get("slower").map(|s| s.parse().ok()).flatten(),
+            before: p.get("before").map(|s| s.parse().ok()).flatten(),
+            after: p.get("after").map(|s| s.parse().ok()).flatten(),
+        })
+    });
+    let offset = Signal::derive(move || {
+        params
             .get()
             .get("page")
             .unwrap_or(String::from("0"))
@@ -74,7 +87,109 @@ pub fn ManageRuns() -> impl IntoView {
 
     view! {
         <section id="manage-runs">
-            <div>"filters"</div>
+            <details>
+                <summary>
+                    <span role="term" aria-details="filters" class="icon">
+                        "Show Filters"
+                    </span>
+                </summary>
+            </details>
+            <div role="definition" id="filters" class="content">
+                <Form method="GET" action="">
+                    <div class="input-box">
+                        <select name="sort" id="sort">
+                            <option value="date">"Date"</option>
+                            <option value="time">"Time"</option>
+                            <option value="section">"Section"</option>
+                        </select>
+                        <label for="sort" class="indicator">
+                            "Sort By"
+                        </label>
+                    </div>
+                    <div class="input-box">
+                        <select name="order" id="order">
+                            <option value="asc">"Ascending"</option>
+                            <option value="desc">"Descending"</option>
+                        </select>
+                        <label for="order" class="indicator">
+                            "Order By"
+                        </label>
+                    </div>
+                    <div class="input-box">
+                        <input type="datetime-local" name="before" id="before" />
+                        <label for="before" class="indicator">
+                            "Before"
+                        </label>
+                    </div>
+                    <div class="input-box">
+                        <input type="datetime-local" name="after" id="after" />
+                        <label for="after" class="indicator">
+                            "Before"
+                        </label>
+                    </div>
+                    <div class="input-box">
+                        <input type="number" name="faster" id="faster" min="0" step="0.001" />
+                        <label for="faster" class="placeholder">
+                            "Faster Than"
+                        </label>
+                    </div>
+                    <div class="input-box">
+                        <input type="number" name="slower" id="slower" min="0" step="0.001" />
+                        <label for="slower" class="placeholder">
+                            "Slower Than"
+                        </label>
+                    </div>
+                    <div class="input-box">
+                        <select name="layout" id="layout">
+                            <option value="">"All"</option>
+                            <option value="1">"Layout 1"</option>
+                            <option value="2">"Layout 2"</option>
+                            <option value="3">"Layout 3"</option>
+                            <option value="4">"Layout 4"</option>
+                            <option value="5">"Layout 5"</option>
+                        </select>
+                        <label for="layout" class="indicator">
+                            "Layout"
+                        </label>
+                    </div>
+                    <div class="input-box">
+                        <select name="category" id="category">
+                            <option value="">"All"</option>
+                            <option value="Standard">"Standard"</option>
+                            <option value="Gravspeed">"Gravspeed"</option>
+                        </select>
+                        <label for="category" class="indicator">
+                            "Category"
+                        </label>
+                    </div>
+                    <div class="input-box">
+                        <input list="maps" name="map" id="map" />
+                        <datalist id="maps">
+                            <Await future=get_maps() let:maps>
+                                {match maps {
+                                    Ok(v) => {
+                                        Either::Left(
+                                            v
+                                                .into_iter()
+                                                .map(|m| {
+                                                    view! {
+                                                        <option value=m.name.clone()>{m.name.clone()}</option>
+                                                    }
+                                                })
+                                                .collect_view(),
+                                        )
+                                    }
+                                    Err(_) => Either::Right(view! {}),
+                                }}
+                            </Await>
+                        </datalist>
+                        <label for="map" class="placeholder">
+                            "Map"
+                        </label>
+                    </div>
+                    <input type="submit" class="button" value="Apply" />
+                </Form>
+            </div>
             <div class="grid">
                 <span class="heading">"id"</span>
                 <span class="heading">"date"</span>
@@ -125,21 +240,38 @@ pub fn ManageRuns() -> impl IntoView {
                 </Suspense>
             </div>
             <div class="pages row">
+                {move || {
+                    if offset.read() == 0 {
+                        Either::Left(view! { <div class="arrow disabled">"<"</div> })
+                    } else {
+                        Either::Right(
+                            view! {
+                                <A
+                                    class:arrow=true
+                                    href=format!(
+                                        "{}$page={}",
+                                        params.get().to_query_string(),
+                                        offset.get() - 1,
+                                    )
+                                >
+                                    "<"
+                                </A>
+                            },
+                        )
+                    }
+                }} <div class="page">{move || offset.get() + 1}</div>
                 <A
                     href=move || {
-                        if offset.read() == 0 {
-                            String::new()
-                        } else {
-                            format!("?page={}", offset.get() - 1)
-                        }
+                        format!("{}&page={}", params.get().to_query_string(), offset.get() + 1)
                     }
-                    class:disabled=move || offset.read() == 0
                     class:arrow=true
+                    class:disabled=move || {
+                        runs
+                            .get()
+                            .map(|res| res.map(|r| r.len()).unwrap_or_default())
+                            .unwrap_or_default() < 50
+                    }
                 >
-                    "<"
-                </A>
-                <div class="page">{move || offset.get() + 1}</div>
-                <A href=move || format!("?page={}", offset.get() + 1) class:arrow=true>
                     ">"
                 </A>
             </div>
