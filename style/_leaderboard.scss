@@ -136,6 +136,8 @@
 
             img {
                 width: 100%;
+                height: 100%;
+                object-fit: cover;
                 border-radius: 0.2rem;
             }
         }
@@ -194,7 +196,7 @@
             color: inherit;
 
             [aria-current="page"]>span {
-                border-bottom: 3px solid var(--grey-200);
+                border-bottom: 3px solid var(--primary-200);
             }
         }
     }
@@ -388,7 +390,7 @@
                             }
 
                             a {
-                                color: var(--info);
+                                color: var(--primary-600);
                             }
                         }
                     }

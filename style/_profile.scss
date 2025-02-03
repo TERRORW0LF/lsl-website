@@ -33,14 +33,14 @@
         align-items: center;
 
         .heading {
-            color: var(--grey-200);
+            color: var(--primary-200);
             font-size: 0.9rem;
             font-weight: 700;
             text-transform: uppercase;
         }
 
         a {
-            color: var(--info);
+            color: var(--primary-600);
         }
 
         .divider {
@@ -63,6 +63,40 @@
                 height: 1.4rem;
                 background-color: var(--error);
             }
+        }
+    }
+
+    .pages {
+        margin-top: 2rem;
+        justify-content: center;
+        gap: 0.2rem;
+
+        >* {
+            display: block;
+            width: 2rem;
+            height: 2rem;
+            text-align: center;
+            align-content: center;
+            border-radius: 5px;
+        }
+
+        .arrow {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--primary-200);
+            background-color: var(--grey-700);
+        }
+
+        .page {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--primary-300);
+        }
+
+        .disabled {
+            cursor: default;
+            color: var(--grey-300);
+            background-color: inherit;
         }
     }
 }
