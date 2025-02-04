@@ -1,4 +1,5 @@
 use lsl_website::state::oauth_client;
+use rustls_acme::caches::TestCache;
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 use axum::{
@@ -6,7 +7,7 @@ use axum::{
     extract::{State},
     response::{IntoResponse, Response},
     routing::get,
-    Extension, Router,
+    Router,
 };
 use axum_session::{SessionConfig, SessionLayer};
 use axum_session_auth::{AuthConfig, AuthSessionLayer};
@@ -14,7 +15,6 @@ use axum_session_sqlx::{SessionPgPool, SessionPgSessionStore};
 use http::Request;
 use leptos::prelude::*;
 use leptos_axum::{generate_route_list, handle_server_fns_with_context, LeptosRoutes};
-use leptos_router::RouteListing;
 use lsl_website::{app::*, server::auth::ssr::{AuthSession, connect_to_database, User}, state::AppState};
 use rustls_acme::{caches::DirCache, AcmeConfig};
 use sqlx::PgPool;
@@ -59,14 +59,17 @@ async fn server_handler(
 async fn main() {
     simple_logger::init_with_level(log::Level::Debug).expect("couldn't initialize logging");
     // ACME setup for Let's Encrypt + TLS connection
-    /*let email = env!("EMAIL");
+    let email = env!("EMAIL");
     let cache = env!("CERT_CACHE");
-    let domain = env!("DOMAIN");
-    let mut state = AcmeConfig::new([domain.unwrap()])
-        .contact_push(email.unwrap())
-        .cache(DirCache::new(cache.unwrap()))
-        .directory_lets_encrypt(false)
-        .state();
+    let domain = std::env::var("DOMAIN");
+    let mut config = AcmeConfig::new([domain.unwrap()])
+        .contact_push(email)
+        .cache(DirCache::new(cache))
+        .directory_lets_encrypt(false);
+    if std::env::var("PRODUCTION").ok().is_none_or(|s| s != "TRUE") {
+        config = config.cache(TestCache::default());
+    }
+    let mut state = config.state();
     let acceptor = state.axum_acceptor(state.default_rustls_config());
 
     tokio::spawn(async move {
@@ -76,7 +79,7 @@ async fn main() {
                 Err(err) => log::error!("error: {:?}", err),
             }
         }
-    });*/
+    });
 
     let pool = connect_to_database().await;
     let session_config = SessionConfig::default().with_table_name("session");
@@ -118,9 +121,9 @@ async fn main() {
 
     // run our app with hyper
     // `axum::Server` is a re-export of `hyper::Server`
-    log::info!("listening on http://{}", &addr);
+    log::info!("listening on https://{}", &addr);
     axum_server::bind(addr)
-        //.acceptor(acceptor)
+        .acceptor(acceptor)
         .serve(app.into_make_service())
         .await
         .unwrap();

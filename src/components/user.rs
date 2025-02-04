@@ -5,6 +5,7 @@ use crate::{
         auth::Delete,
     },
 };
+use chrono::{Local, NaiveDateTime, TimeZone};
 use leptos::{either::Either, prelude::*};
 use leptos_router::{
     components::{Form, A},
@@ -63,8 +64,22 @@ pub fn ManageRuns() -> impl IntoView {
             map: p.get("map"),
             faster: p.get("faster").map(|s| s.parse().ok()).flatten(),
             slower: p.get("slower").map(|s| s.parse().ok()).flatten(),
-            before: p.get("before").map(|s| s.parse().ok()).flatten(),
-            after: p.get("after").map(|s| s.parse().ok()).flatten(),
+            before: p
+                .get("before")
+                .map(|s| {
+                    let st = s.chars().take(16).collect::<String>();
+                    let ndt = NaiveDateTime::parse_from_str(&st, "%Y-%m-%dT%H:%M").ok()?;
+                    Local.from_local_datetime(&ndt).latest()
+                })
+                .flatten(),
+            after: p
+                .get("after")
+                .map(|s| {
+                    let st = s.chars().take(16).collect::<String>();
+                    let ndt = NaiveDateTime::parse_from_str(&st, "%Y-%m-%dT%H:%M").ok()?;
+                    Local.from_local_datetime(&ndt).earliest()
+                })
+                .flatten(),
         })
     });
     let offset = Signal::derive(move || {
