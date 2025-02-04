@@ -87,7 +87,7 @@ fn Chart(height: ReadSignal<i32>, mut runs: Vec<PartialRun>) -> impl IntoView {
     runs = runs
         .into_iter()
         .filter(|r| {
-            user().is_none() || r.user_id == user.get().unwrap().parse::<i64>().unwrap_or(-1)
+            user.get().is_none() || r.user_id == user.get().unwrap().parse::<i64>().unwrap_or(-1)
         })
         .filter(|r| {
             if &r.time
@@ -224,11 +224,12 @@ fn MapRunList(map: String, runs: Vec<PartialRun>) -> impl IntoView {
         let mut runs: Vec<PartialRun> = r
             .into_iter()
             .filter(|r| {
-                user().is_none() || r.user_id == user.get().unwrap().parse::<i64>().unwrap_or(-1)
+                user.get().is_none()
+                    || r.user_id == user.get().unwrap().parse::<i64>().unwrap_or(-1)
             })
-            .filter(|r| filter(r, filter_key(), &mut old_time, &mut old_times))
+            .filter(|r| filter(r, filter_key.get(), &mut old_time, &mut old_times))
             .collect();
-        runs.sort_unstable_by(sort(sort_key()));
+        runs.sort_unstable_by(sort(sort_key.get()));
         runs.into_iter()
             .enumerate()
             .collect::<Vec<(usize, PartialRun)>>()

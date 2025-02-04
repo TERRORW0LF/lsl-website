@@ -96,96 +96,112 @@ pub fn ManageRuns() -> impl IntoView {
             </details>
             <div role="definition" id="filters" class="content">
                 <Form method="GET" action="">
-                    <div class="input-box">
-                        <select name="sort" id="sort">
-                            <option value="date">"Date"</option>
-                            <option value="time">"Time"</option>
-                            <option value="section">"Section"</option>
-                        </select>
-                        <label for="sort" class="indicator">
-                            "Sort By"
-                        </label>
-                    </div>
-                    <div class="input-box">
-                        <select name="order" id="order">
-                            <option value="asc">"Ascending"</option>
-                            <option value="desc">"Descending"</option>
-                        </select>
-                        <label for="order" class="indicator">
-                            "Order By"
-                        </label>
-                    </div>
-                    <div class="input-box">
-                        <input type="datetime-local" name="before" id="before" />
-                        <label for="before" class="indicator">
-                            "Before"
-                        </label>
-                    </div>
-                    <div class="input-box">
-                        <input type="datetime-local" name="after" id="after" />
-                        <label for="after" class="indicator">
-                            "After"
-                        </label>
-                    </div>
-                    <div class="input-box">
-                        <input type="number" name="faster" id="faster" min="0" step="0.001" />
-                        <label for="faster" class="placeholder">
-                            "Faster Than"
-                        </label>
-                    </div>
-                    <div class="input-box">
-                        <input type="number" name="slower" id="slower" min="0" step="0.001" />
-                        <label for="slower" class="placeholder">
-                            "Slower Than"
-                        </label>
-                    </div>
-                    <div class="input-box">
-                        <select name="layout" id="layout">
-                            <option value="">"All"</option>
-                            <option value="1">"Layout 1"</option>
-                            <option value="2">"Layout 2"</option>
-                            <option value="3">"Layout 3"</option>
-                            <option value="4">"Layout 4"</option>
-                            <option value="5">"Layout 5"</option>
-                        </select>
-                        <label for="layout" class="indicator">
-                            "Layout"
-                        </label>
-                    </div>
-                    <div class="input-box">
-                        <select name="category" id="category">
-                            <option value="">"All"</option>
-                            <option value="Standard">"Standard"</option>
-                            <option value="Gravspeed">"Gravspeed"</option>
-                        </select>
-                        <label for="category" class="indicator">
-                            "Category"
-                        </label>
-                    </div>
-                    <div class="input-box">
-                        <input list="maps" name="map" id="map" />
-                        <datalist id="maps">
-                            <Await future=get_maps() let:maps>
-                                {match maps {
-                                    Ok(v) => {
-                                        Either::Left(
-                                            v
-                                                .into_iter()
-                                                .map(|m| {
-                                                    view! {
-                                                        <option value=m.name.clone()>{m.name.clone()}</option>
-                                                    }
-                                                })
-                                                .collect_view(),
-                                        )
-                                    }
-                                    Err(_) => Either::Right(view! {}),
-                                }}
-                            </Await>
-                        </datalist>
-                        <label for="map" class="placeholder">
-                            "Map"
-                        </label>
+                    <div class="row">
+                        <div class="input-box">
+                            <label for="sort" class="indicator">
+                                "Sort By"
+                            </label>
+                            <select class="select" name="sort" id="sort">
+                                <option value="date">"Date"</option>
+                                <option value="time">"Time"</option>
+                                <option value="section">"Section"</option>
+                            </select>
+                        </div>
+                        <div class="input-box">
+                            <label for="order" class="indicator">
+                                "Order By"
+                            </label>
+                            <select class="select" name="order" id="order">
+                                <option value="asc">"Ascending"</option>
+                                <option value="desc">"Descending"</option>
+                            </select>
+                        </div>
+                        <div class="input-box">
+                            <label for="before" class="indicator">
+                                "Before"
+                            </label>
+                            <input class="select" type="datetime-local" name="before" id="before" />
+                        </div>
+                        <div class="input-box">
+                            <label for="after" class="indicator">
+                                "After"
+                            </label>
+                            <input class="select" type="datetime-local" name="after" id="after" />
+                        </div>
+                        <div class="input-box">
+                            <label for="faster" class="indicator">
+                                "Faster Than"
+                            </label>
+                            <input
+                                class="select"
+                                type="number"
+                                name="faster"
+                                id="faster"
+                                min="0"
+                                step="0.001"
+                            />
+                        </div>
+                        <div class="input-box">
+                            <label for="slower" class="indicator">
+                                "Slower Than"
+                            </label>
+                            <input
+                                class="select"
+                                type="number"
+                                name="slower"
+                                id="slower"
+                                min="0"
+                                step="0.001"
+                            />
+                        </div>
+                        <div class="input-box">
+                            <label for="layout" class="indicator">
+                                "Layout"
+                            </label>
+                            <select class="select" name="layout" id="layout">
+                                <option value="">"All"</option>
+                                <option value="1">"Layout 1"</option>
+                                <option value="2">"Layout 2"</option>
+                                <option value="3">"Layout 3"</option>
+                                <option value="4">"Layout 4"</option>
+                                <option value="5">"Layout 5"</option>
+                            </select>
+                        </div>
+                        <div class="input-box">
+                            <label for="category" class="indicator">
+                                "Category"
+                            </label>
+                            <select class="select" name="category" id="category">
+                                <option value="">"All"</option>
+                                <option value="Standard">"Standard"</option>
+                                <option value="Gravspeed">"Gravspeed"</option>
+                            </select>
+                        </div>
+                        <div class="input-box">
+                            <label for="map" class="indicator">
+                                "Map"
+                            </label>
+                            <input class="select" list="maps" name="map" id="map" />
+                            <datalist id="maps">
+                                <Await future=get_maps() let:maps>
+                                    {match maps {
+                                        Ok(v) => {
+                                            Either::Left(
+                                                v
+                                                    .into_iter()
+                                                    .map(|m| {
+                                                        view! {
+                                                            <option value=m.name.clone()>{m.name.clone()}</option>
+                                                        }
+                                                    })
+                                                    .collect_view(),
+                                            )
+                                        }
+                                        Err(_) => Either::Right(view! {}),
+                                    }}
+                                </Await>
+                            </datalist>
+                        </div>
                     </div>
                     <input type="submit" class="button" value="Apply" />
                 </Form>
