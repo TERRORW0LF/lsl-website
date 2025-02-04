@@ -231,7 +231,7 @@ pub fn ManageRuns() -> impl IntoView {
                                                     <span>
                                                         {format!("{}", r.created_at.format("%d/%m/%Y %H:%M"))}
                                                     </span>
-                                                    <span>"layout " {r.layout}</span>
+                                                    <span>"Layout " {r.layout}</span>
                                                     <span>{r.category}</span>
                                                     <span>{r.map}</span>
                                                     <span>
