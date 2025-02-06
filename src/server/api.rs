@@ -218,14 +218,13 @@ pub async fn get_runs_user(
     use sqlx::{Postgres, QueryBuilder};
 
     let pool = crate::server::auth::ssr::pool()?;
-    let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let mut query = QueryBuilder::<Postgres>::new(
         r#"SELECT run.id, run.created_at, section_id, patch, layout, 
                     category, map, user_id, "name", time, proof, yt_id, verified, is_pb, is_wr
                 FROM run
                 INNER JOIN section s ON section_id = s.id
                 INNER JOIN "user" u ON user_id = u.id 
-                WHERE patch = '2.13'"#,
+                WHERE patch = '2.00'"#,
     );
     query.push(" AND user_id = ").push_bind(user_id);
     if let Some(before) = filter.before {
@@ -271,7 +270,6 @@ pub async fn get_runs_user(
             ServerFnError::ServerError("Database lookup failed".to_string())
         })?;
 
-    res_opts.append_header(CACHE_CONTROL, HeaderValue::from_static("max-age=300"));
     Ok(runs)
 }
 

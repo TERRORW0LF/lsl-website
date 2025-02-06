@@ -264,6 +264,17 @@ pub mod ssr {
         }
     }
 
+    pub fn hash_password(password: &String) -> Result<String, ServerFnError<ApiError>> {
+        let salt = SaltString::generate(&mut OsRng);
+        let argon2 = Argon2::default();
+        match argon2.hash_password(password.as_bytes(), &salt) {
+            Ok(v) => Ok(v.to_string()),
+            Err(_) => Err(ServerFnError::ServerError(
+                "Signup failed: Failed to hash password".to_string(),
+            )),
+        }
+    }
+
     pub fn verify_password(
         pass_hash: &String,
         password: &String,
@@ -315,16 +326,7 @@ pub async fn register(
     let pool = pool()?;
     let auth = auth()?;
 
-    let salt = SaltString::generate(&mut OsRng);
-    let argon2 = Argon2::default();
-    let pwd_hash = match argon2.hash_password(password.as_bytes(), &salt) {
-        Ok(v) => v.to_string(),
-        Err(_) => {
-            return Err(ServerFnError::ServerError(
-                "Signup failed: Failed to hash password".to_string(),
-            ))
-        }
-    };
+    let pwd_hash = hash_password(&password)?;
 
     sqlx::query("INSERT INTO \"user\" (name, password) VALUES ($1, $2)")
         .bind(username.clone())
@@ -425,13 +427,14 @@ pub async fn update(
         if !check_password(&pw.new) {
             Err(ApiError::InvalidCredentials)?;
         }
+        let pwd_hash = hash_password(&pw.new)?;
 
         sqlx::query(
             r#"UPDATE "user"
             SET password = $1
             WHERE id = $2"#,
         )
-        .bind(pw.new)
+        .bind(pwd_hash)
         .bind(curr_user.id)
         .execute(&pool)
         .await
@@ -590,7 +593,7 @@ pub async fn submit(
     let section_id = sqlx::query_as::<_, SectionId>(
         r#"SELECT id
         FROM section
-        WHERE patch='2.13' AND layout=$1 AND category=$2 AND map=$3"#,
+        WHERE patch='2.00' AND layout=$1 AND category=$2 AND map=$3"#,
     )
     .bind(&layout)
     .bind(&category)
@@ -732,7 +735,7 @@ pub async fn discord_auth(code: String, state: String) -> Result<(), ServerFnErr
     use self::ssr::*;
     use oauth2::{reqwest::async_http_client, AuthorizationCode, CsrfToken, TokenResponse};
 
-    leptos_axum::redirect("/dashboard");
+    leptos_axum::redirect("/user/@me/dashboard");
 
     let auth = auth()?;
     let user = auth.current_user.ok_or(ApiError::Unauthenticated)?;

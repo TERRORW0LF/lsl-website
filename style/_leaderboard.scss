@@ -154,7 +154,7 @@
     }
 
     #lb_header {
-        top: 3rem;
+        top: 2.5rem;
         margin-top: -4.7rem;
         padding-left: 4rem;
         z-index: 2;
@@ -168,6 +168,7 @@
         nav.split-row-nav {
             background-color: inherit;
             color: inherit;
+            min-height: 2.5rem;
 
             [aria-current="page"]>span {
                 border-bottom: 3px solid var(--primary-200);
@@ -191,6 +192,7 @@
                 display: flex;
                 justify-content: space-between;
                 margin-bottom: 0.2rem;
+                align-items: end;
 
                 * {
                     text-wrap: nowrap;
@@ -364,7 +366,7 @@
                                 font-weight: 700;
                             }
 
-                            a {
+                            a.extern {
                                 color: var(--primary-600);
                             }
                         }

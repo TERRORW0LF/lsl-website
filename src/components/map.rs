@@ -271,7 +271,10 @@ fn MapRunList(map: String, runs: Vec<PartialRun>) -> impl IntoView {
                                                     </span>
                                                 </div>
                                                 <span class="name">
-                                                    <A href=format!("/user/{}", r.user_id)>{username}</A>
+                                                    <A href=format!(
+                                                        "/user/{}/leaderboard",
+                                                        r.user_id,
+                                                    )>{username}</A>
                                                 </span>
                                                 <span class="time">{r.time.to_string()} " s"</span>
                                             </div>
@@ -301,7 +304,12 @@ fn MapRunList(map: String, runs: Vec<PartialRun>) -> impl IntoView {
                                                 </div>
                                                 <div class="entry">
                                                     <h3>"USER"</h3>
-                                                    <p>{r.username}</p>
+                                                    <p>
+                                                        <A href=format!(
+                                                            "/user/{}/leaderboard",
+                                                            r.user_id,
+                                                        )>{r.username}</A>
+                                                    </p>
                                                 </div>
                                                 <div class="entry">
                                                     <h3>"TIME"</h3>
@@ -324,7 +332,7 @@ fn MapRunList(map: String, runs: Vec<PartialRun>) -> impl IntoView {
                                                 <div class="entry">
                                                     <h3>"PROOF"</h3>
                                                     <p>
-                                                        <a href=r.proof target="_blank">
+                                                        <a class="extern".to_string() href=r.proof target="_blank">
                                                             "link"
                                                         </a>
                                                     </p>

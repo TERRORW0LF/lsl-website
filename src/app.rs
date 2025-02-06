@@ -19,7 +19,7 @@ use leptos_meta::MetaTags;
 use leptos_meta::*;
 use leptos_router::{
     components::{ParentRoute, ProtectedRoute, Redirect, Route, Router, Routes, A},
-    path, MatchNestedRoutes,
+    path, MatchNestedRoutes, NavigateOptions,
 };
 use wasm_bindgen::{prelude::Closure, JsCast};
 use web_sys::FormData;
@@ -289,17 +289,28 @@ fn LeaderboardRouter() -> impl MatchNestedRoutes + Clone {
                     }
                 }
             />
-            <Route path=path!("") view=|| view! { <Redirect path="2.13/1/standard" /> } />
+            <Route
+                path=path!("")
+                view=|| {
+                    let mut options = NavigateOptions::default();
+                    options.replace = true;
+                    view! { <Redirect path="2.13/1/standard" options /> }
+                }
+            />
             <Route
                 path=path!(":patch")
                 view=|| {
-                    view! { <Redirect path="1/standard" /> }
+                    let mut options = NavigateOptions::default();
+                    options.replace = true;
+                    view! { <Redirect path="1/standard" options /> }
                 }
             />
             <Route
                 path=path!(":patch/:layout")
                 view=|| {
-                    view! { <Redirect path="standard" /> }
+                    let mut options = NavigateOptions::default();
+                    options.replace = true;
+                    view! { <Redirect path="standard" options /> }
                 }
             />
         </ParentRoute>
@@ -333,17 +344,28 @@ fn LeaderboardRouter() -> impl MatchNestedRoutes + Clone {
                     }
                 }
             />
-            <Route path=path!("") view=|| view! { <Redirect path="2.13/1/standard" /> } />
+            <Route
+                path=path!("")
+                view=|| {
+                    let mut options = NavigateOptions::default();
+                    options.replace = true;
+                    view! { <Redirect path="2.13/1/standard" options /> }
+                }
+            />
             <Route
                 path=path!(":patch")
                 view=|| {
-                    view! { <Redirect path="1/standard" /> }
+                    let mut options = NavigateOptions::default();
+                    options.replace = true;
+                    view! { <Redirect path="1/standard" options /> }
                 }
             />
             <Route
                 path=path!(":patch/:layout")
                 view=|| {
-                    view! { <Redirect path="standard" /> }
+                    let mut options = NavigateOptions::default();
+                    options.replace = true;
+                    view! { <Redirect path="standard" options /> }
                 }
             />
         </ParentRoute>

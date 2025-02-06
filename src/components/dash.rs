@@ -248,7 +248,7 @@ fn Password(show: RwSignal<PopUp>) -> impl IntoView {
             <ActionForm action>
                 <div class="input-box">
                     <input
-                        type="text"
+                        type="password"
                         name="password[old]"
                         id="password"
                         required

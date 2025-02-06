@@ -21,8 +21,7 @@ pub struct AppState {
 pub fn oauth_client() -> BasicClient {
     let client_id = env::var("DISCORD_ID").expect("Missing DISCORD_ID!");
     let client_secret = env::var("DISCORD_SECRET").expect("Missing DISCORD_SECRET!");
-    let redirect_url = env::var("REDIRECT_URL")
-        .unwrap_or_else(|_| "http://127.0.0.1:3000/api/user/discord/auth".to_string());
+    let redirect_url = env::var("REDIRECT_URL").expect("Missing REDIRECT_URL!");
 
     let auth_url = env::var("AUTH_URL").unwrap_or_else(|_| {
         "https://discord.com/api/oauth2/authorize?response_type=code".to_string()

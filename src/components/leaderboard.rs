@@ -245,7 +245,7 @@ pub fn LeaderboardEntry(map: MapRuns) -> impl IntoView {
                         set_sel_run(Some(r.clone()));
                         Either::Left(
                             view! {
-                                <a href=format!("/user/{}", r.user_id)>
+                                <a href=format!("/user/{}/leaderboard", r.user_id)>
                                     <h5>{r.username.clone()}</h5>
                                 </a>
                                 <h5>{r.time.to_string()} " seconds"</h5>
@@ -289,7 +289,7 @@ pub fn LeaderboardEntry(map: MapRuns) -> impl IntoView {
                                             }}
                                         </span>
                                         <span class="name">
-                                            <A href=format!("/user/{}", r.user_id)>{r.username}</A>
+                                            <A href=format!("/user/{}/leaderboard", r.user_id)>{r.username}</A>
                                         </span>
                                         <span class="time">{r.time.to_string()} " s"</span>
                                     </div>
