@@ -255,7 +255,7 @@ fn MapRunList(map: String, runs: Vec<PartialRun>) -> impl IntoView {
                                                 role="term"
                                                 aria-details=format!("run_{}", r.id)
                                             >
-                                                <div class="row">
+                                                <div class="row narrow">
                                                     <span class="icon">""</span>
                                                     <span class="rank">
                                                         {move || match sort_key() {

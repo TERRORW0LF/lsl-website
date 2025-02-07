@@ -86,7 +86,7 @@ pub fn Login() -> impl IntoView {
                     <A href="/register" attr:class="link">
                         "Create account"
                     </A>
-                    <input type="submit" class="button" value="Sign In" />
+                    <input type="submit" class="button primary" value="Sign In" />
                 </div>
             </ActionForm>
         </section>
@@ -188,7 +188,7 @@ pub fn Register() -> impl IntoView {
                     <input type="checkbox" name="remember" id="remember" />
                     <label for="remember">"Remember me?"</label>
                 </div>
-                <input type="submit" class="button" value="Sign Up" />
+                <input type="submit" class="button primary" value="Sign Up" />
             </ActionForm>
         </section>
     }
@@ -394,7 +394,7 @@ pub fn Submit() -> impl IntoView {
                     </label>
                 </div>
                 <div class="text">"∗ Fields are optional."</div>
-                <input type="submit" class="button" value="Submit" />
+                <input type="submit" class="button primary" value="Submit" />
             </ActionForm>
         </section>
     }

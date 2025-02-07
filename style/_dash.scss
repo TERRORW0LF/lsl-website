@@ -66,34 +66,8 @@
         }
     }
 
-    button {
-        min-width: 8ch;
-        padding: 0.4rem 1rem;
-        font-size: 0.7rem;
-        font-weight: 700;
-        border-radius: 5px;
-        cursor: pointer;
-    }
-
-    .primary {
-        color: var(--grey-0);
-        background-color: var(--primary-800);
-        border: 2px solid var(--primary-800);
-    }
-
-    .secondary {
-        color: var(--grey-0);
-        background-color: transparent;
-        border: 2px solid var(--grey-500);
-    }
-
-    .danger {
-        color: var(--grey-0);
-        background-color: var(--error);
-        border: 2px solid var(--error);
-    }
-
     .discord {
+        position: relative;
         height: 3rem;
         margin-bottom: 0.5rem;
         padding: 0 0.6rem;
@@ -105,11 +79,13 @@
     .discord-add {
         height: 3rem;
         width: 100%;
+        margin-bottom: 1rem;
         text-align: center;
         justify-content: center;
         color: var(--grey-500);
         background-color: inherit;
         border: 3px dashed var(--grey-700);
         border-radius: 7px;
+        cursor: pointer;
     }
 }

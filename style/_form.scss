@@ -10,6 +10,7 @@
     padding: 2.5rem;
     background-color: var(--grey-800);
     border-radius: 0.3rem;
+    z-index: 99;
 
     h1 {
         text-align: center;
@@ -34,7 +35,8 @@
     .input-box {
         position: relative;
         width: 100%;
-        padding-top: 2rem;
+        margin-top: 2rem;
+        margin-bottom: 2rem;
 
         input,
         select {
@@ -84,17 +86,17 @@
         }
 
         input:focus {
-            outline: var(--info) solid 3px;
+            outline: var(--primary-800) solid 3px;
             border-color: transparent;
         }
 
         input:focus~.placeholder,
         input:not([value=""])~.placeholder {
-            top: 1.6rem;
+            top: -0.4rem;
             padding: 0 0.2rem;
             margin-left: 0.5rem;
             font-size: 0.6rem;
-            color: var(--info);
+            color: var(--primary-800);
             background-color: var(--grey-800);
         }
 
@@ -113,7 +115,7 @@
 
         .indicator {
             position: absolute;
-            top: 1.6rem;
+            top: -0.4rem;
             left: 0.5rem;
             padding: 0 0.2rem;
             margin-left: 0.5rem;
@@ -125,7 +127,7 @@
 
         .placeholder {
             position: absolute;
-            top: 2.15rem;
+            top: 0.15rem;
             left: 0.5rem;
             padding: 0.5rem 0 0;
             font-size: 0.8rem;
@@ -141,8 +143,13 @@
         }
     }
 
+    .input-box:has(+.remember) {
+        margin-bottom: 0;
+    }
+
     .remember {
         margin-top: 0.5rem;
+        margin-bottom: 1.5rem;
         font-size: 0.8rem;
 
         label {
@@ -153,16 +160,6 @@
     }
 
     input[type="submit"] {
-        border: none;
-        outline: none;
-        padding: 0.4rem 0.7rem;
-        margin: 1rem 0;
-        font-size: 1rem;
-        font-weight: 850;
-        color: var(--grey-1000);
-        background-color: var(--info);
-        cursor: pointer;
-        border-radius: 5px;
         float: right;
     }
 

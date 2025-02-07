@@ -110,14 +110,20 @@ p {
 	bottom: 0;
 	background-color: var(--black);
 	opacity: 0.8;
+	z-index: 10;
 }
 
 .row {
+	width: 100%;
 	display: flex;
 	gap: 1rem;
 	justify-content: space-between;
 	align-items: center;
 	flex-wrap: wrap;
+
+	&.narrow {
+		width: auto;
+	}
 }
 
 .no-wrap {
@@ -132,6 +138,35 @@ header {
 	position: sticky;
 	top: 0;
 	z-index: 99;
+}
+
+
+.button {
+	display: inline-block;
+	min-width: 8ch;
+	padding: 0.4rem 1rem;
+	font-size: 0.7rem;
+	font-weight: 700;
+	border-radius: 5px;
+	cursor: pointer;
+
+	&.primary {
+		color: var(--grey-0);
+		background-color: var(--primary-800);
+		border: 2px solid var(--primary-800);
+	}
+
+	&.secondary {
+		color: var(--grey-0);
+		background-color: transparent;
+		border: 2px solid var(--grey-500);
+	}
+
+	&.danger {
+		color: var(--grey-0);
+		background-color: var(--error);
+		border: 2px solid var(--error);
+	}
 }
 
 nav.split-row-nav {
@@ -256,6 +291,10 @@ details {
 	display: block;
 	position: relative;
 
+	&[open] span.icon::before {
+		transform: rotate(90deg) scaleX(-1);
+	}
+
 	summary {
 		display: block;
 
@@ -283,10 +322,6 @@ details {
 	summary::marker {
 		display: none;
 	}
-}
-
-details[open] span.icon::before {
-	transform: rotate(90deg) scaleX(-1);
 }
 
 details~div.content {

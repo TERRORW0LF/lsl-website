@@ -2,62 +2,46 @@ use crate::{
     app::{UpdatePfpAction, UserResource},
     server::{
         api::ApiError,
-        auth::{discord_add, discord_delete, discord_list, Logout, Update},
+        auth::{discord_list, DiscordAdd, DiscordDelete, Logout, Update},
     },
 };
 use leptos::{either::Either, html::Input, prelude::*};
 use leptos_meta::Title;
+use leptos_router::components::{Outlet, A};
 use wasm_bindgen::JsCast;
 use web_sys::{Event, FormData, HtmlFormElement, SubmitEvent};
-
-#[derive(PartialEq, Eq)]
-enum PopUp {
-    None,
-    Username,
-    Password,
-    Avatar,
-    Discord,
-}
 
 #[component]
 pub fn Dashboard() -> impl IntoView {
     let user = expect_context::<UserResource>();
     let logout = expect_context::<ServerAction<Logout>>();
 
-    let show = RwSignal::new(PopUp::None);
     view! {
         <Title text="Dashboard" />
         <section id="dashboard">
-            <div
-                class="toner"
-                class:hidden=move || { *show.read() == PopUp::None }
-                on:click=move |_| { show.set(PopUp::None) }
-            />
-            <Username show />
-            <Password show />
-            <Avatar show />
-            <DiscordList show />
+            <Outlet />
             <Suspense fallback=|| view! { <h1>"Loading..."</h1> }>
                 <h1>"Dashboard"</h1>
                 <div class="section">
                     <h2>"Profile"</h2>
                     <div class="row">
-                        <img
-                            class="pfp"
-                            src=move || {
-                                format!(
-                                    "/cdn/users/{}.jpg",
-                                    user
-                                        .get()
-                                        .map(|res| { res.unwrap_or_default().pfp })
-                                        .unwrap_or("default".into()),
-                                )
-                            }
-                            on:click=move |_| show.set(PopUp::Avatar)
-                        />
-                        <button class="primary" on:click=move |_| show.set(PopUp::Avatar)>
+                        <A href="avatar">
+                            <img
+                                class="pfp"
+                                src=move || {
+                                    format!(
+                                        "/cdn/users/{}.jpg",
+                                        user
+                                            .get()
+                                            .map(|res| { res.unwrap_or_default().pfp })
+                                            .unwrap_or("default".into()),
+                                    )
+                                }
+                            />
+                        </A>
+                        <A attr:class="button primary" href="avatar">
                             "Change Avatar"
-                        </button>
+                        </A>
                     </div>
                     <div class="spacer-2"></div>
                     <div class="row">
@@ -67,9 +51,9 @@ pub fn Dashboard() -> impl IntoView {
                                 {move || { user.get().map(|user| user.map(|user| user.username)) }}
                             </h4>
                         </div>
-                        <button class="secondary" on:click=move |_| show.set(PopUp::Username)>
+                        <A attr:class="button secondary" href="username">
                             "Edit"
-                        </button>
+                        </A>
                     </div>
                     <div class="spacer-2"></div>
                     <div class="row">
@@ -77,9 +61,9 @@ pub fn Dashboard() -> impl IntoView {
                             <h3>"PASSWORD"</h3>
                             <h4>"********"</h4>
                         </div>
-                        <button class="secondary" on:click=move |_| show.set(PopUp::Password)>
+                        <A attr:class="button secondary" href="password">
                             "Edit"
-                        </button>
+                        </A>
                     </div>
                 </div>
                 <div class="section">
@@ -91,22 +75,18 @@ pub fn Dashboard() -> impl IntoView {
                             "Manage your connected Discord profiles or add a new one. "
                             "This allows you to easily submit and manage your runs from within Discord."
                         </p>
-                        <button class="primary" on:click=move |_| show.set(PopUp::Discord)>
+
+                        <A attr:class="button primary" href="discord">
                             "Manage"
-                        </button>
+                        </A>
                     </div>
                     <h3>"MANAGEMENT"</h3>
                     <div>
                         <h4>"Log Out"</h4>
                         <p>"Logging out of your account will only affect this device."</p>
-                        <button
-                            class="secondary"
-                            on:click=move |_| {
-                                let _ = logout.dispatch(Logout {});
-                            }
-                        >
-                            "Log Out"
-                        </button>
+                        <ActionForm action=logout>
+                            <input type="submit" class="button secondary" value="Log Out" />
+                        </ActionForm>
                     </div>
                     <div>
                         <h4>"Account Removal"</h4>
@@ -114,7 +94,7 @@ pub fn Dashboard() -> impl IntoView {
                             "Disabling your account will anonymize your account and prevent "
                             "you from logging in. This action will not delete runs from the leaderboard."
                         </p>
-                        <button class="danger">"Disable Account"</button>
+                        <button class="button danger">"Disable Account"</button>
                     </div>
                 </div>
                 <div class="section">
@@ -125,7 +105,9 @@ pub fn Dashboard() -> impl IntoView {
                             "Manage your submissions to the leaderboards. "
                             "This will redirect you to the submission management page."
                         </p>
-                        <button class="primary">"Edit"</button>
+                        <A attr:class="button primary" href="../manage">
+                            "Edit"
+                        </A>
                     </div>
                     <div>
                         <h4>"Claim Submissions"</h4>
@@ -133,7 +115,7 @@ pub fn Dashboard() -> impl IntoView {
                             "Claim submissions made under the old Google Sheets method "
                             "to your account. Requires moderator approval."
                         </p>
-                        <button class="secondary">"Claim"</button>
+                        <button class="button secondary">"Claim"</button>
                     </div>
                 </div>
             </Suspense>
@@ -142,12 +124,15 @@ pub fn Dashboard() -> impl IntoView {
 }
 
 #[component]
-fn Username(show: RwSignal<PopUp>) -> impl IntoView {
+pub fn Username() -> impl IntoView {
     let action = expect_context::<ServerAction<Update>>();
-    let result = Signal::derive(move || action.value().get().unwrap_or(Ok(())));
+    let result = Signal::derive(move || action.value().get());
     let (username, set_username) = signal(String::new());
     view! {
-        <section id="box" class:hidden=move || !(*show.read() == PopUp::Username)>
+        <A attr:class="toner" href="../">
+            <div />
+        </A>
+        <section id="box">
             <h1>"Edit Username"</h1>
             <ErrorBoundary fallback=|e| {
                 view! {
@@ -195,15 +180,10 @@ fn Username(show: RwSignal<PopUp>) -> impl IntoView {
                     </label>
                 </div>
                 <div class="row">
-                    <button
-                        class="secondary"
-                        on:click=move |_| {
-                            show.set(PopUp::None);
-                        }
-                    >
+                    <A attr:class="button secondary" href="../">
                         "Cancel"
-                    </button>
-                    <input type="submit" class="button" value="Save" />
+                    </A>
+                    <input type="submit" class="button primary" value="Save" />
                 </div>
             </ActionForm>
         </section>
@@ -211,14 +191,17 @@ fn Username(show: RwSignal<PopUp>) -> impl IntoView {
 }
 
 #[component]
-fn Password(show: RwSignal<PopUp>) -> impl IntoView {
+pub fn Password() -> impl IntoView {
     let action = expect_context::<ServerAction<Update>>();
-    let result = Signal::derive(move || action.value().get().unwrap_or(Ok(())));
+    let result = Signal::derive(move || action.value().get());
     let (password, set_password) = signal(String::new());
     let (password_new, set_password_new) = signal(String::new());
     let (password_rep, set_password_rep) = signal(String::new());
     view! {
-        <section id="box" class:hidden=move || !(*show.read() == PopUp::Password)>
+        <A attr:class="toner" href="../">
+            <div />
+        </A>
+        <section id="box">
             <h1>"Edit Password"</h1>
             <ErrorBoundary fallback=|e| {
                 view! {
@@ -294,15 +277,10 @@ fn Password(show: RwSignal<PopUp>) -> impl IntoView {
                     </label>
                 </div>
                 <div class="row">
-                    <button
-                        class="secondary"
-                        on:click=move |_| {
-                            show.set(PopUp::None);
-                        }
-                    >
+                    <A attr:class="button secondary" href="../">
                         "Cancel"
-                    </button>
-                    <input type="submit" class="button" value="Save" />
+                    </A>
+                    <input type="submit" class="button primary" value="Save" />
                 </div>
             </ActionForm>
         </section>
@@ -310,12 +288,15 @@ fn Password(show: RwSignal<PopUp>) -> impl IntoView {
 }
 
 #[component]
-fn Avatar(show: RwSignal<PopUp>) -> impl IntoView {
+pub fn Avatar() -> impl IntoView {
     let action = expect_context::<UpdatePfpAction>();
-    let result = Signal::derive(move || action.value().get().unwrap_or(Ok(())));
+    let result = Signal::derive(move || action.value().get());
     let input_ref = NodeRef::<Input>::new();
     view! {
-        <section id="box" class:hidden=move || !(*show.read() == PopUp::Avatar)>
+        <A attr:class="toner" href="../">
+            <div />
+        </A>
+        <section id="box">
             <h1>"Change Avatar"</h1>
             <ErrorBoundary fallback=|e| {
                 view! {
@@ -373,15 +354,10 @@ fn Avatar(show: RwSignal<PopUp>) -> impl IntoView {
                     </label>
                 </div>
                 <div class="row">
-                    <button
-                        class="secondary"
-                        on:click=move |_| {
-                            show.set(PopUp::None);
-                        }
-                    >
+                    <A attr:class="button secondary" href="../">
                         "Cancel"
-                    </button>
-                    <input type="submit" class="button" value="Save" />
+                    </A>
+                    <input type="submit" class="button primary" value="Save" />
                 </div>
             </form>
         </section>
@@ -389,18 +365,18 @@ fn Avatar(show: RwSignal<PopUp>) -> impl IntoView {
 }
 
 #[component]
-fn DiscordList(show: RwSignal<PopUp>) -> impl IntoView {
-    let discord_del = Action::new(|snowflake: &String| {
-        let snowflake = snowflake.to_owned();
-        async move { discord_delete(snowflake).await }
-    });
-    let discord_add = Action::new(|_: &()| async move { discord_add().await });
+pub fn DiscordList() -> impl IntoView {
+    let discord_del = ServerAction::<DiscordDelete>::new();
+    let discord_add = ServerAction::<DiscordAdd>::new();
     let discord_list = Resource::new(
         move || (discord_del.version().get(), discord_add.version().get()),
         |_| discord_list(),
     );
     view! {
-        <section id="box" class:hidden=move || !(*show.read() == PopUp::Discord)>
+        <A attr:class="toner" href="../">
+            <div />
+        </A>
+        <section id="box">
             <h1>"Discord"</h1>
             <Transition fallback=move || {
                 view! { <p>"Loading..."</p> }
@@ -424,14 +400,15 @@ fn DiscordList(show: RwSignal<PopUp>) -> impl IntoView {
                                                             <h4>{con.name}</h4>
                                                             <p>{con.snowflake.clone()}</p>
                                                         </div>
-                                                        <button
-                                                            class="danger"
-                                                            on:click=move |_| {
-                                                                discord_del.dispatch(con.snowflake.clone());
-                                                            }
-                                                        >
-                                                            "Remove"
-                                                        </button>
+                                                        <ActionForm action=discord_del>
+                                                            <input
+                                                                hidden
+                                                                type="text"
+                                                                name="snowflake"
+                                                                value=con.snowflake.clone()
+                                                            />
+                                                            <input type="submit" class="button danger" value="Remove" />
+                                                        </ActionForm>
                                                     </div>
                                                 }
                                             })
@@ -439,14 +416,13 @@ fn DiscordList(show: RwSignal<PopUp>) -> impl IntoView {
                                         {if conns.len() < 5 {
                                             Either::Left(
                                                 view! {
-                                                    <button
-                                                        class="discord-add row"
-                                                        on:click=move |_| {
-                                                            discord_add.dispatch(());
-                                                        }
-                                                    >
-                                                        "Add Account"
-                                                    </button>
+                                                    <ActionForm action=discord_add>
+                                                        <input
+                                                            type="submit"
+                                                            class="discord-add"
+                                                            value="Add Account"
+                                                        />
+                                                    </ActionForm>
                                                 },
                                             )
                                         } else {
@@ -458,6 +434,14 @@ fn DiscordList(show: RwSignal<PopUp>) -> impl IntoView {
                     }}
                 </ErrorBoundary>
             </Transition>
+            <div class="row">
+                <A attr:class="button secondary" href="../">
+                    "Cancel"
+                </A>
+                <A attr:class="button primary" href="../">
+                    "Save"
+                </A>
+            </div>
         </section>
     }
 }

@@ -1,13 +1,13 @@
 use crate::{
     components::{
         auth::{Login, Register, Submit},
-        dash::Dashboard,
+        dash::{Avatar, Dashboard, DiscordList, Password, Username},
         error_template::{AppError, ErrorTemplate},
         home::HomePage,
         leaderboard::{Leaderboard, Section},
         map::Map,
         ranking::Ranking,
-        user::{ManageRuns, Profile},
+        user::{Delete, ManageRuns, Profile},
     },
     server::{
         api::ApiError,
@@ -18,7 +18,9 @@ use leptos::{either::*, prelude::*};
 use leptos_meta::MetaTags;
 use leptos_meta::*;
 use leptos_router::{
-    components::{ParentRoute, ProtectedRoute, Redirect, Route, Router, Routes, A},
+    components::{
+        ParentRoute, ProtectedParentRoute, ProtectedRoute, Redirect, Route, Router, Routes, A,
+    },
     path, MatchNestedRoutes, NavigateOptions,
 };
 use wasm_bindgen::{prelude::Closure, JsCast};
@@ -212,7 +214,6 @@ pub fn App() -> impl IntoView {
 
 #[component(transparent)]
 fn AppRouter() -> impl IntoView {
-    let user = use_context::<UserResource>().unwrap();
     view! {
         <Routes fallback=|| {
             let mut outside_errors = Errors::default();
@@ -230,30 +231,48 @@ fn AppRouter() -> impl IntoView {
                     ""
                 }
             />
-            <Route path=path!("register") view=Register />
-            <Route path=path!("login") view=Login />
-            <ProtectedRoute
-                path=path!("user/@me/dashboard")
-                condition=move || user.get().map(|n| n.is_ok())
-                redirect_path=|| "/login?redirect=user/@me/dashboard"
-                view=Dashboard
-            />
-            <ProtectedRoute
-                path=path!("user/@me/manage")
-                condition=move || user.get().map(|n| n.is_ok())
-                redirect_path=|| "/login?redirect=user/@me/manage"
-                view=ManageRuns
-            />
-            <ProtectedRoute
-                path=path!("submit")
-                condition=move || user.get().map(|n| n.is_ok())
-                redirect_path=|| "/login?redirect=submit"
-                view=Submit
-            />
             <Route path=path!("ranking") view=Ranking />
             <LeaderboardRouter />
+            <Route path=path!("register") view=Register />
+            <Route path=path!("login") view=Login />
+            <UserRouter />
         </Routes>
     }
+}
+
+#[component(transparent)]
+fn UserRouter() -> impl MatchNestedRoutes + Clone {
+    let user = expect_context::<UserResource>();
+    view! {
+        <ProtectedParentRoute
+            path=path!("user/@me/dashboard")
+            condition=move || user.get().map(|n| n.is_ok())
+            redirect_path=|| "/login?redirect=user/@me/dashboard"
+            view=Dashboard
+        >
+            <Route path=path!("") view=() />
+            <Route path=path!("username") view=Username />
+            <Route path=path!("password") view=Password />
+            <Route path=path!("avatar") view=Avatar />
+            <Route path=path!("discord") view=DiscordList />
+        </ProtectedParentRoute>
+        <ProtectedParentRoute
+            path=path!("user/@me/manage")
+            condition=move || user.get().map(|n| n.is_ok())
+            redirect_path=|| "/login?redirect=user/@me/manage"
+            view=ManageRuns
+        >
+            <Route path=path!("") view=() />
+            <Route path=path!(":id") view=Delete />
+        </ProtectedParentRoute>
+        <ProtectedRoute
+            path=path!("user/@me/submit")
+            condition=move || user.get().map(|n| n.is_ok())
+            redirect_path=|| "/login?redirect=submit"
+            view=Submit
+        />
+    }
+    .into_inner()
 }
 
 #[component(transparent)]

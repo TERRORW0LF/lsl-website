@@ -1,14 +1,14 @@
 use crate::{
     app::UserResource,
     server::{
-        api::{get_maps, get_runs_user, get_user, RunFilters},
+        api::{get_maps, get_runs_user, get_user, ApiError, RunFilters},
         auth::Delete,
     },
 };
 use chrono::{Local, NaiveDateTime, TimeZone};
 use leptos::{either::Either, prelude::*};
 use leptos_router::{
-    components::{Form, A},
+    components::{Form, Outlet, A},
     hooks::{use_params_map, use_query_map},
 };
 
@@ -91,6 +91,7 @@ pub fn ManageRuns() -> impl IntoView {
             .unwrap()
     });
     let delete = ServerAction::<Delete>::new();
+    provide_context(delete);
     let user = expect_context::<UserResource>();
     let runs = Resource::new(
         move || (filters.get(), delete.version().get(), offset.get()),
@@ -102,6 +103,7 @@ pub fn ManageRuns() -> impl IntoView {
 
     view! {
         <section id="manage-runs">
+            <Outlet />
             <details>
                 <summary>
                     <span role="term" aria-details="filters" class="icon">
@@ -253,13 +255,18 @@ pub fn ManageRuns() -> impl IntoView {
                                                         <a href=r.proof>"link"</a>
                                                     </span>
                                                     <span>{r.time.to_string()} " sec"</span>
-                                                    <ActionForm action=delete>
-                                                        <input type="text" hidden readonly name="id" value=r.id />
-                                                        <label class="delete">
-                                                            <input hidden type="submit" />
-                                                            <div></div>
-                                                        </label>
-                                                    </ActionForm>
+                                                    <A
+                                                        attr:class="delete"
+                                                        href=move || {
+                                                            format!(
+                                                                "{}{}",
+                                                                r.id.to_string(),
+                                                                params.get().to_query_string(),
+                                                            )
+                                                        }
+                                                    >
+                                                        <div></div>
+                                                    </A>
                                                     <div class="divider"></div>
                                                 }
                                             })
@@ -306,6 +313,68 @@ pub fn ManageRuns() -> impl IntoView {
                     ">"
                 </A>
             </div>
+        </section>
+    }
+}
+
+#[component]
+pub fn Delete() -> impl IntoView {
+    let id = Signal::derive(|| {
+        use_params_map()
+            .get()
+            .get("id")
+            .unwrap()
+            .parse::<i32>()
+            .unwrap_or(-1)
+    });
+    let action = expect_context::<ServerAction<Delete>>();
+    let result = Signal::derive(move || action.value().get());
+    view! {
+        <A attr:class="toner" href="../">
+            <div />
+        </A>
+        <section id="box">
+            <h1>"Delete Run"</h1>
+            <p>"Please confirm your deletion of the run with id " {id}</p>
+            <ErrorBoundary fallback=|e| {
+                view! {
+                    <span class="error">
+                        {move || {
+                            let e = e.get().into_iter().next().unwrap().1;
+                            if e.is::<ServerFnError<ApiError>>() {
+                                let e = e.downcast_ref::<ServerFnError<ApiError>>().unwrap();
+                                match e {
+                                    ServerFnError::WrappedServerError(err) => {
+                                        match err {
+                                            ApiError::Unauthenticated => "🛈 Please log in",
+                                            ApiError::Unauthorized => "🛈 Missing permission",
+                                            ApiError::NotFound => "🛈 Invalid run",
+                                            _ => "🛈 Something went wrong. Try again",
+                                        }
+                                    }
+                                    _ => "🛈 Something went wrong. Try again",
+                                }
+                            } else {
+                                "🛈 Something went wrong. Try again"
+                            }
+                        }}
+                    </span>
+                }
+            }>
+                <div class="hidden">{result}</div>
+            </ErrorBoundary>
+            <ActionForm action>
+                <input type="text" name="id" hidden value=id />
+                <div class="row">
+                    <A
+                        attr:class="button secondary"
+                        href=|| format!("../{}", use_query_map().get().to_query_string())
+                    >
+                        "Cancel"
+                    </A>
+                    <input type="submit" class="button danger" value="Delete" />
+                </div>
+            </ActionForm>
         </section>
     }
 }
