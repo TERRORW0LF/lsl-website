@@ -114,11 +114,11 @@ pub mod ssr {
     pub async fn connect_to_database() -> PgPool {
         let mut connect_opts = PgConnectOptions::new();
         connect_opts = connect_opts
-            .database(env!("PG_DB"))
-            .username(env!("PG_USER"))
-            .password(env!("PG_PASS"))
-            .host(env!("PG_HOST"))
-            .port(env!("PG_PORT").parse::<u16>().unwrap());
+            .database(&std::env::var("PG_DB").unwrap())
+            .username(&std::env::var("PG_USER").unwrap())
+            .password(&std::env::var("PG_PASS").unwrap())
+            .host(&std::env::var("PG_HOST").unwrap())
+            .port(std::env::var("PG_PORT").unwrap().parse::<u16>().unwrap());
 
         PgPoolOptions::new()
             .max_connections(5)
