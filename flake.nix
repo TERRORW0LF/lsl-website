@@ -24,22 +24,22 @@
         })
         (final: prev: {
           cargo-leptos = prev.cargo-leptos.overrideAttrs (oldAttrs: rec {
-              pname = "cargo-leptos";
-              version = "0.2.26";
+            pname = "cargo-leptos";
+            version = "0.2.26";
 
-              src = prev.fetchFromGitHub {
-                owner = "leptos-rs";
-                repo = pname;
-                rev = "v${version}";
-                hash = "sha256-v1gNH3pq5db/swsk79nEzgtR4jy3f/xHs4QaLnVcVYU=";
-              };
+            src = prev.fetchFromGitHub {
+              owner = "leptos-rs";
+              repo = pname;
+              rev = "v${version}";
+              hash = "sha256-v1gNH3pq5db/swsk79nEzgtR4jy3f/xHs4QaLnVcVYU=";
+            };
 
-              cargoDeps = oldAttrs.cargoDeps.overrideAttrs (prev.lib.const {
-                name = "${pname}-vendor.tar.gz";
-                inherit src;
-                outputHash = "sha256-ATfnMcwyOGlBDULi57VsLtLsL9n3K9TWbVPHX8N/BV0=";
-              });
+            cargoDeps = oldAttrs.cargoDeps.overrideAttrs (prev.lib.const {
+              name = "${pname}-vendor.tar.gz";
+              inherit src;
+              outputHash = "sha256-ATfnMcwyOGlBDULi57VsLtLsL9n3K9TWbVPHX8N/BV0=";
             });
+          });
         })
       ];
       supportedSystems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
@@ -58,6 +58,7 @@
             cargo-edit
             cargo-watch
             cargo-leptos
+            binaryen
             dart-sass
             rust-analyzer
             leptosfmt

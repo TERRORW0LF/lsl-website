@@ -62,11 +62,12 @@ async fn main() {
     let email = env!("EMAIL");
     let cache = env!("CERT_CACHE");
     let domain = std::env::var("DOMAIN");
+    let production = std::env::var("ENVIRONMENT").is_ok_and(|s| s == "PRODUCTION");
     let mut config = AcmeConfig::new([domain.unwrap()])
         .contact_push(email)
         .cache(DirCache::new(cache))
-        .directory_lets_encrypt(false);
-    if std::env::var("PRODUCTION").ok().is_none_or(|s| s != "TRUE") {
+        .directory_lets_encrypt(production);
+    if std::env::var("ENVIRONMENT").ok().is_none_or(|s| s != "PRODUCTION" || s != "TESTING") {
         config = config.cache(TestCache::default());
     }
     let mut state = config.state();
