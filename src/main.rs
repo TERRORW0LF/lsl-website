@@ -1,5 +1,4 @@
 use lsl_website::state::oauth_client;
-use rustls_acme::caches::TestCache;
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 use axum::{
@@ -16,9 +15,7 @@ use http::Request;
 use leptos::prelude::*;
 use leptos_axum::{generate_route_list, handle_server_fns_with_context, LeptosRoutes};
 use lsl_website::{app::*, server::auth::ssr::{AuthSession, connect_to_database, User}, state::AppState};
-use rustls_acme::{caches::DirCache, AcmeConfig};
 use sqlx::PgPool;
-use tokio_stream::StreamExt;
 use tower::ServiceBuilder;
 
 async fn leptos_handler(
@@ -58,29 +55,6 @@ async fn server_handler(
 #[tokio::main]
 async fn main() {
     simple_logger::init_with_level(log::Level::Debug).expect("couldn't initialize logging");
-    // ACME setup for Let's Encrypt + TLS connection
-    let email = env!("EMAIL");
-    let cache = env!("CERT_CACHE");
-    let domain = std::env::var("DOMAIN");
-    let production = std::env::var("ENVIRONMENT").is_ok_and(|s| s == "PRODUCTION");
-    let mut config = AcmeConfig::new([domain.unwrap()])
-        .contact_push(email)
-        .cache(DirCache::new(cache))
-        .directory_lets_encrypt(production);
-    if std::env::var("ENVIRONMENT").ok().is_none_or(|s| s != "PRODUCTION" || s != "TESTING") {
-        config = config.cache(TestCache::default());
-    }
-    let mut state = config.state();
-    let acceptor = state.axum_acceptor(state.default_rustls_config());
-
-    tokio::spawn(async move {
-        loop {
-            match state.next().await.unwrap() {
-                Ok(ok) => log::info!("event: {:?}", ok),
-                Err(err) => log::error!("error: {:?}", err),
-            }
-        }
-    });
 
     let pool = connect_to_database().await;
     let session_config = SessionConfig::default().with_table_name("session");
@@ -122,9 +96,8 @@ async fn main() {
 
     // run our app with hyper
     // `axum::Server` is a re-export of `hyper::Server`
-    log::info!("listening on https://{}", &addr);
+    log::info!("listening on http://{}", &addr);
     axum_server::bind(addr)
-        .acceptor(acceptor)
         .serve(app.into_make_service())
         .await
         .unwrap();
