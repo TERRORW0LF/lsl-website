@@ -175,7 +175,7 @@ pub fn App() -> impl IntoView {
                                                                 )>"Profile"</A>
                                                             </li>
                                                             <li>
-                                                                <A href="/submit">"Submit"</A>
+                                                                <A href="/user/@me/submit">"Submit"</A>
                                                             </li>
                                                             <li>
                                                                 <A href="/user/@me/dashboard">"Dashboard"</A>
@@ -268,7 +268,7 @@ fn UserRouter() -> impl MatchNestedRoutes + Clone {
         <ProtectedRoute
             path=path!("user/@me/submit")
             condition=move || user.get().map(|n| n.is_ok())
-            redirect_path=|| "/login?redirect=submit"
+            redirect_path=|| "/login?redirect=user/@me/submit"
             view=Submit
         />
     }

@@ -802,8 +802,6 @@ pub async fn discord_auth(code: String, state: String) -> Result<(), ServerFnErr
         .execute(&pool)
         .await
         .map_err(|_| ServerFnError::ServerError("Database update failed".to_string()))?;
-
-        leptos::logging::log!("Update done");
     } else {
         sqlx::query(
             r#"INSERT INTO discord (user_id, name, snowflake)
@@ -815,8 +813,6 @@ pub async fn discord_auth(code: String, state: String) -> Result<(), ServerFnErr
         .execute(&pool)
         .await
         .map_err(|_| ServerFnError::ServerError("Database insert failed".to_string()))?;
-
-        leptos::logging::log!("Insert done");
     }
     Ok(())
 }

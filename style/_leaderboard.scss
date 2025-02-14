@@ -230,12 +230,15 @@
 
                 .lb_entry_ranks {
                     padding-left: 1rem;
+                    padding-right: 5px;
                     width: 40%;
                     min-height: 0;
                     aspect-ratio: 16/13.5;
                     font-size: 0.75rem;
                     color: var(--grey-0);
-                    overflow-y: scroll;
+                    overflow-y: auto;
+                    scrollbar-width: thin;
+                    scrollbar-color: var(--grey-500);
 
                     .no-data {
                         display: block;
