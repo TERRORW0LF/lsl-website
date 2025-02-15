@@ -364,6 +364,7 @@ pub fn Delete() -> impl IntoView {
                 <div class="hidden">{result}</div>
             </ErrorBoundary>
             <ActionForm action>
+                <input type="text" name="redirect" hidden value="user/@me/manage" />
                 <input type="text" name="id" hidden value=id />
                 <div class="row">
                     <A

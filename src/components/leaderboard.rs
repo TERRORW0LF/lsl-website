@@ -46,15 +46,18 @@ pub fn Section(
                             children=move |l| {
                                 view! {
                                     <li>
-                                        <A href=move || {
-                                            format!(
-                                                "{}/{l}/{}{}{}",
-                                                patch.get(),
-                                                category.get(),
-                                                map.get().map_or(String::new(), |m| format!("/{m}")),
-                                                query.get().to_query_string(),
-                                            )
-                                        }>
+                                        <A
+                                            href=move || {
+                                                format!(
+                                                    "{}/{l}/{}{}{}",
+                                                    patch.get(),
+                                                    category.get(),
+                                                    map.get().map_or(String::new(), |m| format!("/{m}")),
+                                                    query.get().to_query_string(),
+                                                )
+                                            }
+                                            scroll=false
+                                        >
                                             <span class="text">"Layout " {l}</span>
                                         </A>
                                     </li>
@@ -64,28 +67,34 @@ pub fn Section(
                     </ul>
                     <ul class="right-row-nav">
                         <li>
-                            <A href=move || {
-                                format!(
-                                    "{}/{}/standard{}{}",
-                                    patch.get(),
-                                    layout.get(),
-                                    map.get().map_or(String::new(), |m| format!("/{m}")),
-                                    query.get().to_query_string(),
-                                )
-                            }>
+                            <A
+                                href=move || {
+                                    format!(
+                                        "{}/{}/standard{}{}",
+                                        patch.get(),
+                                        layout.get(),
+                                        map.get().map_or(String::new(), |m| format!("/{m}")),
+                                        query.get().to_query_string(),
+                                    )
+                                }
+                                scroll=false
+                            >
                                 <span class="text">"Standard"</span>
                             </A>
                         </li>
                         <li>
-                            <A href=move || {
-                                format!(
-                                    "{}/{}/gravspeed{}{}",
-                                    patch.get(),
-                                    layout.get(),
-                                    map.get().map_or(String::new(), |m| format!("/{m}")),
-                                    query.get().to_query_string(),
-                                )
-                            }>
+                            <A
+                                href=move || {
+                                    format!(
+                                        "{}/{}/gravspeed{}{}",
+                                        patch.get(),
+                                        layout.get(),
+                                        map.get().map_or(String::new(), |m| format!("/{m}")),
+                                        query.get().to_query_string(),
+                                    )
+                                }
+                                scroll=false
+                            >
                                 <span class="text">"Gravspeed"</span>
                             </A>
                         </li>
@@ -289,7 +298,10 @@ pub fn LeaderboardEntry(map: MapRuns) -> impl IntoView {
                                             }}
                                         </span>
                                         <span class="name">
-                                            <A href=format!("/user/{}/leaderboard", r.user_id)>{r.username}</A>
+                                            <A href=format!(
+                                                "/user/{}/leaderboard",
+                                                r.user_id,
+                                            )>{r.username}</A>
                                         </span>
                                         <span class="time">{r.time.to_string()} " s"</span>
                                     </div>

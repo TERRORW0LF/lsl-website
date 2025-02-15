@@ -2,7 +2,7 @@
     box-sizing: border-box;
     position: fixed;
     max-height: calc(100% - 3rem);
-    overflow-y: scroll;
+    overflow-y: auto;
     top: calc(50% + 1.5rem);
     left: 50%;
     transform: translate(-50%, -50%);

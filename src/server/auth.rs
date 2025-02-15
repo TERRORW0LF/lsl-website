@@ -392,6 +392,7 @@ pub async fn login(
 pub async fn update(
     username: Option<String>,
     password: Option<PasswordUpdate>,
+    redirect: Option<String>,
 ) -> Result<(), ServerFnError<ApiError>> {
     use self::ssr::*;
 
@@ -440,6 +441,11 @@ pub async fn update(
         .await
         .map_err(|_| ServerFnError::<ApiError>::ServerError("Database update failed".into()))?;
         auth.cache_clear_user(curr_user.id);
+    }
+    if let Some(red) = redirect {
+        if let Some(re) = HeaderValue::from_str(&format!("/{}", red)).ok() {
+            leptos_axum::redirect(re.to_str().unwrap_or("/"));
+        };
     }
     Ok(())
 }
@@ -666,7 +672,7 @@ pub async fn verify(id: i32) -> Result<(), ServerFnError<ApiError>> {
 }
 
 #[server(Delete, prefix="/api", endpoint="runs/delete", input=PostUrl)]
-pub async fn delete(id: i32) -> Result<(), ServerFnError<ApiError>> {
+pub async fn delete(id: i32, redirect: Option<String>) -> Result<(), ServerFnError<ApiError>> {
     use self::ssr::*;
 
     let auth = auth()?;
@@ -677,16 +683,24 @@ pub async fn delete(id: i32) -> Result<(), ServerFnError<ApiError>> {
         return Err(ApiError::Unauthorized)?;
     }
 
-    sqlx::query(
+    let num = sqlx::query(
         r#"DELETE FROM run
-        WHERE id = $1 AND user_id = $2 AND section_id >= 1093"#,
+        WHERE id = $1 AND user_id = $2 AND section_id >= 683"#,
     )
     .bind(id)
     .bind(u.id)
     .execute(&pool)
-    .await
-    .map_err(|_| ApiError::NotFound)?;
-    Ok(())
+    .await;
+    if num.is_ok_and(|r| r.rows_affected() != 0) {
+        if let Some(red) = redirect {
+            if let Some(re) = HeaderValue::from_str(&format!("/{}", red)).ok() {
+                leptos_axum::redirect(re.to_str().unwrap_or("/"));
+            };
+        }
+        Ok(())
+    } else {
+        Err(ApiError::NotFound)?
+    }
 }
 
 #[server(DiscordList, prefix="/api", endpoint="user/discord/list", input=PostUrl)]

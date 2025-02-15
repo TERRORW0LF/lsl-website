@@ -160,6 +160,7 @@ pub fn Username() -> impl IntoView {
                 <div class="hidden">{result}</div>
             </ErrorBoundary>
             <ActionForm action>
+                <input type="text" name="redirect" hidden value="user/@me/dashboard" />
                 <div class="input-box">
                     <input
                         type="text"
@@ -229,6 +230,7 @@ pub fn Password() -> impl IntoView {
                 <div class="hidden">{result}</div>
             </ErrorBoundary>
             <ActionForm action>
+                <input type="text" name="redirect" hidden value="user/@me/dashboard" />
                 <div class="input-box">
                     <input
                         type="password"
