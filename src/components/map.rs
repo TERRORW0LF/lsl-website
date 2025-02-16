@@ -1,9 +1,7 @@
 use std::collections::HashMap;
 
 use charming::{
-    component::{
-        Axis, DataZoom, Feature, FilterMode, Grid, Legend, Restore, Toolbox, ToolboxDataZoom,
-    },
+    component::{Axis, DataZoom, FilterMode, Grid, Legend},
     datatype::CompositeValue,
     element::{AxisLabel, AxisType, FormatterFunction, Step, Tooltip, Trigger},
     series::Line,
