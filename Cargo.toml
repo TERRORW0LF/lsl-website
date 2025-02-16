@@ -41,7 +41,7 @@ tokio-stream = { version = "0.1.16", optional = true }
 tower = { version = "0.5.0", features = ["util"], optional = true }
 tower-http = { version = "0.5", features = ["fs"], optional = true }
 tracing = { version = "0.1.37", optional = true }
-charming = { version = "0.4.0", features = ["wasm"] }
+charming = { git = "https://github.com/yuankunzhang/charming.git", rev = "6fe7362ba9f635471c712ea2dee5709960ed7e62", features = ["wasm"] }
 
 [features]
 default = [ "ssr" ]

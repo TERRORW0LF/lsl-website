@@ -1,13 +1,16 @@
 use std::collections::HashMap;
 
 use charming::{
-    component::{Axis, DataZoom, FilterMode, Grid, Legend},
+    component::{
+        Axis, DataZoom, Feature, FilterMode, Grid, Legend, Restore, Toolbox, ToolboxDataZoom,
+    },
     datatype::CompositeValue,
-    element::{AxisType, Tooltip, Trigger},
+    element::{AxisLabel, AxisType, FormatterFunction, Step, Tooltip, Trigger},
     series::Line,
     theme::Theme,
-    Chart, WasmRenderer,
+    Chart, Echarts, WasmRenderer,
 };
+use chrono::Local;
 use leptos::{either::Either, html::Div, prelude::*};
 use leptos_router::{
     components::A,
@@ -17,7 +20,7 @@ use rust_decimal::{
     prelude::{FromPrimitive, ToPrimitive},
     Decimal,
 };
-use wasm_bindgen::{prelude::Closure, JsCast};
+use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
 use web_sys::js_sys;
 
 use crate::{
@@ -49,7 +52,6 @@ pub fn Map(
             .unwrap_or(0)
     });
     let map = Resource::new(selection, |s| get_runs_id(s));
-    let (height, _) = signal(400);
 
     view! {
         <section id="map">
@@ -66,7 +68,7 @@ pub fn Map(
                                     view! {
                                         <div>
                                             <h1>{runs.map.clone()}</h1>
-                                            <Chart height runs=runs.runs.clone() />
+                                            <Chart runs=runs.runs.clone() />
                                             <MapRunList map=runs.map runs=runs.runs />
                                         </div>
                                     }
@@ -80,7 +82,7 @@ pub fn Map(
 }
 
 #[component]
-fn Chart(height: ReadSignal<i32>, mut runs: Vec<PartialRun>) -> impl IntoView {
+fn Chart(mut runs: Vec<PartialRun>) -> impl IntoView {
     let user = Memo::new(|_| use_params_map().read().get("id"));
     let mut old_times = HashMap::<i64, Decimal>::new();
     runs.sort_by_key(|r| r.created_at);
@@ -131,58 +133,103 @@ fn Chart(height: ReadSignal<i32>, mut runs: Vec<PartialRun>) -> impl IntoView {
             );
         }
     }
-    let mut chart = Chart::new()
-        .tooltip(Tooltip::new().trigger(Trigger::Item))
-        .legend(Legend::new())
-        .grid(Grid::new().contain_label(true).left(40).right(5))
-        .data_zoom(
-            DataZoom::new()
-                .show(true)
-                .realtime(true)
-                .start(0)
-                .end(100)
-                .filter_mode(FilterMode::None),
-        )
-        .x_axis(Axis::new().type_(AxisType::Time))
-        .y_axis(
-            Axis::new()
-                .type_(AxisType::Value)
-                .min(
-                    min.round_dp_with_strategy(
-                        1,
-                        rust_decimal::RoundingStrategy::ToNegativeInfinity,
-                    )
-                    .to_f64()
-                    .unwrap(),
-                )
-                .max(
-                    max.round_dp_with_strategy(
-                        1,
-                        rust_decimal::RoundingStrategy::ToPositiveInfinity,
-                    )
-                    .to_f64()
-                    .unwrap(),
+    for user in &mut users {
+        if let Some(CompositeValue::Array(vec)) = user.1.last() {
+            user.1.push(CompositeValue::Array(vec![
+                CompositeValue::String(Local::now().to_rfc3339()),
+                vec[1].clone(),
+            ]));
+        }
+    }
+    let mut chart =
+        Chart::new()
+            .legend(Legend::new())
+            .grid(Grid::new().contain_label(true).left(25).right(50))
+            .tooltip(Tooltip::new().trigger(Trigger::Item).formatter(
+                FormatterFunction::new_with_args(
+                    "params",
+                    r#"
+                        const date = new Date(params.data[0]);
+                        const day = `${date.getDate()}`.padStart(2, '0');
+                        const hour = `${date.getHours()}`.padStart(2, '0');
+                        const min = `${date.getMinutes()}`.padStart(2, '0');
+                        const month = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                        return `<div class="header" style="color: ${params.color};">${params.seriesName}</div>
+                        ${params.marker} ${params.data[1].toFixed(3)} sec
+                        <div class="date">${day} ${month[date.getMonth()]} ${date.getFullYear()} ${hour}:${min}</div>`;
+                    "#,
                 ),
-        );
+            ))
+            .data_zoom(
+                DataZoom::new()
+                    .show(true)
+                    .realtime(true)
+                    .start(0)
+                    .end(100)
+                    .filter_mode(FilterMode::None),
+            )
+            .data_zoom(
+                DataZoom::new()
+                    .show(true)
+                    .realtime(true)
+                    .start(0)
+                    .end(100)
+                    .y_axis_index(0),
+            )
+            .x_axis(Axis::new().type_(AxisType::Time))
+            .y_axis(
+                Axis::new()
+                    .type_(AxisType::Value)
+                    .min(
+                        min.round_dp_with_strategy(
+                            1,
+                            rust_decimal::RoundingStrategy::ToNegativeInfinity,
+                        )
+                        .to_f64()
+                        .unwrap(),
+                    )
+                    .max(
+                        max.round_dp_with_strategy(
+                            1,
+                            rust_decimal::RoundingStrategy::ToPositiveInfinity,
+                        )
+                        .to_f64()
+                        .unwrap(),
+                    )
+                    .axis_label(AxisLabel::new().formatter(FormatterFunction::new_with_args(
+                        "value",
+                        "return `${value} sec`",
+                    ))),
+            );
     for user in users {
-        chart = chart.series(Line::new().name(user.0).data(user.1));
+        chart = chart.series(Line::new().name(user.0).data(user.1).step(Step::End));
     }
     let chart_elem: NodeRef<Div> = NodeRef::new();
     let (width, set_width) = signal::<i32>(0);
-    Effect::new(move |_| {
-        if let Some(elem) = chart_elem.get() {
-            elem.set_inner_html("");
-            let _ = elem.remove_attribute("_echarts_instance_");
-        }
-        WasmRenderer::new(width.get() as u32, height.get() as u32)
-            .theme(Theme::Walden)
-            .render("chart", &chart)
-    });
-    let mut obs_init = true;
-    let mut chart_init = true;
+    let mut echart: Option<Echarts> = None;
+
+    Effect::watch(
+        move || width.get(),
+        move |_, _, _| {
+            if echart.is_none() {
+                if let Some(ch) = WasmRenderer::new_opt(None, None)
+                    .theme(Theme::Walden)
+                    .render("chart", &chart)
+                    .ok()
+                {
+                    echart = Some(ch);
+                }
+            }
+            if let Some(echart) = echart.as_ref() {
+                echart.resize(JsValue::UNDEFINED);
+            }
+        },
+        true,
+    );
     let mut obs: Option<web_sys::ResizeObserver> = None;
+    let mut has_obs = false;
     Effect::new(move |_| {
-        if obs_init {
+        if obs.is_none() {
             let a = Closure::<dyn FnMut(js_sys::Array, web_sys::ResizeObserver)>::new(
                 move |entries: js_sys::Array, _| {
                     set_width(
@@ -196,15 +243,12 @@ fn Chart(height: ReadSignal<i32>, mut runs: Vec<PartialRun>) -> impl IntoView {
             );
             obs = web_sys::ResizeObserver::new(a.as_ref().unchecked_ref()).ok();
             a.forget();
-            obs_init = false;
         }
-        if let Some(observer) = obs.clone() {
+        if let Some(observer) = obs.as_mut() {
             if let Some(elem) = chart_elem.get() {
-                if chart_init {
+                if !has_obs {
                     observer.observe(&elem.into());
-                    chart_init = false;
-                } else {
-                    chart_init = true;
+                    has_obs = true;
                 }
             }
         }
