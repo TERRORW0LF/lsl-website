@@ -388,8 +388,8 @@ pub async fn login(
     Ok(())
 }
 
-#[server(Update, prefix="/api", endpoint="user/update/credentials", input=PostUrl)]
-pub async fn update(
+#[server(UpdateCreds, prefix="/api", endpoint="user/update/credentials", input=PostUrl)]
+pub async fn update_creds(
     username: Option<String>,
     password: Option<PasswordUpdate>,
     redirect: Option<String>,
@@ -450,8 +450,45 @@ pub async fn update(
     Ok(())
 }
 
-#[server(Pfp, prefix="/api", endpoint="user/update/avatar", input=MultipartFormData)]
-pub async fn pfp(data: MultipartData) -> Result<(), ServerFnError<ApiError>> {
+#[server(UpdateBio, prefix="/api", endpoint="user/update/bio", input=PostUrl)]
+pub async fn update_bio(
+    bio: Option<String>,
+    redirect: Option<String>,
+) -> Result<(), ServerFnError<ApiError>> {
+    use self::ssr::*;
+
+    let auth = auth()?;
+    if !auth.current_user.is_some() {
+        Err(ApiError::Unauthenticated)?;
+    }
+    let curr_user = auth.current_user.as_ref().unwrap();
+    let pool = pool()?;
+
+    if bio.clone().is_some_and(|b| b.len() > 512) {
+        Err(ApiError::InvalidCredentials)?;
+    }
+    sqlx::query(
+        r#"UPDATE "user"
+        SET bio = $1
+        WHERE id = $2"#,
+    )
+    .bind(bio)
+    .bind(curr_user.id)
+    .execute(&pool)
+    .await
+    .map_err(|_| ApiError::InvalidCredentials)?;
+    auth.cache_clear_user(curr_user.id);
+
+    if let Some(red) = redirect {
+        if let Some(re) = HeaderValue::from_str(&format!("/{}", red)).ok() {
+            leptos_axum::redirect(re.to_str().unwrap_or("/"));
+        };
+    }
+    Ok(())
+}
+
+#[server(UpdatePfp, prefix="/api", endpoint="user/update/avatar", input=MultipartFormData)]
+pub async fn update_pfp(data: MultipartData) -> Result<(), ServerFnError<ApiError>> {
     use crate::server::auth::ssr::{auth, pool};
     use rand::{distributions::Alphanumeric, thread_rng, Rng};
     use std::fs::{remove_file, File};

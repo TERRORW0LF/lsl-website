@@ -39,7 +39,8 @@
         margin-bottom: 2rem;
 
         input,
-        select {
+        select,
+        textarea {
             width: 100%;
             padding: 0.5rem;
             font-size: 0.8rem;
@@ -47,6 +48,11 @@
             border: 1px solid var(--grey-200);
             border-radius: 4px;
             background: transparent;
+        }
+
+        textarea {
+            height: 10lh;
+            resize: none;
         }
 
         input[type="file"] {
@@ -85,9 +91,15 @@
             }
         }
 
-        input:focus {
+        input:focus,
+        textarea:focus {
             outline: var(--primary-800) solid 3px;
             border-color: transparent;
+        }
+
+        textarea:focus~.indicator {
+            color: var(--primary-800);
+            background-color: var(--grey-800);
         }
 
         input:focus~.placeholder,

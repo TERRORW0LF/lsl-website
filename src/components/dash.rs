@@ -2,7 +2,7 @@ use crate::{
     app::{UpdatePfpAction, UserResource},
     server::{
         api::ApiError,
-        auth::{discord_list, DiscordAdd, DiscordDelete, Logout, Update},
+        auth::{discord_list, DiscordAdd, DiscordDelete, Logout, UpdateBio, UpdateCreds},
     },
 };
 use leptos::{either::Either, html::Input, prelude::*};
@@ -44,24 +44,38 @@ pub fn Dashboard() -> impl IntoView {
                         </A>
                     </div>
                     <div class="spacer-2"></div>
-                    <div class="row">
+                    <div class="row no-wrap">
                         <div class="narrow">
                             <h3>"USERNAME"</h3>
-                            <h4>
-                                {move || { user.get().map(|user| user.map(|user| user.username)) }}
-                            </h4>
+                            <h4>{move || { user.and_then(|user| user.username.clone()) }}</h4>
                         </div>
                         <A attr:class="button secondary" href="username">
                             "Edit"
                         </A>
                     </div>
                     <div class="spacer-2"></div>
-                    <div class="row">
+                    <div class="row no-wrap">
                         <div class="narrow">
                             <h3>"PASSWORD"</h3>
                             <h4>"********"</h4>
                         </div>
                         <A attr:class="button secondary" href="password">
+                            "Edit"
+                        </A>
+                    </div>
+                    <div class="spacer-2"></div>
+                    <div class="row no-wrap">
+                        <div class="narrow">
+                            <h3>"ABOUT ME"</h3>
+                            <p>
+                                {move || {
+                                    user.and_then(|user| {
+                                        user.bio.clone().unwrap_or("No about me set.".into())
+                                    })
+                                }}
+                            </p>
+                        </div>
+                        <A attr:class="button secondary" href="bio">
                             "Edit"
                         </A>
                     </div>
@@ -125,7 +139,7 @@ pub fn Dashboard() -> impl IntoView {
 
 #[component]
 pub fn Username() -> impl IntoView {
-    let action = expect_context::<ServerAction<Update>>();
+    let action = expect_context::<ServerAction<UpdateCreds>>();
     let result = Signal::derive(move || action.value().get());
     let (username, set_username) = signal(String::new());
     view! {
@@ -193,7 +207,7 @@ pub fn Username() -> impl IntoView {
 
 #[component]
 pub fn Password() -> impl IntoView {
-    let action = expect_context::<ServerAction<Update>>();
+    let action = expect_context::<ServerAction<UpdateCreds>>();
     let result = Signal::derive(move || action.value().get());
     let (password, set_password) = signal(String::new());
     let (password_new, set_password_new) = signal(String::new());
@@ -276,6 +290,74 @@ pub fn Password() -> impl IntoView {
                     </label>
                     <label for="password-repeat" class="error">
                         "Passwords must match."
+                    </label>
+                </div>
+                <div class="row">
+                    <A attr:class="button secondary" href="../">
+                        "Cancel"
+                    </A>
+                    <input type="submit" class="button primary" value="Save" />
+                </div>
+            </ActionForm>
+        </section>
+    }
+}
+
+#[component]
+pub fn Bio() -> impl IntoView {
+    let action = expect_context::<ServerAction<UpdateBio>>();
+    let user = expect_context::<UserResource>();
+    let result = Signal::derive(move || action.value().get());
+    view! {
+        <A attr:class="toner" href="../">
+            <div />
+        </A>
+        <section id="box">
+            <h1>"Edit About Me"</h1>
+            <ErrorBoundary fallback=|e| {
+                view! {
+                    <span class="error">
+                        {move || {
+                            let e = e.get().into_iter().next().unwrap().1;
+                            if e.is::<ServerFnError<ApiError>>() {
+                                let e = e.downcast_ref::<ServerFnError<ApiError>>().unwrap();
+                                match e {
+                                    ServerFnError::WrappedServerError(err) => {
+                                        match err {
+                                            ApiError::InvalidCredentials => "🛈 Incorrect password",
+                                            _ => "🛈 Something went wrong. Try again",
+                                        }
+                                    }
+                                    _ => "🛈 Something went wrong. Try again",
+                                }
+                            } else {
+                                "🛈 Something went wrong. Try again"
+                            }
+                        }}
+                    </span>
+                }
+            }>
+                <div class="hidden">{result}</div>
+            </ErrorBoundary>
+            <ActionForm action>
+                <input type="text" name="redirect" hidden value="user/@me/dashboard" />
+                <div class="input-box">
+                    <Suspense fallback=move || {
+                        view! {
+                            <textarea name="bio" id="bio" maxlength="512">
+                                "Loading..."
+                            </textarea>
+                        }
+                    }>
+                        <textarea name="bio" id="bio" maxlength="512">
+                            {move || user.and_then(|u| u.bio.clone().unwrap_or(String::new()))}
+                        </textarea>
+                    </Suspense>
+                    <label for="bio" class="indicator">
+                        "About Me"
+                    </label>
+                    <label for="bio" class="error">
+                        "About me must be under 512 characters."
                     </label>
                 </div>
                 <div class="row">

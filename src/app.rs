@@ -1,7 +1,7 @@
 use crate::{
     components::{
         auth::{Login, Register, Submit},
-        dash::{Avatar, Dashboard, DiscordList, Password, Username},
+        dash::{Avatar, Bio, Dashboard, DiscordList, Password, Username},
         error_template::{AppError, ErrorTemplate},
         home::HomePage,
         leaderboard::{Leaderboard, Section},
@@ -11,7 +11,9 @@ use crate::{
     },
     server::{
         api::ApiError,
-        auth::{get_current_user, pfp, Login, Logout, Register, Update, User},
+        auth::{
+            get_current_user, update_pfp, Login, Logout, Register, UpdateBio, UpdateCreds, User,
+        },
     },
 };
 use leptos::{either::*, prelude::*};
@@ -60,8 +62,9 @@ pub fn App() -> impl IntoView {
     let login = ServerAction::<Login>::new();
     let logout = ServerAction::<Logout>::new();
     let register = ServerAction::<Register>::new();
-    let update = ServerAction::<Update>::new();
-    let update_pfp = Action::new_local(|data: &FormData| pfp(data.clone().into()));
+    let update = ServerAction::<UpdateCreds>::new();
+    let update_bio = ServerAction::<UpdateBio>::new();
+    let update_pfp = Action::new_local(|data: &FormData| update_pfp(data.clone().into()));
     let user = Resource::new(
         move || {
             (
@@ -69,6 +72,7 @@ pub fn App() -> impl IntoView {
                 register.version().get(),
                 logout.version().get(),
                 update.version().get(),
+                update_bio.version().get(),
                 update_pfp.version().get(),
             )
         },
@@ -82,6 +86,7 @@ pub fn App() -> impl IntoView {
     provide_context(login);
     provide_context(logout);
     provide_context(update);
+    provide_context(update_bio);
     provide_context(update_pfp);
 
     Effect::new(|_| {
@@ -253,6 +258,7 @@ fn UserRouter() -> impl MatchNestedRoutes + Clone {
             <Route path=path!("") view=() />
             <Route path=path!("username") view=Username />
             <Route path=path!("password") view=Password />
+            <Route path=path!("bio") view=Bio />
             <Route path=path!("avatar") view=Avatar />
             <Route path=path!("discord") view=DiscordList />
         </ProtectedParentRoute>
