@@ -1,7 +1,7 @@
 use leptos::prelude::*;
 use leptos_meta::Title;
+use leptos_router::components::A;
 
-/// Renders the home page of your application.
 #[component]
 pub fn HomePage() -> impl IntoView {
     view! {
@@ -16,6 +16,11 @@ pub fn HomePage() -> impl IntoView {
                 "Updating the game mode and leaderboards, connecting the community, and holding tournaments, the Lucio Surf League "
                 "is your place for anything related to Lucio Surf. We welcome you as another frog in our ranks."
             </p>
+            <div class="row">
+                <A href="leaderboard" attr:class="button primary">"Leaderboard"</A>
+                <a href="https://learn.lucio.surf/" class="button primary">"Tutorial"</a>
+                <A href="workshop" attr:class="button primary">"Play"</A>
+            </div>
         </section>
         <section id="potd">
             <h2>"Player of the day"</h2>

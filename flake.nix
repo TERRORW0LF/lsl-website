@@ -41,6 +41,21 @@
             });
           });
         })
+        (final: prev: {
+          mdbook-embedify = prev.rustPlatform.buildRustPackage rec {
+            pname = "mdbook-embedify";
+            version = "0.2.11";
+
+            src = prev.fetchFromGitHub {
+              owner = "MR-Addict";
+              repo = pname;
+              rev = version;
+              hash = "sha256-xmpGSSwyJ+pSYF6qUjuMGpYPR5Ipki9mqpid4FcWea0=";
+            };
+
+            cargoHash = "sha256-isoeLxxu79EtRA4IXY2Fr8JbydgiFeKs0v9A5l6l20I=";
+          };
+        })
       ];
       supportedSystems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
       forEachSupportedSystem = f: nixpkgs.lib.genAttrs supportedSystems (system: f {
@@ -58,6 +73,8 @@
             cargo-edit
             cargo-watch
             cargo-leptos
+            mdbook
+            mdbook-embedify
             binaryen
             dart-sass
             rust-analyzer

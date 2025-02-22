@@ -1,0 +1,11 @@
+[book]
+authors = ["Finn Brandt"]
+language = "en"
+multilingual = false
+src = "src"
+title = "Wallriding Academy"
+
+[preprocessor.embedify]
+footer.enable = true
+footer.message = "Copyright © 2025 • [Lucio Surf League](https://lucio.surf/)"
+scroll-to-top.enable = true
