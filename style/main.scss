@@ -95,7 +95,7 @@ body {
 }
 
 p {
-	line-height: 2;
+	line-height: 1.5;
 }
 
 .hidden {
@@ -122,8 +122,14 @@ p {
 	flex-wrap: wrap;
 
 	&.narrow {
-		width: auto;
+		width: fit-content;
 	}
+}
+
+.column {
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
 }
 
 .no-wrap {
@@ -148,25 +154,34 @@ header {
 	flex-shrink: 0;
 	font-size: 0.7rem;
 	font-weight: 700;
+	border: 2px solid var(--grey-0);
 	border-radius: 5px;
 	cursor: pointer;
 
 	&.primary {
 		color: var(--grey-0);
 		background-color: var(--primary-800);
-		border: 2px solid var(--primary-800);
+		border-color: var(--primary-800);
 	}
 
 	&.secondary {
 		color: var(--grey-0);
 		background-color: transparent;
-		border: 2px solid var(--grey-500);
+		border-color: var(--grey-500);
 	}
 
 	&.danger {
 		color: var(--grey-0);
 		background-color: var(--error);
-		border: 2px solid var(--error);
+		border-color: var(--error);
+	}
+
+	&.magic {
+		min-width: 22ch;
+		padding: 1rem 2rem;
+		background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-800) 100%);
+		border: none;
+		box-shadow: 0 0.2rem 0.5rem color-mix(in srgb, var(--primary-700) 30%, transparent);
 	}
 }
 

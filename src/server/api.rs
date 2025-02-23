@@ -195,8 +195,8 @@ pub async fn get_runs_latest(offset: i32) -> Result<Vec<Run>, ServerFnError<ApiE
         r#"SELECT run.id, run.created_at, section_id, patch, layout, 
                     category, map, user_id, "name", time, proof, yt_id, verified, is_pb, is_wr
                 FROM run
-                INNER JOIN section ON section_id = section.id
-                INNER JOIN "user" ON user_id = u.id
+                INNER JOIN section s ON section_id = s.id
+                INNER JOIN "user" u ON user_id = u.id
                 ORDER BY run.created_at DESC
                 LIMIT 50 OFFSET $1"#,
     )

@@ -1,27 +1,89 @@
 #welcome {
-    padding: 7rem 3rem 0;
+    display: flex;
+    min-height: calc(100dvh - 3rem);
+    padding: 2rem;
+    margin-bottom: 8rem;
     text-align: center;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(180deg, var(--primary-200) 0%,
+            color-mix(in srgb, var(--primary-300) 80%, var(--grey-700)) 25%,
+            color-mix(in srgb, var(--primary-300) 10%, var(--grey-900)) 75%,
+            var(--grey-900) 100%);
+
+    .container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        height: fit-content;
+    }
+
+    h1 {
+        font-size: 4rem;
+    }
+
+    p {
+        margin: auto;
+        margin-top: 1rem;
+        margin-bottom: 3rem;
+        max-width: 100ch;
+    }
+
+    .row {
+        gap: 2rem;
+    }
 }
 
-#welcome h1 {
-    font-size: 4rem;
-}
+#activity {
+    margin: 8rem 2rem;
 
-#welcome p {
-    margin: auto;
-    margin-top: 1rem;
-    max-width: 100ch;
+    .runs {
+        max-width: 40ch;
+
+        .row {
+            display: grid;
+            grid-template-columns: 1rem 1fr 1fr;
+            padding: 0.5rem 0;
+        }
+
+        .row:not(:last-child) {
+            border-bottom: 1px solid var(--grey-500);
+        }
+
+        .play {
+            mask: url(/play-button.svg) no-repeat center / 1rem;
+            min-width: 1rem;
+            min-height: 1rem;
+            background-color: var(--grey-0);
+        }
+
+        h5 {
+            margin-bottom: 0.2rem;
+        }
+
+        h6 {
+            color: var(--grey-500);
+            font-size: 0.8rem;
+            font-weight: 400;
+        }
+
+        p {
+            text-align: right;
+            color: var(--grey-500);
+            font-size: 0.7rem;
+        }
+    }
 }
 
 #potd {
     margin: 10rem 3rem 8rem;
-}
 
-#potd h2 {
-    font-size: 4rem;
-}
+    h2 {
+        font-size: 4rem;
+    }
 
-#potd p {
-    margin-top: 1rem;
-    max-width: 80ch;
+    p {
+        margin-top: 1rem;
+        max-width: 80ch;
+    }
 }
