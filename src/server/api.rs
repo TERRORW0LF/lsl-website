@@ -3,7 +3,7 @@ use http::{header::CACHE_CONTROL, HeaderValue};
 use leptos::prelude::{expect_context, server, server_fn::codec::GetUrl, ServerFnError};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use strum::EnumString;
+use strum::{Display, EnumString};
 use thiserror::Error;
 
 use super::auth::User;
@@ -31,6 +31,25 @@ pub enum ApiError {
     #[error("Not Found")]
     #[strum(to_string = "Not Found")]
     NotFound,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Display, Serialize, Deserialize, Hash)]
+#[cfg_attr(feature = "ssr", derive(sqlx::Type), sqlx(type_name = "Title"))]
+pub enum Title {
+    #[strum(to_string = "No Title")]
+    None,
+    #[strum(to_string = "Surfer")]
+    Surfer,
+    #[strum(to_string = "Super Surfer")]
+    SuperSurfer,
+    #[strum(to_string = "Epic Surfer")]
+    EpicSurfer,
+    #[strum(to_string = "Legendary Surfer")]
+    LegendarySurfer,
+    #[strum(to_string = "Mythic Surfer")]
+    MythicSurfer,
+    #[strum(to_string = "Rank 1")]
+    TopOne,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
@@ -130,6 +149,24 @@ pub struct Map {
     pub code: String,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
+pub struct Activity {
+    pub id: i32,
+    pub user_id: i64,
+    #[cfg_attr(feature = "ssr", sqlx(rename = "name"))]
+    pub username: String,
+    pub rank_id: i32,
+    pub patch: String,
+    pub layout: Option<String>,
+    pub category: Option<String>,
+    pub title_old: Option<Title>,
+    pub title_new: Option<Title>,
+    pub rank_old: Option<i32>,
+    pub rank_new: Option<i32>,
+    pub created_at: DateTime<Local>,
+}
+
 #[server(GetRunsId, prefix="/api", endpoint="runs/id", input=GetUrl)]
 pub async fn get_runs_id(id: i32) -> Result<MapRuns, ServerFnError<ApiError>> {
     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
@@ -190,7 +227,6 @@ pub async fn get_runs_category(
 #[server(GetRunsLatest, prefix="/api", endpoint="runs/latest", input=GetUrl)]
 pub async fn get_runs_latest(offset: i32) -> Result<Vec<Run>, ServerFnError<ApiError>> {
     let pool = crate::server::auth::ssr::pool()?;
-    let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let runs = sqlx::query_as::<_, Run>(
         r#"SELECT run.id, run.created_at, section_id, patch, layout, 
                     category, map, user_id, "name", time, proof, yt_id, verified, is_pb, is_wr
@@ -205,7 +241,6 @@ pub async fn get_runs_latest(offset: i32) -> Result<Vec<Run>, ServerFnError<ApiE
     .await
     .map_err(|_| ServerFnError::ServerError("Database lookup failed".to_string()))?;
 
-    res_opts.append_header(CACHE_CONTROL, HeaderValue::from_static("max-age=300"));
     Ok(runs)
 }
 
@@ -294,4 +329,24 @@ pub async fn get_maps() -> Result<Vec<Map>, ServerFnError<ApiError>> {
 pub async fn get_user(id: i64) -> Result<User, ServerFnError<ApiError>> {
     let pool = crate::server::auth::ssr::pool()?;
     Ok(User::get(id, &pool).await.ok_or(ApiError::NotFound)?)
+}
+
+#[server(GetActivity, prefix="/api", endpoint="activity/get", input=GetUrl)]
+pub async fn get_activity_latest(offset: i32) -> Result<Vec<Activity>, ServerFnError<ApiError>> {
+    let pool = crate::server::auth::ssr::pool()?;
+    let activity = sqlx::query_as::<_, Activity>(
+        r#"SELECT a.id, user_id, name, rank_id, patch, layout, section, 
+                    title_old, title_new, rank_old, rank_new, a.created_at
+                FROM activity a
+                INNER JOIN "user" u ON a.user_id = u.id
+                INNER JOIN rank t ON rank_id = t.id
+                ORDER BY a.created_at DESC
+                LIMIT 50 OFFSET $1"#,
+    )
+    .bind(offset)
+    .fetch_all(&pool)
+    .await
+    .map_err(|_| ServerFnError::ServerError("Database lookup failed".to_string()))?;
+
+    Ok(activity)
 }
