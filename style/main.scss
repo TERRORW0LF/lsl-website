@@ -81,6 +81,42 @@ b {
 	--white: hsl(0, 0%, 100%);
 }
 
+.Surfer {
+	color: var(--primary-800);
+
+	&.Super {
+		color: var(--primary-700);
+	}
+
+	&.Epic {
+		color: var(--primary-600);
+	}
+
+	&.Legendary {
+		color: var(--primary-500);
+	}
+
+	&.Mythic {
+		color: var(--primary-400);
+	}
+}
+
+.Rank {
+	color: var(--primary-300);
+}
+
+.rank-1 {
+	color: hsl(49, 100%, 45%);
+}
+
+.rank-2 {
+	color: hsl(197, 8%, 56%);
+}
+
+.rank-3 {
+	color: hsl(24, 69%, 34%);
+}
+
 html,
 body {
 	font-size: 1.2rem;
@@ -179,7 +215,7 @@ header {
 	&.magic {
 		min-width: 22ch;
 		padding: 1rem 2rem;
-		background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-800) 100%);
+		background: linear-gradient(135deg, var(--primary-400) 0%, var(--primary-800) 100%);
 		border: none;
 		box-shadow: 0 0.2rem 0.5rem color-mix(in srgb, var(--primary-700) 30%, transparent);
 	}

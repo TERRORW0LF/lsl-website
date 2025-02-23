@@ -1,3 +1,20 @@
+#welcome,
+#activity,
+#potd {
+    h1 {
+        font-size: 4rem;
+    }
+
+    h2 {
+        font-size: 3rem;
+    }
+
+    h3 {
+        font-size: 2rem;
+        color: var(--primary-300);
+    }
+}
+
 #welcome {
     display: flex;
     min-height: calc(100dvh - 3rem);
@@ -18,10 +35,6 @@
         height: fit-content;
     }
 
-    h1 {
-        font-size: 4rem;
-    }
-
     p {
         margin: auto;
         margin-top: 1rem;
@@ -37,24 +50,32 @@
 #activity {
     margin: 8rem 2rem;
 
-    .runs {
-        max-width: 40ch;
+    h2 {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
 
-        .row {
+    >.row {
+        margin: 0 auto;
+        max-width: 100ch;
+        align-items: start;
+    }
+
+    .users,
+    .runs {
+        width: min(100%, 40ch);
+
+        h3 {
+            margin-bottom: 1rem;
+        }
+
+        >.row {
             display: grid;
-            grid-template-columns: 1rem 1fr 1fr;
             padding: 0.5rem 0;
         }
 
-        .row:not(:last-child) {
+        >.row:not(:last-child) {
             border-bottom: 1px solid var(--grey-500);
-        }
-
-        .play {
-            mask: url(/play-button.svg) no-repeat center / 1rem;
-            min-width: 1rem;
-            min-height: 1rem;
-            background-color: var(--grey-0);
         }
 
         h5 {
@@ -68,19 +89,58 @@
         }
 
         p {
-            text-align: right;
             color: var(--grey-500);
             font-size: 0.7rem;
+        }
+    }
+
+    .users {
+        >.row {
+            grid-template-columns: 1fr 10ch;
+        }
+
+        .column {
+            height: 100%;
+            justify-content: start;
+
+            .row {
+                justify-content: start;
+            }
+        }
+
+        .column:first-child {
+            text-align: left;
+        }
+
+        .column:last-child {
+            text-align: right;
+        }
+    }
+
+    .runs {
+        .row {
+            grid-template-columns: 1rem 1fr 1fr;
+        }
+
+        .play {
+            mask: url(/play-button.svg) no-repeat center / 1rem;
+            min-width: 1rem;
+            min-height: 1rem;
+            background-color: var(--primary-300);
+        }
+
+        h5 {
+            color: var(--primary-100);
+        }
+
+        p {
+            text-align: right;
         }
     }
 }
 
 #potd {
     margin: 10rem 3rem 8rem;
-
-    h2 {
-        font-size: 4rem;
-    }
 
     p {
         margin-top: 1rem;

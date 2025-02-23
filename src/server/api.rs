@@ -1,4 +1,4 @@
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Datelike, Local};
 use http::{header::CACHE_CONTROL, HeaderValue};
 use leptos::prelude::{expect_context, server, server_fn::codec::GetUrl, ServerFnError};
 use rust_decimal::Decimal;
@@ -156,8 +156,8 @@ pub struct Activity {
     pub user_id: i64,
     #[cfg_attr(feature = "ssr", sqlx(rename = "name"))]
     pub username: String,
-    pub rank_id: i32,
-    pub patch: String,
+    pub rank_id: Option<i32>,
+    pub patch: Option<String>,
     pub layout: Option<String>,
     pub category: Option<String>,
     pub title_old: Option<Title>,
@@ -331,15 +331,42 @@ pub async fn get_user(id: i64) -> Result<User, ServerFnError<ApiError>> {
     Ok(User::get(id, &pool).await.ok_or(ApiError::NotFound)?)
 }
 
+#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
+struct UserId {
+    id: i64,
+}
+
+#[server(GetPotd, prefix="/api", endpoint="user/get/potd", input=GetUrl)]
+pub async fn get_potd() -> Result<User, ServerFnError<ApiError>> {
+    let pool = crate::server::auth::ssr::pool()?;
+    let seed = Local::now().num_days_from_ce() as f64 / i32::MAX as f64;
+    let id = sqlx::query_as::<_, UserId>(
+        r#"SELECT NULL FROM (SELECT setseed($1)) 
+            UNION ALL (
+                SELECT id
+                FROM "user"
+                WHERE bio IS NOT NULL
+                ORDER BY random()
+                LIMIT 1
+            ) OFFSET 1
+        "#,
+    )
+    .bind(seed)
+    .fetch_one(&pool)
+    .await
+    .map_err(|_| ApiError::NotFound)?;
+    Ok(User::get(id.id, &pool).await.ok_or(ApiError::NotFound)?)
+}
+
 #[server(GetActivity, prefix="/api", endpoint="activity/get", input=GetUrl)]
 pub async fn get_activity_latest(offset: i32) -> Result<Vec<Activity>, ServerFnError<ApiError>> {
     let pool = crate::server::auth::ssr::pool()?;
     let activity = sqlx::query_as::<_, Activity>(
-        r#"SELECT a.id, user_id, name, rank_id, patch, layout, section, 
+        r#"SELECT a.id, a.user_id, name, rank_id, patch, layout, category, 
                     title_old, title_new, rank_old, rank_new, a.created_at
                 FROM activity a
                 INNER JOIN "user" u ON a.user_id = u.id
-                INNER JOIN rank t ON rank_id = t.id
+                LEFT JOIN rank r ON rank_id = r.id
                 ORDER BY a.created_at DESC
                 LIMIT 50 OFFSET $1"#,
     )

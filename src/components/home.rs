@@ -1,14 +1,18 @@
 use chrono::Local;
-use leptos::prelude::*;
+use leptos::{
+    either::{Either, EitherOf3},
+    prelude::*,
+};
 use leptos_meta::Title;
 use leptos_router::components::A;
 
-use crate::server::api::{get_activity_latest, get_runs_latest};
+use crate::server::api::{get_activity_latest, get_potd, get_runs_latest};
 
 #[component]
 pub fn HomePage() -> impl IntoView {
     let runs = OnceResource::new(get_runs_latest(0));
     let rankings = OnceResource::new(get_activity_latest(0));
+    let potd = OnceResource::new(get_potd());
 
     view! {
         <Title text="Home" />
@@ -55,36 +59,68 @@ pub fn HomePage() -> impl IntoView {
                                             .map(|act| {
                                                 let diff = Local::now() - act.created_at;
                                                 view! {
-                                                    <div class="column">
-                                                        <div class="row">
-                                                            <h5>
+                                                    <div class="row">
+                                                        <div class="column">
+                                                            <div class="row">
                                                                 {if let Some(title) = &act.title_old {
-                                                                    title.to_string()
+                                                                    EitherOf3::A(
+                                                                        view! {
+                                                                            <h5 class=title.to_string()>{title.to_string()}</h5>
+                                                                        },
+                                                                    )
                                                                 } else if let Some(rank) = act.rank_old {
-                                                                    format!("#{}", rank.to_string())
+                                                                    EitherOf3::B(
+                                                                        view! {
+                                                                            <h5 class=format!(
+                                                                                "rank-{rank}",
+                                                                            )>{format!("#{}", rank.to_string())}</h5>
+                                                                        },
+                                                                    )
                                                                 } else {
-                                                                    String::from("User Joined")
+                                                                    EitherOf3::C(view! { <h5>"User Joined"</h5> })
                                                                 }}
-                                                            </h5>
-                                                            <h6>
-                                                                {if act.title_old.is_some() || act.rank_old.is_some() {
-                                                                    "➡"
-                                                                } else {
-                                                                    ""
-                                                                }}
-                                                            </h6>
-                                                            <h5>
-                                                                {if let Some(title) = act.title_new {
-                                                                    title.to_string()
+                                                                <h6>
+                                                                    {if act.title_old.is_some() || act.rank_old.is_some() {
+                                                                        "to"
+                                                                    } else {
+                                                                        ""
+                                                                    }}
+                                                                </h6>
+                                                                {if let Some(title) = &act.title_new {
+                                                                    EitherOf3::A(
+                                                                        view! {
+                                                                            <h5 class=title.to_string()>{title.to_string()}</h5>
+                                                                        },
+                                                                    )
                                                                 } else if let Some(rank) = act.rank_new {
-                                                                    format!("#{}", rank.to_string())
+                                                                    EitherOf3::B(
+                                                                        view! {
+                                                                            <h5 class=format!(
+                                                                                "rank-{rank}",
+                                                                            )>{format!("#{}", rank.to_string())}</h5>
+                                                                        },
+                                                                    )
                                                                 } else {
-                                                                    String::new()
+                                                                    EitherOf3::C(())
                                                                 }}
-                                                            </h5>
+                                                            </div>
+                                                            <h6>"for " {act.username}</h6>
                                                         </div>
-                                                        <div class="row">
-                                                            <p>"for " {act.username}</p>
+                                                        <div class="column">
+                                                            <p>
+                                                                {if let Some(l) = act.layout {
+                                                                    Either::Left(format!("Layout {l}"))
+                                                                } else {
+                                                                    Either::Right(view! { <br /> })
+                                                                }}
+                                                            </p>
+                                                            <p>
+                                                                {if let Some(c) = act.category {
+                                                                    Either::Left(c)
+                                                                } else {
+                                                                    Either::Right(view! { <br /> })
+                                                                }}
+                                                            </p>
                                                             <p>
                                                                 {if diff.num_hours() == 0 {
                                                                     format!(
@@ -174,14 +210,21 @@ pub fn HomePage() -> impl IntoView {
         </section>
         <section id="potd">
             <h2>"Player of the day"</h2>
-            <div>
-                <img src="" />
-                <p>
-                    "Test is an exceptional player combining superb routing with steady movement. This allows them to top "
-                    "any leaderboard that don't involve boosts. While occasionaly dabbling in Gravspeed their main category "
-                    "is Standard, prefering the challenge over the speed."
-                </p>
-            </div>
+            <Suspense fallback=|| "Loading...">
+                <div>
+                    <img src=move || {
+                        format!(
+                            "/cdn/users/{}.jpg",
+                            potd
+                                .get()
+                                .map(|res| res.map(|u| u.pfp).ok())
+                                .flatten()
+                                .unwrap_or(String::from("default")),
+                        )
+                    } />
+                    <p>{move || potd.get().map(|res| res.map(|u| u.bio.unwrap()))}</p>
+                </div>
+            </Suspense>
         </section>
     }
 }
