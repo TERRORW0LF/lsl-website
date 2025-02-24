@@ -3,6 +3,7 @@ use crate::{
         auth::{Login, Register, Submit},
         dash::{Avatar, Bio, Dashboard, DiscordList, Password, Username},
         error_template::{AppError, ErrorTemplate},
+        faq::FAQ,
         home::HomePage,
         leaderboard::{Leaderboard, Section},
         map::Map,
@@ -236,6 +237,7 @@ fn AppRouter() -> impl IntoView {
                     ""
                 }
             />
+            <Route path=path!("faq") view=FAQ />
             <Route path=path!("ranking") view=Ranking />
             <LeaderboardRouter />
             <Route path=path!("register") view=Register />

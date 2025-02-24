@@ -34,7 +34,7 @@ pub fn HomePage() -> impl IntoView {
                     <a href="https://learn.lucio.surf/" class="button magic">
                         "Academy"
                     </a>
-                    <A href="/workshop" attr:class="button magic">
+                    <A href="/faq#codes" attr:class="button magic">
                         "Play"
                     </A>
                 </div>
@@ -151,6 +151,9 @@ pub fn HomePage() -> impl IntoView {
                                 })
                         }}
                     </Suspense>
+                    <A href="" attr:class="button secondary">
+                        "Show More"
+                    </A>
                 </div>
                 <div class="runs">
                     <h3>"Submissions"</h3>
@@ -205,24 +208,111 @@ pub fn HomePage() -> impl IntoView {
                                 })
                         }}
                     </Suspense>
+                    <A href="" attr:class="button secondary">
+                        "Show More"
+                    </A>
                 </div>
             </div>
         </section>
         <section id="potd">
             <h2>"Player of the day"</h2>
             <Suspense fallback=|| "Loading...">
-                <div>
-                    <img src=move || {
-                        format!(
-                            "/cdn/users/{}.jpg",
-                            potd
-                                .get()
-                                .map(|res| res.map(|u| u.pfp).ok())
-                                .flatten()
-                                .unwrap_or(String::from("default")),
-                        )
-                    } />
-                    <p>{move || potd.get().map(|res| res.map(|u| u.bio.unwrap()))}</p>
+                <div class="row">
+                    <div class="user">
+                        {move || {
+                            potd.get()
+                                .map(|res| {
+                                    res.map(|u| {
+                                        let rank = u
+                                            .ranks
+                                            .iter()
+                                            .filter(|r| r.layout.is_none())
+                                            .next();
+                                        view! {
+                                            <div class="row narrow">
+                                                <A href=format!("/user/{}/leaderboard", u.id)>
+                                                    <h3>{u.username}</h3>
+                                                </A>
+                                                {if let Some(r) = rank {
+                                                    Either::Left(
+                                                        view! {
+                                                            <div class="row narrow">
+                                                                <h6 class=format!("rank-{}", r.rank)>"#" {r.rank}</h6>
+                                                                <h6 class=r.title.to_string()>{r.title.to_string()}</h6>
+                                                            </div>
+                                                        },
+                                                    )
+                                                } else {
+                                                    Either::Right(())
+                                                }}
+                                            </div>
+                                            <img src=format!("/cdn/users/{}.jpg", u.pfp) />
+                                            <p>{u.bio.unwrap()}</p>
+                                        }
+                                    })
+                                })
+                        }}
+                    </div>
+                    <div class="row narrow">
+                        <div class="ranks">
+                            <h4>"Standard"</h4>
+                            {move || {
+                                potd.get()
+                                    .map(|res| {
+                                        res.map(|mut u| {
+                                            u.ranks.sort_by_key(|r| r.layout.clone());
+                                            u.ranks
+                                                .iter()
+                                                .filter(|r| r.category == Some(String::from("Standard")))
+                                                .map(|r| {
+                                                    view! {
+                                                        <div class="row">
+                                                            <div class="column">
+                                                                <h5 class=format!("rank-{}", r.rank)>"#"{r.rank}</h5>
+                                                                <h6>"Layout "{r.layout.clone()}</h6>
+                                                            </div>
+                                                            <div class="column">
+                                                                <h5 class=r.title.to_string()>{r.title.to_string()}</h5>
+                                                                <h6>{r.points} " Rating"</h6>
+                                                            </div>
+                                                        </div>
+                                                    }
+                                                })
+                                                .collect_view()
+                                        })
+                                    })
+                            }}
+                        </div>
+                        <div class="ranks">
+                            <h4>"Gravspeed"</h4>
+                            {move || {
+                                potd.get()
+                                    .map(|res| {
+                                        res.map(|mut u| {
+                                            u.ranks.sort_by_key(|r| r.layout.clone());
+                                            u.ranks
+                                                .iter()
+                                                .filter(|r| r.category == Some(String::from("Gravspeed")))
+                                                .map(|r| {
+                                                    view! {
+                                                        <div class="row">
+                                                            <div class="column">
+                                                                <h5 class=format!("rank-{}", r.rank)>"#"{r.rank}</h5>
+                                                                <h6>"Layout "{r.layout.clone()}</h6>
+                                                            </div>
+                                                            <div class="column">
+                                                                <h5 class=r.title.to_string()>{r.title.to_string()}</h5>
+                                                                <h6>{r.points} " Rating"</h6>
+                                                            </div>
+                                                        </div>
+                                                    }
+                                                })
+                                                .collect_view()
+                                        })
+                                    })
+                            }}
+                        </div>
+                    </div>
                 </div>
             </Suspense>
         </section>

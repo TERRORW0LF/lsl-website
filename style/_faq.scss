@@ -1,0 +1,81 @@
+#faq {
+    margin: 2rem;
+
+    details {
+        z-index: 3;
+        font-size: 1rem;
+        font-weight: 600;
+
+        summary {
+            display: block;
+
+            span.icon {
+                width: fit-content;
+                height: 2rem;
+                padding-right: 0.5rem;
+                border-radius: 4px;
+                background-color: var(--grey-700);
+            }
+
+            span.icon:hover {
+                cursor: pointer;
+            }
+
+            span.icon::before {
+                margin-top: 0.5rem;
+                margin-left: 0.8rem;
+                padding-right: 0.5rem;
+                font-size: 2.5rem;
+                font-weight: 700;
+                line-height: 1;
+                color: var(--primary-300);
+            }
+        }
+
+        summary::-webkit-details-marker,
+        summary::marker {
+            display: none;
+        }
+    }
+
+    details[open] span.icon::before {
+        margin-top: -0.5rem;
+        transform: rotate(90deg) scaleX(-1);
+    }
+
+    details~div.content {
+        margin: 0.5rem 0;
+        overflow-y: scroll;
+
+        >form>div.row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+        }
+
+        .input-box {
+            display: block;
+
+            .select {
+                width: 100%;
+                height: 2rem;
+                padding-left: 0.5rem;
+                font-size: 0.9rem;
+                font-weight: 850;
+                color: var(--grey-0);
+                background-color: var(--grey-700);
+            }
+
+            .indicator {
+                display: block;
+                font-size: 0.83rem;
+                font-weight: 500;
+                color: var(--grey-100);
+                padding-bottom: 0.5rem;
+            }
+        }
+    }
+
+    details[open]~div.content {
+        max-height: 20rem;
+    }
+}

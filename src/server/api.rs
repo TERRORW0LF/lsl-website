@@ -341,7 +341,7 @@ pub async fn get_potd() -> Result<User, ServerFnError<ApiError>> {
     let pool = crate::server::auth::ssr::pool()?;
     let seed = Local::now().num_days_from_ce() as f64 / i32::MAX as f64;
     let id = sqlx::query_as::<_, UserId>(
-        r#"SELECT NULL FROM (SELECT setseed($1)) 
+        r#"SELECT NULL AS id FROM (SELECT setseed($1)) 
             UNION ALL (
                 SELECT id
                 FROM "user"

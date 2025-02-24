@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use server_fn::codec::{GetUrl, MultipartData, MultipartFormData};
 use std::collections::HashSet;
 
-use super::api::Run;
+use super::api::{Run, Title};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]
 #[cfg_attr(feature = "ssr", derive(sqlx::Type), sqlx(type_name = "Permissions"))]
@@ -21,13 +21,25 @@ pub enum Permissions {
     Administrator,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct User {
     pub id: i64,
     pub username: String,
     pub bio: Option<String>,
     pub pfp: String,
+    pub ranks: Vec<Rank>,
     pub permissions: HashSet<Permissions>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
+pub struct Rank {
+    pub patch: String,
+    pub layout: Option<String>,
+    pub category: Option<String>,
+    pub title: Title,
+    pub rank: i32,
+    pub points: f64,
 }
 
 // Explicitly is not Serialize/Deserialize!
@@ -43,6 +55,7 @@ impl Default for User {
             username: "Guest".into(),
             bio: None,
             permissions,
+            ranks: Vec::new(),
             pfp: "default".into(),
         }
     }
@@ -91,7 +104,7 @@ pub struct PasswordUpdate {
 pub mod ssr {
     use crate::server::api::ApiError;
 
-    use super::Permissions;
+    use super::{Permissions, Rank};
     pub use super::{User, UserPasshash};
     pub use argon2::{
         password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
@@ -158,7 +171,18 @@ pub mod ssr {
             .await
             .ok()?;
 
-            Some(pg_user.into_user(Some(pg_user_perms)))
+            let pg_user_ranks = sqlx::query_as::<_, Rank>(
+                r#"SELECT patch, layout, category, title, rank, points
+                    FROM rank
+                    WHERE user_id = $1;
+                "#,
+            )
+            .bind(id)
+            .fetch_all(pool)
+            .await
+            .ok()?;
+
+            Some(pg_user.into_user(Some(pg_user_perms), Some(pg_user_ranks)))
         }
 
         pub async fn get(id: i64, pool: &PgPool) -> Option<Self> {
@@ -171,11 +195,12 @@ pub mod ssr {
             name: String,
             pool: &PgPool,
         ) -> Option<(Self, UserPasshash)> {
-            let pg_user = sqlx::query_as::<_, PgUser>("SELECT * FROM \"user\" WHERE \"name\" = $1")
-                .bind(name)
-                .fetch_one(pool)
-                .await
-                .ok()?;
+            let pg_user =
+                sqlx::query_as::<_, PgUser>("SELECT * FROM \"user\" WHERE \"name\" = $1;")
+                    .bind(name)
+                    .fetch_one(pool)
+                    .await
+                    .ok()?;
 
             //lets just get all the tokens the user can use, we will only use the full permissions if modifying them.
             let pg_user_perms = sqlx::query_as::<_, PgPermissionToken>(
@@ -186,7 +211,18 @@ pub mod ssr {
             .await
             .ok()?;
 
-            Some(pg_user.into_user(Some(pg_user_perms)))
+            let pg_user_ranks = sqlx::query_as::<_, Rank>(
+                r#"SELECT patch, layout, category, title, rank, points
+                    FROM rank
+                    WHERE user_id = $1;
+                "#,
+            )
+            .bind(pg_user.id)
+            .fetch_all(pool)
+            .await
+            .ok()?;
+
+            Some(pg_user.into_user(Some(pg_user_perms), Some(pg_user_ranks)))
         }
 
         pub async fn get_from_username(name: String, pool: &PgPool) -> Option<Self> {
@@ -243,6 +279,7 @@ pub mod ssr {
         pub fn into_user(
             self,
             pg_user_perms: Option<Vec<PgPermissionToken>>,
+            pg_user_ranks: Option<Vec<Rank>>,
         ) -> (User, UserPasshash) {
             (
                 User {
@@ -257,6 +294,7 @@ pub mod ssr {
                     } else {
                         HashSet::<Permissions>::new()
                     },
+                    ranks: pg_user_ranks.unwrap_or_default(),
                     pfp: self.pfp,
                 },
                 UserPasshash(self.password),
@@ -328,7 +366,7 @@ pub async fn register(
 
     let pwd_hash = hash_password(&password)?;
 
-    sqlx::query("INSERT INTO \"user\" (name, password) VALUES ($1, $2)")
+    sqlx::query("INSERT INTO \"user\" (name, password) VALUES ($1, $2);")
         .bind(username.clone())
         .bind(pwd_hash)
         .execute(&pool)
@@ -343,7 +381,7 @@ pub async fn register(
 
     let _ = sqlx::query(
         r#"INSERT INTO permission (user_id, token) 
-            VALUES ($1, $2), ($1, $3), ($1, $4), ($1, $5)"#,
+            VALUES ($1, $2), ($1, $3), ($1, $4), ($1, $5);"#,
     )
     .bind(user.id)
     .bind(Permissions::View)
@@ -410,7 +448,7 @@ pub async fn update_creds(
         sqlx::query(
             r#"UPDATE "user"
             SET name = $1
-            WHERE id = $2"#,
+            WHERE id = $2;"#,
         )
         .bind(name)
         .bind(curr_user.id)
@@ -433,7 +471,7 @@ pub async fn update_creds(
         sqlx::query(
             r#"UPDATE "user"
             SET password = $1
-            WHERE id = $2"#,
+            WHERE id = $2;"#,
         )
         .bind(pwd_hash)
         .bind(curr_user.id)
@@ -470,7 +508,7 @@ pub async fn update_bio(
     sqlx::query(
         r#"UPDATE "user"
         SET bio = $1
-        WHERE id = $2"#,
+        WHERE id = $2;"#,
     )
     .bind(bio)
     .bind(curr_user.id)
@@ -551,7 +589,7 @@ pub async fn update_pfp(data: MultipartData) -> Result<(), ServerFnError<ApiErro
                 sqlx::query(
                     r#"UPDATE "user"
                     SET pfp = $1
-                    WHERE id = $2"#,
+                    WHERE id = $2;"#,
                 )
                 .bind(name.clone())
                 .bind(user.id)
@@ -636,7 +674,7 @@ pub async fn submit(
     let section_id = sqlx::query_as::<_, SectionId>(
         r#"SELECT id
         FROM section
-        WHERE patch='2.00' AND layout=$1 AND category=$2 AND map=$3"#,
+        WHERE patch='2.00' AND layout=$1 AND category=$2 AND map=$3;"#,
     )
     .bind(&layout)
     .bind(&category)
@@ -663,7 +701,7 @@ pub async fn submit(
         let proof = format!("https://youtube.com/watch?v={yt_id}");
         let _ = sqlx::query(
             r#"INSERT INTO run (section_id, user_id, time, proof, yt_id, verified)
-                                    VALUES ($1, $2, $3, $4, $5, $6)"#,
+                                    VALUES ($1, $2, $3, $4, $5, $6);"#,
         )
         .bind(section_id.id)
         .bind(u.id)
@@ -699,7 +737,7 @@ pub async fn verify(id: i32) -> Result<(), ServerFnError<ApiError>> {
     sqlx::query(
         r#"UPDATE run
         SET verified = TRUE
-        WHERE id = $1"#,
+        WHERE id = $1;"#,
     )
     .bind(id)
     .execute(&pool)
@@ -722,7 +760,7 @@ pub async fn delete(id: i32, redirect: Option<String>) -> Result<(), ServerFnErr
 
     let num = sqlx::query(
         r#"DELETE FROM run
-        WHERE id = $1 AND user_id = $2 AND section_id >= 683"#,
+        WHERE id = $1 AND user_id = $2 AND section_id >= 683;"#,
     )
     .bind(id)
     .bind(u.id)
@@ -752,7 +790,7 @@ pub async fn discord_list() -> Result<Vec<Discord>, ServerFnError<ApiError>> {
         r#"SELECT name, snowflake
         FROM discord
         WHERE user_id = $1
-        LIMIT 5"#,
+        LIMIT 5;"#,
     )
     .bind(user.id)
     .fetch_all(&pool)
@@ -831,7 +869,7 @@ pub async fn discord_auth(code: String, state: String) -> Result<(), ServerFnErr
         r#"SELECT name, snowflake
         FROM discord
         WHERE user_id = $1
-        LIMIT 5"#,
+        LIMIT 5;"#,
     )
     .bind(user.id)
     .fetch_all(&pool)
@@ -845,7 +883,7 @@ pub async fn discord_auth(code: String, state: String) -> Result<(), ServerFnErr
         sqlx::query(
             r#"UPDATE discord
             SET name = $1
-            WHERE user_id = $2 AND snowflake = $3"#,
+            WHERE user_id = $2 AND snowflake = $3;"#,
         )
         .bind(name)
         .bind(user.id)
@@ -856,7 +894,7 @@ pub async fn discord_auth(code: String, state: String) -> Result<(), ServerFnErr
     } else {
         sqlx::query(
             r#"INSERT INTO discord (user_id, name, snowflake)
-            VALUES ($1, $2, $3)"#,
+            VALUES ($1, $2, $3);"#,
         )
         .bind(user.id)
         .bind(name)
@@ -878,7 +916,7 @@ pub async fn discord_delete(snowflake: String) -> Result<(), ServerFnError<ApiEr
 
     let _ = sqlx::query(
         r#"DELETE FROM discord
-        WHERE user_id = $1 AND snowflake = $2"#,
+        WHERE user_id = $1 AND snowflake = $2;"#,
     )
     .bind(user.id)
     .bind(snowflake)
