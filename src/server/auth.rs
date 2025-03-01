@@ -9,7 +9,7 @@ use std::collections::HashSet;
 use super::api::{Run, Title};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]
-#[cfg_attr(feature = "ssr", derive(sqlx::Type), sqlx(type_name = "Permissions"))]
+#[cfg_attr(feature = "ssr", derive(sqlx::Type), sqlx(type_name = "permissions"))]
 pub enum Permissions {
     View,
     Submit,

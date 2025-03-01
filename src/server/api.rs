@@ -1,3 +1,4 @@
+use super::auth::User;
 use chrono::{DateTime, Datelike, Local};
 use http::{header::CACHE_CONTROL, HeaderValue};
 use leptos::prelude::{expect_context, server, server_fn::codec::GetUrl, ServerFnError};
@@ -5,8 +6,6 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 use thiserror::Error;
-
-use super::auth::User;
 
 #[derive(Clone, Debug, Error, EnumString, Serialize, Deserialize)]
 pub enum ApiError {
@@ -34,7 +33,7 @@ pub enum ApiError {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Display, Serialize, Deserialize, Hash)]
-#[cfg_attr(feature = "ssr", derive(sqlx::Type), sqlx(type_name = "Title"))]
+#[cfg_attr(feature = "ssr", derive(sqlx::Type), sqlx(type_name = "title"))]
 pub enum Title {
     #[strum(to_string = "No Title")]
     None,
@@ -169,7 +168,6 @@ pub struct Activity {
 
 #[server(GetRunsId, prefix="/api", endpoint="runs/id", input=GetUrl)]
 pub async fn get_runs_id(id: i32) -> Result<MapRuns, ServerFnError<ApiError>> {
-    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
     let pool = crate::server::auth::ssr::pool()?;
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let runs = sqlx::query_as::<_, MapRuns>(
@@ -182,7 +180,7 @@ pub async fn get_runs_id(id: i32) -> Result<MapRuns, ServerFnError<ApiError>> {
             LEFT JOIN run r ON section_id = s.id
             LEFT JOIN "user" u ON user_id = u.id
             WHERE s.id = $1
-            GROUP BY s.id, patch, layout, category, map"#,
+            GROUP BY s.id, patch, layout, category, map;"#,
     )
     .bind(id)
     .fetch_one(&pool)
@@ -211,7 +209,7 @@ pub async fn get_runs_category(
             LEFT JOIN run r ON section_id = s.id
             LEFT JOIN "user" u ON user_id = u.id
             WHERE patch = $1 AND layout = $2 AND category = $3
-            GROUP BY s.id, patch, layout, category, map"#,
+            GROUP BY s.id, patch, layout, category, map;"#,
     )
     .bind(patch)
     .bind(layout)
@@ -234,7 +232,7 @@ pub async fn get_runs_latest(offset: i32) -> Result<Vec<Run>, ServerFnError<ApiE
                 INNER JOIN section s ON section_id = s.id
                 INNER JOIN "user" u ON user_id = u.id
                 ORDER BY run.created_at DESC
-                LIMIT 50 OFFSET $1"#,
+                LIMIT 50 OFFSET $1;"#,
     )
     .bind(offset)
     .fetch_all(&pool)
@@ -295,7 +293,8 @@ pub async fn get_runs_user(
             false => " DESC",
         })
         .push(" LIMIT 50 OFFSET ")
-        .push_bind(offset);
+        .push_bind(offset)
+        .push(";");
     let runs = query
         .build_query_as::<Run>()
         .fetch_all(&pool)
@@ -315,7 +314,7 @@ pub async fn get_maps() -> Result<Vec<Map>, ServerFnError<ApiError>> {
     let maps = sqlx::query_as::<_, Map>(
         r#"SELECT map, code
         FROM section
-        WHERE patch='2.13' AND layout='1' AND category='Standard'"#,
+        WHERE patch='2.13' AND layout='1' AND category='Standard';"#,
     )
     .fetch_all(&pool)
     .await
@@ -348,7 +347,7 @@ pub async fn get_potd() -> Result<User, ServerFnError<ApiError>> {
                 WHERE bio IS NOT NULL
                 ORDER BY random()
                 LIMIT 1
-            ) OFFSET 1
+            ) OFFSET 1;
         "#,
     )
     .bind(seed)
@@ -368,7 +367,7 @@ pub async fn get_activity_latest(offset: i32) -> Result<Vec<Activity>, ServerFnE
                 INNER JOIN "user" u ON a.user_id = u.id
                 LEFT JOIN rank r ON rank_id = r.id
                 ORDER BY a.created_at DESC
-                LIMIT 50 OFFSET $1"#,
+                LIMIT 50 OFFSET $1;"#,
     )
     .bind(offset)
     .fetch_all(&pool)
