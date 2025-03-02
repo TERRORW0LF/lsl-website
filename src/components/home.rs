@@ -273,7 +273,7 @@ pub fn HomePage() -> impl IntoView {
                                                             </div>
                                                             <div class="column">
                                                                 <h5 class=r.title.to_string()>{r.title.to_string()}</h5>
-                                                                <h6>{r.points} " Rating"</h6>
+                                                                <h6>{r.rating} " Rating"</h6>
                                                             </div>
                                                         </div>
                                                     }
@@ -302,7 +302,7 @@ pub fn HomePage() -> impl IntoView {
                                                             </div>
                                                             <div class="column">
                                                                 <h5 class=r.title.to_string()>{r.title.to_string()}</h5>
-                                                                <h6>{r.points} " Rating"</h6>
+                                                                <h6>{r.rating} " Rating"</h6>
                                                             </div>
                                                         </div>
                                                     }

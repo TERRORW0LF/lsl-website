@@ -1,4 +1,5 @@
 use crate::server::api::{get_runs_user, ApiError, RunFilters};
+use chrono::{DateTime, Local};
 use http::HeaderValue;
 use leptos::prelude::{server, server_fn::codec::PostUrl, ServerFnError};
 use rust_decimal::Decimal;
@@ -39,7 +40,10 @@ pub struct Rank {
     pub category: Option<String>,
     pub title: Title,
     pub rank: i32,
-    pub points: f64,
+    pub rating: f64,
+    pub percentage: f64,
+    pub created_at: DateTime<Local>,
+    pub updated_at: DateTime<Local>,
 }
 
 // Explicitly is not Serialize/Deserialize!
@@ -172,7 +176,7 @@ pub mod ssr {
             .ok()?;
 
             let pg_user_ranks = sqlx::query_as::<_, Rank>(
-                r#"SELECT patch, layout, category, title, rank, points
+                r#"SELECT patch, layout, category, title, rank, rating, percentage, created_at, updated_at
                     FROM rank
                     WHERE user_id = $1;
                 "#,
@@ -212,7 +216,7 @@ pub mod ssr {
             .ok()?;
 
             let pg_user_ranks = sqlx::query_as::<_, Rank>(
-                r#"SELECT patch, layout, category, title, rank, points
+                r#"SELECT patch, layout, category, title, rank, rating, percentage, created_at, updated_at
                     FROM rank
                     WHERE user_id = $1;
                 "#,
