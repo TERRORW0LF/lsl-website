@@ -674,7 +674,7 @@ pub async fn submit(
     let section_id = sqlx::query_as::<_, SectionId>(
         r#"SELECT id
         FROM section
-        WHERE patch='2.00' AND layout=$1 AND category=$2 AND map=$3;"#,
+        WHERE patch='2.13' AND layout=$1 AND category=$2 AND map=$3;"#,
     )
     .bind(&layout)
     .bind(&category)
@@ -760,7 +760,7 @@ pub async fn delete(id: i32, redirect: Option<String>) -> Result<(), ServerFnErr
 
     let num = sqlx::query(
         r#"DELETE FROM run
-        WHERE id = $1 AND user_id = $2 AND section_id >= 683;"#,
+        WHERE id = $1 AND user_id = $2 AND section_id >= 1093;"#,
     )
     .bind(id)
     .bind(u.id)

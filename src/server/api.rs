@@ -257,7 +257,7 @@ pub async fn get_runs_user(
                 FROM run
                 INNER JOIN section s ON section_id = s.id
                 INNER JOIN "user" u ON user_id = u.id 
-                WHERE patch = '2.00'"#,
+                WHERE patch = '2.13'"#,
     );
     query.push(" AND user_id = ").push_bind(user_id);
     if let Some(before) = filter.before {
