@@ -1,5 +1,6 @@
 use crate::{
     components::{
+        activity::Activity,
         auth::{Login, Register, Submit},
         dash::{Avatar, Bio, Dashboard, DiscordList, Password, Username},
         error_template::{AppError, ErrorTemplate},
@@ -239,6 +240,7 @@ fn AppRouter() -> impl IntoView {
             />
             <Route path=path!("faq") view=FAQ />
             <Route path=path!("ranking") view=Ranking />
+            <Route path=path!("runs") view=Activity />
             <LeaderboardRouter />
             <Route path=path!("register") view=Register />
             <Route path=path!("login") view=Login />
@@ -288,31 +290,27 @@ fn LeaderboardRouter() -> impl MatchNestedRoutes + Clone {
     let (patch, set_patch) = signal(String::new());
     let (layout, set_layout) = signal(String::new());
     let (category, set_category) = signal(String::new());
-    let (map, set_map) = signal::<Option<String>>(None);
 
     view! {
+        <Route
+            path=path!("leaderboard/map/:map")
+            view=move || {
+                view! {
+                    <section id="leaderboard">
+                        <Map />
+                    </section>
+                }
+            }
+        />
         <ParentRoute
             path=path!("leaderboard")
-            view=move || view! { <Section patch layout category map /> }
+            view=move || view! { <Section patch layout category /> }
         >
-            <Route
-                path=path!(":patch/:layout/:category/:map")
-                view=move || {
-                    view! {
-                        <Map patch=set_patch layout=set_layout category=set_category map=set_map />
-                    }
-                }
-            />
             <Route
                 path=path!(":patch/:layout/:category")
                 view=move || {
                     view! {
-                        <Leaderboard
-                            patch=set_patch
-                            layout=set_layout
-                            category=set_category
-                            map=set_map
-                        />
+                        <Leaderboard patch=set_patch layout=set_layout category=set_category />
                     }
                 }
             />
@@ -341,33 +339,31 @@ fn LeaderboardRouter() -> impl MatchNestedRoutes + Clone {
                 }
             />
         </ParentRoute>
+        <Route
+            path=path!("user/:id/leaderboard/map/:map")
+            view=move || {
+                view! {
+                    <Profile />
+                    <section id="leaderboard">
+                        <Map />
+                    </section>
+                }
+            }
+        />
         <ParentRoute
             path=path!("user/:id/leaderboard")
             view=move || {
                 view! {
                     <Profile />
-                    <Section patch layout category map />
+                    <Section patch layout category />
                 }
             }
         >
             <Route
-                path=path!(":patch/:layout/:category/:map")
-                view=move || {
-                    view! {
-                        <Map patch=set_patch layout=set_layout category=set_category map=set_map />
-                    }
-                }
-            />
-            <Route
                 path=path!(":patch/:layout/:category")
                 view=move || {
                     view! {
-                        <Leaderboard
-                            patch=set_patch
-                            layout=set_layout
-                            category=set_category
-                            map=set_map
-                        />
+                        <Leaderboard patch=set_patch layout=set_layout category=set_category />
                     }
                 }
             />

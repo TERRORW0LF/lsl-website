@@ -14,7 +14,6 @@ pub fn Section(
     patch: ReadSignal<String>,
     layout: ReadSignal<String>,
     category: ReadSignal<String>,
-    map: ReadSignal<Option<String>>,
 ) -> impl IntoView {
     let layouts = move || match patch.get().as_str() {
         "1.00" => vec![1, 2],
@@ -49,10 +48,9 @@ pub fn Section(
                                         <A
                                             href=move || {
                                                 format!(
-                                                    "{}/{l}/{}{}{}",
+                                                    "{}/{l}/{}{}",
                                                     patch.get(),
                                                     category.get(),
-                                                    map.get().map_or(String::new(), |m| format!("/{m}")),
                                                     query.get().to_query_string(),
                                                 )
                                             }
@@ -70,10 +68,9 @@ pub fn Section(
                             <A
                                 href=move || {
                                     format!(
-                                        "{}/{}/standard{}{}",
+                                        "{}/{}/standard{}",
                                         patch.get(),
                                         layout.get(),
-                                        map.get().map_or(String::new(), |m| format!("/{m}")),
                                         query.get().to_query_string(),
                                     )
                                 }
@@ -86,10 +83,9 @@ pub fn Section(
                             <A
                                 href=move || {
                                     format!(
-                                        "{}/{}/gravspeed{}{}",
+                                        "{}/{}/gravspeed{}",
                                         patch.get(),
                                         layout.get(),
-                                        map.get().map_or(String::new(), |m| format!("/{m}")),
                                         query.get().to_query_string(),
                                     )
                                 }
@@ -105,13 +101,7 @@ pub fn Section(
                 <Form
                     method="GET"
                     action=move || {
-                        format!(
-                            "{}/{}/{}{}",
-                            patch.get(),
-                            layout.get(),
-                            category.get(),
-                            map.get().map_or(String::new(), |m| format!("/{m}")),
-                        )
+                        format!("{}/{}/{}", patch.get(), layout.get(), category.get())
                     }
                 >
                     <div class="group">
@@ -164,7 +154,6 @@ pub fn Leaderboard(
     patch: WriteSignal<String>,
     layout: WriteSignal<String>,
     category: WriteSignal<String>,
-    map: WriteSignal<Option<String>>,
 ) -> impl IntoView {
     let params = use_params_map();
     Effect::new(move |_| {
@@ -172,7 +161,6 @@ pub fn Leaderboard(
         patch.set(params.get("patch").unwrap());
         layout.set(params.get("layout").unwrap());
         category.set(params.get("category").unwrap());
-        map.set(None);
     });
     let selection = Memo::new(move |_| {
         let params = params.read();
@@ -245,7 +233,7 @@ pub fn LeaderboardEntry(map: MapRuns) -> impl IntoView {
     view! {
         <div class="lb_entry">
             <div class="header">
-                <A href=map.id.to_string()>
+                <A href=format!("../../../map/{}", map.id.to_string())>
                     <h2>{map_name}</h2>
                 </A>
                 {move || match runs().get(0) {

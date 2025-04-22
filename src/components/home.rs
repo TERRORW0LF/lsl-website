@@ -215,7 +215,7 @@ pub fn HomePage() -> impl IntoView {
             </div>
         </section>
         <section id="potd">
-            <h2>"Player of the day"</h2>
+            <h2>"Player Showcase"</h2>
             <Suspense fallback=|| "Loading...">
                 <div class="row">
                     <div class="user">
@@ -226,7 +226,9 @@ pub fn HomePage() -> impl IntoView {
                                         let rank = u
                                             .ranks
                                             .iter()
-                                            .filter(|r| r.layout.is_none())
+                                            .filter(|r| {
+                                                r.patch == String::from("2.13") && r.layout.is_none()
+                                            })
                                             .next();
                                         view! {
                                             <div class="row narrow">
@@ -263,7 +265,10 @@ pub fn HomePage() -> impl IntoView {
                                             u.ranks.sort_by_key(|r| r.layout.clone());
                                             u.ranks
                                                 .iter()
-                                                .filter(|r| r.category == Some(String::from("Standard")))
+                                                .filter(|r| {
+                                                    r.patch == String::from("2.13")
+                                                        && r.category == Some(String::from("Standard"))
+                                                })
                                                 .map(|r| {
                                                     view! {
                                                         <div class="row">
@@ -273,7 +278,7 @@ pub fn HomePage() -> impl IntoView {
                                                             </div>
                                                             <div class="column">
                                                                 <h5 class=r.title.to_string()>{r.title.to_string()}</h5>
-                                                                <h6>{r.rating} " Rating"</h6>
+                                                                <h6>format!("{:0} Rating", r.rating)</h6>
                                                             </div>
                                                         </div>
                                                     }
@@ -292,7 +297,10 @@ pub fn HomePage() -> impl IntoView {
                                             u.ranks.sort_by_key(|r| r.layout.clone());
                                             u.ranks
                                                 .iter()
-                                                .filter(|r| r.category == Some(String::from("Gravspeed")))
+                                                .filter(|r| {
+                                                    r.patch == String::from("2.13")
+                                                        && r.category == Some(String::from("Gravspeed"))
+                                                })
                                                 .map(|r| {
                                                     view! {
                                                         <div class="row">
@@ -302,7 +310,7 @@ pub fn HomePage() -> impl IntoView {
                                                             </div>
                                                             <div class="column">
                                                                 <h5 class=r.title.to_string()>{r.title.to_string()}</h5>
-                                                                <h6>{r.rating} " Rating"</h6>
+                                                                <h6>format!("{:0} Rating", r.rating)</h6>
                                                             </div>
                                                         </div>
                                                     }

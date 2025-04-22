@@ -27,20 +27,8 @@ use crate::{
 };
 
 #[component]
-pub fn Map(
-    patch: WriteSignal<String>,
-    layout: WriteSignal<String>,
-    category: WriteSignal<String>,
-    map: WriteSignal<Option<String>>,
-) -> impl IntoView {
+pub fn Map() -> impl IntoView {
     let params = use_params_map();
-    Effect::new(move |_| {
-        let params = params.read();
-        patch.set(params.get("patch").unwrap());
-        layout.set(params.get("layout").unwrap());
-        category.set(params.get("category").unwrap());
-        map.set(Some(params.get("map").unwrap()));
-    });
     let selection = Memo::new(move |_| {
         params
             .read()
