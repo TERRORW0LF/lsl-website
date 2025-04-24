@@ -13,12 +13,8 @@ use leptos_router::{
 };
 
 #[component]
-pub fn Profile() -> impl IntoView {
-    let user_id = Signal::derive(|| use_params_map().get().get("id"));
-    let user = Resource::new(
-        move || user_id.get().unwrap().parse::<i64>().unwrap_or(0),
-        |id: i64| get_user(id),
-    );
+pub fn Profile(id: Signal<i64>) -> impl IntoView {
+    let user = Resource::new(id, |s| get_user(s));
     view! {
         <section id="profile">
             <Suspense fallback=|| {

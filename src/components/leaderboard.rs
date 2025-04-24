@@ -1,7 +1,7 @@
 use leptos::{either::*, prelude::*};
 use leptos_meta::Title;
 use leptos_router::{
-    components::{Form, Outlet, A},
+    components::{Form, A},
     hooks::{use_params_map, use_query_map},
 };
 use rust_decimal::Decimal;
@@ -11,165 +11,127 @@ use crate::server::api::{get_runs_category, MapRuns, PartialRun};
 
 #[component]
 pub fn Section(
-    patch: ReadSignal<String>,
-    layout: ReadSignal<String>,
-    category: ReadSignal<String>,
+    layouts: Signal<Vec<(String, String)>>,
+    categories: Signal<Vec<(String, String)>>,
+    category: Signal<String>,
 ) -> impl IntoView {
-    let layouts = move || match patch.get().as_str() {
-        "1.00" => vec![1, 2],
-        "1.41" => vec![1, 2, 3, 4],
-        "1.50" => vec![1, 2, 3, 4, 5],
-        "2.00" => vec![1, 2, 3, 4, 5],
-        "2.13" => vec![1, 2, 3, 4, 5],
-        _ => vec![],
-    };
-
     let query = use_query_map();
 
     view! {
         <Title text="Leaderboard" />
-        <section id="leaderboard">
-            <details>
-                <summary>
-                    <span role="term" aria-details="filters" class="icon">
-                        ""
-                    </span>
-                </summary>
-            </details>
-            <header id="lb_header">
-                <nav class="split-row-nav">
-                    <ul class="left-row-nav">
-                        <For
-                            each=layouts
-                            key=|l| l.to_owned()
-                            children=move |l| {
-                                view! {
-                                    <li>
-                                        <A
-                                            href=move || {
-                                                format!(
-                                                    "{}/{l}/{}{}",
-                                                    patch.get(),
-                                                    category.get(),
-                                                    query.get().to_query_string(),
-                                                )
-                                            }
-                                            scroll=false
-                                        >
-                                            <span class="text">"Layout " {l}</span>
-                                        </A>
-                                    </li>
-                                }
+        <details>
+            <summary>
+                <span role="term" aria-details="filters" class="icon">
+                    ""
+                </span>
+            </summary>
+        </details>
+        <header id="lb_header">
+            <nav class="split-row-nav">
+                <ul class="left-row-nav">
+                    <For
+                        each=layouts
+                        key=|l| l.0.to_owned()
+                        children=move |l| {
+                            view! {
+                                <li>
+                                    <A
+                                        href=move || {
+                                            format!(
+                                                "../../{}/{}{}",
+                                                l.0,
+                                                category.get(),
+                                                query.get().to_query_string(),
+                                            )
+                                        }
+                                        scroll=false
+                                    >
+                                        <span class="text">{l.1}</span>
+                                    </A>
+                                </li>
                             }
-                        />
-                    </ul>
-                    <ul class="right-row-nav">
-                        <li>
-                            <A
-                                href=move || {
-                                    format!(
-                                        "{}/{}/standard{}",
-                                        patch.get(),
-                                        layout.get(),
-                                        query.get().to_query_string(),
-                                    )
-                                }
-                                scroll=false
-                            >
-                                <span class="text">"Standard"</span>
-                            </A>
-                        </li>
-                        <li>
-                            <A
-                                href=move || {
-                                    format!(
-                                        "{}/{}/gravspeed{}",
-                                        patch.get(),
-                                        layout.get(),
-                                        query.get().to_query_string(),
-                                    )
-                                }
-                                scroll=false
-                            >
-                                <span class="text">"Gravspeed"</span>
-                            </A>
-                        </li>
-                    </ul>
-                </nav>
-            </header>
-            <div role="definition" id="filters" class="content">
-                <Form
-                    method="GET"
-                    action=move || {
-                        format!("{}/{}/{}", patch.get(), layout.get(), category.get())
-                    }
-                >
-                    <div class="group">
-                        <h6>"Patch"</h6>
-                        <div class="options">
-                            <A href="1.00">"1.00"</A>
-                            <A href="1.41">"1.41"</A>
-                            <A href="1.50">"1.50"</A>
-                            <A href="2.00">"2.00"</A>
-                            <A href="2.13">"Current"</A>
-                        </div>
+                        }
+                    />
+                </ul>
+                <ul class="right-row-nav">
+                    <For
+                        each=categories
+                        key=|c| c.0.to_owned()
+                        children=move |c| {
+                            view! {
+                                <li>
+                                    <A
+                                        href=move || {
+                                            format!(
+                                                "../../{}/{}{}",
+                                                c.0,
+                                                category.get(),
+                                                query.get().to_query_string(),
+                                            )
+                                        }
+                                        scroll=false
+                                    >
+                                        <span class="text">{c.1}</span>
+                                    </A>
+                                </li>
+                            }
+                        }
+                    />
+                </ul>
+            </nav>
+        </header>
+        <div role="definition" id="filters" class="content">
+            <Form method="GET" action="">
+                <div class="group">
+                    <h6>"Patch"</h6>
+                    <div class="options">
+                        <A href="../../../1.00/1/standard">"1.00"</A>
+                        <A href="../../../1.41/1/standard">"1.41"</A>
+                        <A href="../../../1.50/1/standard">"1.50"</A>
+                        <A href="../../../2.00/1/standard">"2.00"</A>
+                        <A href="../../../2.13/1/standard">"Current"</A>
                     </div>
-                    <div class="group">
-                        <h6>"Sort by"</h6>
-                        <div class="options">
-                            <input type="radio" name="sort" value="time" id="time" />
-                            <label for="time">"Time"</label>
+                </div>
+                <div class="group">
+                    <h6>"Sort by"</h6>
+                    <div class="options">
+                        <input type="radio" name="sort" value="time" id="time" />
+                        <label for="time">"Time"</label>
 
-                            <input type="radio" name="sort" value="date" id="date" />
-                            <label for="date">"Date"</label>
-                        </div>
+                        <input type="radio" name="sort" value="date" id="date" />
+                        <label for="date">"Date"</label>
                     </div>
-                    <div class="group">
-                        <h6>"Filter"</h6>
-                        <div class="options">
-                            <input type="radio" name="filter" value="none" id="none" />
-                            <label for="none">"None"</label>
-                            <input type="radio" name="filter" value="is_pb" id="is_pb" />
-                            <label for="is_pb">"Is PB"</label>
-                            <input type="radio" name="filter" value="is_wr" id="is_wr" />
-                            <label for="is_wr">"Is WR"</label>
-                            <input type="radio" name="filter" value="was_pb" id="was_pb" />
-                            <label for="was_pb">"Was PB"</label>
-                            <input type="radio" name="filter" value="was_wr" id="was_wr" />
-                            <label for="was_wr">"Was WR"</label>
-                            <input type="radio" name="filter" value="verified" id="verified" />
-                            <label for="verified">"Verified"</label>
-                        </div>
+                </div>
+                <div class="group">
+                    <h6>"Filter"</h6>
+                    <div class="options">
+                        <input type="radio" name="filter" value="none" id="none" />
+                        <label for="none">"None"</label>
+                        <input type="radio" name="filter" value="is_pb" id="is_pb" />
+                        <label for="is_pb">"Is PB"</label>
+                        <input type="radio" name="filter" value="is_wr" id="is_wr" />
+                        <label for="is_wr">"Is WR"</label>
+                        <input type="radio" name="filter" value="was_pb" id="was_pb" />
+                        <label for="was_pb">"Was PB"</label>
+                        <input type="radio" name="filter" value="was_wr" id="was_wr" />
+                        <label for="was_wr">"Was WR"</label>
+                        <input type="radio" name="filter" value="verified" id="verified" />
+                        <label for="verified">"Verified"</label>
                     </div>
-                    <input type="submit" class="button" value="Apply" />
-                </Form>
-            </div>
-            <Outlet />
-        </section>
+                </div>
+                <input type="submit" class="button" value="Apply" />
+            </Form>
+        </div>
     }
 }
 
 #[component]
 pub fn Leaderboard(
-    patch: WriteSignal<String>,
-    layout: WriteSignal<String>,
-    category: WriteSignal<String>,
+    patch: Signal<String>,
+    layout: Signal<String>,
+    category: Signal<String>,
 ) -> impl IntoView {
-    let params = use_params_map();
-    Effect::new(move |_| {
-        let params = params.read();
-        patch.set(params.get("patch").unwrap());
-        layout.set(params.get("layout").unwrap());
-        category.set(params.get("category").unwrap());
-    });
-    let selection = Memo::new(move |_| {
-        let params = params.read();
-        (
-            params.get("patch").unwrap(),
-            params.get("layout").unwrap(),
-            params.get("category").unwrap(),
-        )
-    });
+    let selection = Signal::derive(move || (patch.get(), layout.get(), category.get()));
     let maps = Resource::new(selection, |mut s| {
         get_runs_category(s.0, s.1, format!("{}{}", s.2.remove(0).to_uppercase(), s.2))
     });

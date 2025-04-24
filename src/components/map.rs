@@ -27,17 +27,8 @@ use crate::{
 };
 
 #[component]
-pub fn Map() -> impl IntoView {
-    let params = use_params_map();
-    let selection = Memo::new(move |_| {
-        params
-            .read()
-            .get("map")
-            .unwrap()
-            .parse::<i32>()
-            .unwrap_or(0)
-    });
-    let map = Resource::new(selection, |s| get_runs_id(s));
+pub fn Map(id: Signal<i32>) -> impl IntoView {
+    let map = Resource::new(id, |s| get_runs_id(s));
 
     view! {
         <section id="map">
