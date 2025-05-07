@@ -129,15 +129,62 @@ impl sqlx::postgres::PgHasArrayType for PartialRun {
     }
 }
 
+#[cfg(feature = "ssr")]
+impl sqlx::postgres::PgHasArrayType for PartialRanking {
+    fn array_type_info() -> sqlx::postgres::PgTypeInfo {
+        sqlx::postgres::PgTypeInfo::with_name("_record")
+    }
+    fn array_compatible(_ty: &sqlx::postgres::PgTypeInfo) -> bool {
+        true
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
-pub struct MapRuns {
+pub struct SectionRuns {
     pub id: i32,
     pub patch: String,
     pub layout: String,
     pub category: String,
     pub map: String,
     pub runs: Vec<PartialRun>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
+pub struct Ranking {
+    pub id: i32,
+    pub patch: String,
+    pub layout: String,
+    pub category: String,
+    pub user_id: i64,
+    #[cfg_attr(feature = "ssr", sqlx(rename = "name"))]
+    pub username: String,
+    pub title: Title,
+    pub rank: i32,
+    pub rating: f64,
+    pub created_at: DateTime<Local>,
+    pub updated_at: DateTime<Local>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ssr", derive(sqlx::Type), sqlx(no_pg_array))]
+pub struct PartialRanking {
+    pub id: i32,
+    pub user_id: i64,
+    pub username: String,
+    pub title: Title,
+    pub rank: i32,
+    pub rating: f64,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
+pub struct ComboRanking {
+    pub patch: String,
+    pub layout: String,
+    pub category: String,
+    pub runs: Vec<PartialRanking>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -167,10 +214,10 @@ pub struct Activity {
 }
 
 #[server(GetRunsId, prefix="/api", endpoint="runs/id", input=GetUrl)]
-pub async fn get_runs_id(id: i32) -> Result<MapRuns, ServerFnError<ApiError>> {
+pub async fn get_runs_id(id: i32) -> Result<SectionRuns, ServerFnError<ApiError>> {
     let pool = crate::server::auth::ssr::pool()?;
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
-    let runs = sqlx::query_as::<_, MapRuns>(
+    let runs = sqlx::query_as::<_, SectionRuns>(
         r#"SELECT s.id, s.patch, s.layout, s.category, s.map,
                 COALESCE(NULLIF(ARRAY_AGG((r.id, r.section_id, u.id, u."name", r.time,
                         r.proof, r.yt_id, r.verified, r.is_pb, r.is_wr, r.created_at)
@@ -196,10 +243,10 @@ pub async fn get_runs_category(
     patch: String,
     layout: String,
     category: String,
-) -> Result<Vec<MapRuns>, ServerFnError<ApiError>> {
+) -> Result<Vec<SectionRuns>, ServerFnError<ApiError>> {
     let pool = crate::server::auth::ssr::pool()?;
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
-    let runs = sqlx::query_as::<_, MapRuns>(
+    let runs = sqlx::query_as::<_, SectionRuns>(
         r#"SELECT s.id, patch, layout, category, map,
                 COALESCE(NULLIF(ARRAY_AGG((r.id, r.section_id, r.user_id, u."name", r.time,
                 r.proof, r.yt_id, r.verified, r.is_pb, r.is_wr, r.created_at)
@@ -328,6 +375,14 @@ pub async fn get_maps() -> Result<Vec<Map>, ServerFnError<ApiError>> {
 pub async fn get_user(id: i64) -> Result<User, ServerFnError<ApiError>> {
     let pool = crate::server::auth::ssr::pool()?;
     Ok(User::get(id, &pool).await.ok_or(ApiError::NotFound)?)
+}
+
+#[server(GetRanking, prefix="/api", endpoint="ranking", input=GetUrl)]
+pub async fn get_ranking(
+    patch: String,
+    layout: String,
+) -> Result<Ranking, ServerFnError<ApiError>> {
+    let pool = crate::server::auth::ssr::pool()?;
 }
 
 #[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]

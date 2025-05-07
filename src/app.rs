@@ -336,7 +336,7 @@ fn LeaderboardRouter() -> impl MatchNestedRoutes + Clone {
                     }
                     _ => vec![],
                 });
-                view! { <Ranking patches=patches.into() layouts patch layout /> }
+                view! { <Ranking patches layouts patch layout /> }
             }
         />
         <Route
@@ -386,7 +386,7 @@ fn LeaderboardRouter() -> impl MatchNestedRoutes + Clone {
                 ];
                 view! {
                     <section id="leaderboard">
-                        <Section layouts categories=categories.into() category />
+                        <Section layouts categories category />
                         <Leaderboard patch layout category />
                     </section>
                 }
@@ -458,7 +458,7 @@ fn LeaderboardRouter() -> impl MatchNestedRoutes + Clone {
                     ];
                     view! {
                         <section id="leaderboard">
-                            <Section layouts categories=categories.into() category />
+                            <Section layouts categories category />
                             <Leaderboard patch layout category />
                         </section>
                     }
@@ -490,7 +490,7 @@ fn LeaderboardRouter() -> impl MatchNestedRoutes + Clone {
                         ("2.00".into(), "Patch 2.00".into()),
                         ("2.13".into(), "Patch 2.13".into()),
                     ];
-                    view! { <UserRanking id patches=patches.into() /> }
+                    view! { <UserRanking id patches /> }
                 }
             />
             <Route

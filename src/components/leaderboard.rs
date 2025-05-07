@@ -7,13 +7,13 @@ use leptos_router::{
 use rust_decimal::Decimal;
 use std::{cmp::Ordering, collections::HashMap};
 
-use crate::server::api::{get_runs_category, MapRuns, PartialRun};
+use crate::server::api::{get_runs_category, PartialRun, SectionRuns};
 
 #[component]
 pub fn Section(
-    layouts: Signal<Vec<(String, String)>>,
-    categories: Signal<Vec<(String, String)>>,
-    category: Signal<String>,
+    #[prop(into)] layouts: Signal<Vec<(String, String)>>,
+    #[prop(into)] categories: Signal<Vec<(String, String)>>,
+    #[prop(into)] category: Signal<String>,
 ) -> impl IntoView {
     let query = use_query_map();
 
@@ -165,7 +165,7 @@ pub fn Leaderboard(
 }
 
 #[component]
-pub fn LeaderboardEntry(map: MapRuns) -> impl IntoView {
+pub fn LeaderboardEntry(map: SectionRuns) -> impl IntoView {
     let filter_key = Memo::new(|_| use_query_map().read().get("filter"));
     let sort_key = Memo::new(|_| use_query_map().read().get("sort"));
     let user = Memo::new(|_| use_params_map().read().get("id"));
