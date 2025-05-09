@@ -1,9 +1,12 @@
 use super::auth::User;
-use chrono::{DateTime, Datelike, Local};
-use http::{header::CACHE_CONTROL, HeaderValue};
-use leptos::prelude::{expect_context, server, server_fn::codec::GetUrl, ServerFnError};
+use chrono::{DateTime, Local};
+use http::{HeaderValue, header::CACHE_CONTROL};
+use leptos::prelude::{
+    FromServerFnError, ServerFnErrorErr, expect_context, server, server_fn::codec::GetUrl,
+};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
+use server_fn::codec::JsonEncoding;
 use strum::{Display, EnumString};
 use thiserror::Error;
 
@@ -15,6 +18,9 @@ pub enum ApiError {
     #[error("Unauthenticated")]
     #[strum(to_string = "Unauthenticated")]
     Unauthenticated,
+    #[error("Invalid Input")]
+    #[strum(to_string = "Invalid Input")]
+    InvalidInput,
     #[error("Invalid Credentials")]
     #[strum(to_string = "Invalid Credentials")]
     InvalidCredentials,
@@ -30,6 +36,26 @@ pub enum ApiError {
     #[error("Not Found")]
     #[strum(to_string = "Not Found")]
     NotFound,
+    #[error("Client Error: {0}")]
+    ClientError(String),
+    #[error("Server Error: {0}")]
+    ServerError(String),
+}
+
+impl FromServerFnError for ApiError {
+    type Encoder = JsonEncoding;
+
+    fn from_server_fn_error(value: ServerFnErrorErr) -> Self {
+        use ServerFnErrorErr::*;
+
+        match value {
+            UnsupportedRequestMethod(v) | Request(v) | Deserialization(v) | Serialization(v) => {
+                ApiError::ClientError(v)
+            }
+            Registration(v) | MiddlewareError(v) | ServerError(v) | Args(v) | MissingArg(v)
+            | Response(v) => ApiError::ServerError(v),
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Display, Serialize, Deserialize, Hash)]
@@ -214,25 +240,25 @@ pub struct Activity {
 }
 
 #[server(GetRunsId, prefix="/api", endpoint="runs/id", input=GetUrl)]
-pub async fn get_runs_id(id: i32) -> Result<SectionRuns, ServerFnError<ApiError>> {
+pub async fn get_runs_id(id: i32) -> Result<SectionRuns, ApiError> {
     let pool = crate::server::auth::ssr::pool()?;
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let runs = sqlx::query_as::<_, SectionRuns>(
         r#"SELECT s.id, s.patch, s.layout, s.category, s.map,
-                COALESCE(NULLIF(ARRAY_AGG((r.id, r.section_id, u.id, u."name", r.time,
-                        r.proof, r.yt_id, r.verified, r.is_pb, r.is_wr, r.created_at)
-                    ORDER BY r.created_at ASC)
-                    FILTER(WHERE r.id IS NOT NULL), '{NULL}'), '{}') AS runs
-            FROM section s
-            LEFT JOIN run r ON section_id = s.id
-            LEFT JOIN "user" u ON user_id = u.id
-            WHERE s.id = $1
-            GROUP BY s.id, patch, layout, category, map;"#,
+            COALESCE(NULLIF(ARRAY_AGG((r.id, r.section_id, u.id, u."name", r.time,
+                r.proof, r.yt_id, r.verified, r.is_pb, r.is_wr, r.created_at)
+            ORDER BY r.created_at ASC)
+            FILTER(WHERE r.id IS NOT NULL), '{NULL}'), '{}') AS runs
+        FROM section s
+        LEFT JOIN run r ON section_id = s.id
+        LEFT JOIN "user" u ON user_id = u.id
+        WHERE s.id = $1
+        GROUP BY s.id, patch, layout, category, map;"#,
     )
     .bind(id)
     .fetch_one(&pool)
     .await
-    .map_err(|_| ApiError::InvalidSection)?;
+    .or(Err(ApiError::InvalidSection))?;
 
     res_opts.append_header(CACHE_CONTROL, HeaderValue::from_static("max-age=900"));
     Ok(runs)
@@ -243,50 +269,48 @@ pub async fn get_runs_category(
     patch: String,
     layout: String,
     category: String,
-) -> Result<Vec<SectionRuns>, ServerFnError<ApiError>> {
+) -> Result<Vec<SectionRuns>, ApiError> {
     let pool = crate::server::auth::ssr::pool()?;
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let runs = sqlx::query_as::<_, SectionRuns>(
         r#"SELECT s.id, patch, layout, category, map,
-                COALESCE(NULLIF(ARRAY_AGG((r.id, r.section_id, r.user_id, u."name", r.time,
+            COALESCE(NULLIF(ARRAY_AGG((r.id, r.section_id, r.user_id, u."name", r.time,
                 r.proof, r.yt_id, r.verified, r.is_pb, r.is_wr, r.created_at)
-                    ORDER BY r.created_at ASC) 
-                    FILTER(WHERE r.id IS NOT NULL), '{NULL}'), '{}') AS runs
-            FROM section s
-            LEFT JOIN run r ON section_id = s.id
-            LEFT JOIN "user" u ON user_id = u.id
-            WHERE patch = $1 AND layout = $2 AND category = $3
-            GROUP BY s.id, patch, layout, category, map;"#,
+            ORDER BY r.created_at ASC) 
+            FILTER(WHERE r.id IS NOT NULL), '{NULL}'), '{}') AS runs
+        FROM section s
+        LEFT JOIN run r ON section_id = s.id
+        LEFT JOIN "user" u ON user_id = u.id
+        WHERE patch = $1 AND layout = $2 AND category = $3
+        GROUP BY s.id, patch, layout, category, map;"#,
     )
     .bind(patch)
     .bind(layout)
     .bind(category)
     .fetch_all(&pool)
     .await
-    .map_err(|_| ServerFnError::ServerError("Database lookup failed".to_string()))?;
+    .or(Err(ApiError::ServerError("Database lookup failed".into())))?;
 
     res_opts.append_header(CACHE_CONTROL, HeaderValue::from_static("max-age=900"));
     Ok(runs)
 }
 
 #[server(GetRunsLatest, prefix="/api", endpoint="runs/latest", input=GetUrl)]
-pub async fn get_runs_latest(offset: i32) -> Result<Vec<Run>, ServerFnError<ApiError>> {
+pub async fn get_runs_latest(offset: i32) -> Result<Vec<Run>, ApiError> {
     let pool = crate::server::auth::ssr::pool()?;
-    let runs = sqlx::query_as::<_, Run>(
+    sqlx::query_as::<_, Run>(
         r#"SELECT run.id, run.created_at, section_id, patch, layout, 
-                    category, map, user_id, "name", time, proof, yt_id, verified, is_pb, is_wr
-                FROM run
-                INNER JOIN section s ON section_id = s.id
-                INNER JOIN "user" u ON user_id = u.id
-                ORDER BY run.created_at DESC
-                LIMIT 50 OFFSET $1;"#,
+            category, map, user_id, "name", time, proof, yt_id, verified, is_pb, is_wr
+        FROM run
+        INNER JOIN section s ON section_id = s.id
+        INNER JOIN "user" u ON user_id = u.id
+        ORDER BY run.created_at DESC
+        LIMIT 50 OFFSET $1;"#,
     )
     .bind(offset)
     .fetch_all(&pool)
     .await
-    .map_err(|_| ServerFnError::ServerError("Database lookup failed".to_string()))?;
-
-    Ok(runs)
+    .or(Err(ApiError::ServerError("Database lookup failed".into())))
 }
 
 #[server(GetRunsUser, prefix="/api", endpoint="runs/user", input=GetUrl)]
@@ -294,17 +318,17 @@ pub async fn get_runs_user(
     user_id: i64,
     filter: RunFilters,
     offset: i32,
-) -> Result<Vec<Run>, ServerFnError<ApiError>> {
+) -> Result<Vec<Run>, ApiError> {
     use sqlx::{Postgres, QueryBuilder};
 
     let pool = crate::server::auth::ssr::pool()?;
     let mut query = QueryBuilder::<Postgres>::new(
         r#"SELECT run.id, run.created_at, section_id, patch, layout, 
-                    category, map, user_id, "name", time, proof, yt_id, verified, is_pb, is_wr
-                FROM run
-                INNER JOIN section s ON section_id = s.id
-                INNER JOIN "user" u ON user_id = u.id 
-                WHERE patch = '2.13'"#,
+            category, map, user_id, "name", time, proof, yt_id, verified, is_pb, is_wr
+        FROM run
+        INNER JOIN section s ON section_id = s.id
+        INNER JOIN "user" u ON user_id = u.id 
+        WHERE patch = '2.13'"#,
     );
     query.push(" AND user_id = ").push_bind(user_id);
     if let Some(before) = filter.before {
@@ -342,20 +366,17 @@ pub async fn get_runs_user(
         .push(" LIMIT 50 OFFSET ")
         .push_bind(offset)
         .push(";");
-    let runs = query
+    query
         .build_query_as::<Run>()
         .fetch_all(&pool)
         .await
-        .map_err(|e| {
-            leptos::logging::log!("{}", e);
-            ServerFnError::ServerError("Database lookup failed".to_string())
-        })?;
-
-    Ok(runs)
+        .or(Err(ApiError::ServerError(
+            "Database lookup failed".to_string(),
+        )))
 }
 
 #[server(GetMaps, prefix="/api", endpoint="maps", input=GetUrl)]
-pub async fn get_maps() -> Result<Vec<Map>, ServerFnError<ApiError>> {
+pub async fn get_maps() -> Result<Vec<Map>, ApiError> {
     let pool = crate::server::auth::ssr::pool()?;
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let maps = sqlx::query_as::<_, Map>(
@@ -365,24 +386,64 @@ pub async fn get_maps() -> Result<Vec<Map>, ServerFnError<ApiError>> {
     )
     .fetch_all(&pool)
     .await
-    .map_err(|_| ServerFnError::ServerError("Database lookup failed".to_string()))?;
+    .or(Err(ApiError::ServerError(
+        "Database lookup failed".to_string(),
+    )))?;
 
     res_opts.append_header(CACHE_CONTROL, HeaderValue::from_static("max-age=604800"));
     Ok(maps)
 }
 
 #[server(GetUser, prefix="/api", endpoint="user/get", input=GetUrl)]
-pub async fn get_user(id: i64) -> Result<User, ServerFnError<ApiError>> {
+pub async fn get_user(id: i64) -> Result<User, ApiError> {
     let pool = crate::server::auth::ssr::pool()?;
-    Ok(User::get(id, &pool).await.ok_or(ApiError::NotFound)?)
+    User::get(id, &pool).await.ok_or(ApiError::NotFound)
 }
 
-#[server(GetRanking, prefix="/api", endpoint="ranking", input=GetUrl)]
-pub async fn get_ranking(
+#[server(GetRankings, prefix="/api", endpoint="ranking", input=GetUrl)]
+pub async fn get_rankings(
     patch: String,
     layout: String,
-) -> Result<Ranking, ServerFnError<ApiError>> {
+    category: String,
+) -> Result<ComboRanking, ApiError> {
     let pool = crate::server::auth::ssr::pool()?;
+    let res_opts = expect_context::<leptos_axum::ResponseOptions>();
+    let rankings = sqlx::query_as::<_, ComboRanking>(
+        r#"SELECT patch, s.layout, s.category, 
+            COALESCE(NULLIF(ARRAY_AGG((r.id, user_id, u."name", title, rank, rating)
+            ORDER BY r.created_at ASC)
+            FILTER(WHERE r.id IS NOT NULL), '{NULL}'), '{}') AS runs
+        FROM rank r
+        LEFT JOIN "user" u ON user_id = u.id
+        WHERE patch = $1 AND layout = $2 AND category = $3
+        GROUP BY patch, layout, category;"#,
+    )
+    .bind(patch)
+    .bind(layout)
+    .bind(category)
+    .fetch_one(&pool)
+    .await
+    .or(Err(ApiError::NotFound))?;
+
+    res_opts.append_header(CACHE_CONTROL, HeaderValue::from_static("max-age=900"));
+    Ok(rankings)
+}
+
+#[server(GetRankingsUser, prefix="/api", endpoint="ranking/user", input=GetUrl)]
+pub async fn get_rankings_user(id: i64) -> Result<Vec<Ranking>, ApiError> {
+    let pool = crate::server::auth::ssr::pool()?;
+
+    sqlx::query_as::<_, Ranking>(
+        r#"SELECT r.id, patch, layout, category, user_id, 
+            name, title, rank, rating, created_at, updated_at
+        FROM rank
+        JOIN "user" u ON user_id = u.id
+        WHERE user_id = $1;"#,
+    )
+    .bind(id)
+    .fetch_all(&pool)
+    .await
+    .map_err(|_| ApiError::ServerError("Database lookup failed".into()))
 }
 
 #[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
@@ -391,31 +452,25 @@ struct UserId {
 }
 
 #[server(GetPotd, prefix="/api", endpoint="user/get/potd", input=GetUrl)]
-pub async fn get_potd() -> Result<User, ServerFnError<ApiError>> {
+pub async fn get_potd() -> Result<User, ApiError> {
     let pool = crate::server::auth::ssr::pool()?;
-    let seed = Local::now().num_days_from_ce() as f64 / i32::MAX as f64;
     let id = sqlx::query_as::<_, UserId>(
-        r#"SELECT NULL AS id FROM (SELECT setseed($1)) 
-            UNION ALL (
-                SELECT id
-                FROM "user"
-                WHERE bio IS NOT NULL
-                ORDER BY random()
-                LIMIT 1
-            ) OFFSET 1;
-        "#,
+        r#"SELECT id
+        FROM "user"
+        WHERE bio IS NOT NULL
+        ORDER BY random()
+        LIMIT 1;"#,
     )
-    .bind(seed)
     .fetch_one(&pool)
     .await
-    .map_err(|_| ApiError::NotFound)?;
-    Ok(User::get(id.id, &pool).await.ok_or(ApiError::NotFound)?)
+    .or(Err(ApiError::NotFound))?;
+    User::get(id.id, &pool).await.ok_or(ApiError::NotFound)
 }
 
 #[server(GetActivity, prefix="/api", endpoint="activity/get", input=GetUrl)]
-pub async fn get_activity_latest(offset: i32) -> Result<Vec<Activity>, ServerFnError<ApiError>> {
+pub async fn get_activity_latest(offset: i32) -> Result<Vec<Activity>, ApiError> {
     let pool = crate::server::auth::ssr::pool()?;
-    let activity = sqlx::query_as::<_, Activity>(
+    sqlx::query_as::<_, Activity>(
         r#"SELECT a.id, a.user_id, name, rank_id, patch, layout, category, 
                     title_old, title_new, rank_old, rank_new, a.created_at
                 FROM activity a
@@ -427,7 +482,7 @@ pub async fn get_activity_latest(offset: i32) -> Result<Vec<Activity>, ServerFnE
     .bind(offset)
     .fetch_all(&pool)
     .await
-    .map_err(|_| ServerFnError::ServerError("Database lookup failed".to_string()))?;
-
-    Ok(activity)
+    .or(Err(ApiError::ServerError(
+        "Database lookup failed".to_string(),
+    )))
 }

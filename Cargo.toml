@@ -13,25 +13,25 @@ chrono = { version = "0.4.38", features = ["serde"] }
 console_error_panic_hook = "0.1"
 console_log = "1"
 http = "1.1.0"
-leptos = { version = "0.7.5", features = ["nightly"] }
-leptos_meta = "0.7.5"
-leptos_router = "0.7.5"
+leptos = { version = "0.8.2", features = ["nightly"] }
+leptos_meta = "0.8.2"
+leptos_router = "0.8.2"
 rust_decimal = "1.36.0"
 serde = { version = "1.0.188", features = ["derive"] }
 thiserror = "1.0.38"
 log = "0.4"
-server_fn = { version = "0.7.5", features = ["multipart"] }
+server_fn = { version = "0.8.2", features = ["multipart"] }
 simple_logger = "5"
 strum = { version = "0.26", features = ["derive"] }
 wasm-bindgen = "=0.2.100"
 web-sys = {version ="0.3", features = ["DataTransfer", "FileList", "DomRectReadOnly", "ResizeObserver", "ResizeObserverEntry"] }
 argon2 = { version = "0.5.3", optional = true }
-axum = { version = "0.7.5", features = ["macros"], optional = true }
-axum-server = { version = "0.7.1", optional = true }
-axum_session = {version = "0.14.2", optional = true }
-axum_session_auth = { version = "0.14.1", optional = true }
-axum_session_sqlx = { version = "0.3.0", features = ["postgres", "tls-rustls"], optional = true }
-leptos_axum = { version = "0.7.4", optional = true }
+async-trait = { version = "0.1", optional = true }
+axum = { version = "0.8", features = ["macros"], optional = true }
+axum_session = {version = "0.16", optional = true }
+axum_session_auth = { version = "0.16", optional = true }
+axum_session_sqlx = { version = "0.5", features = ["postgres", "tls-rustls"], optional = true }
+leptos_axum = { version = "0.8.2", optional = true }
 oauth2 = { version = "4.4.2", optional = true }
 rand = { version = "0.8.5", optional = true }
 reqwest = { version = "0.12.9", features = ["json"], optional = true }
@@ -47,9 +47,9 @@ charming = { git = "https://github.com/yuankunzhang/charming.git", rev = "6fe736
 default = [ "ssr" ]
 hydrate = [ "leptos/hydrate"]
 ssr = [
+    "dep:async-trait",
     "dep:argon2",
     "dep:axum",
-    "dep:axum-server",
     "dep:axum_session",
     "dep:axum_session_auth",
     "dep:axum_session_sqlx",

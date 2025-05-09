@@ -1,5 +1,5 @@
 use crate::server::{
-    api::{get_maps, ApiError, Map},
+    api::{ApiError, Map, get_maps},
     auth::{Login, Register, Submit},
 };
 use leptos::{either::*, prelude::*};
@@ -22,16 +22,11 @@ pub fn Login() -> impl IntoView {
                     <span class="error">
                         {move || {
                             let e = e.get().into_iter().next().unwrap().1;
-                            if e.is::<ServerFnError<ApiError>>() {
-                                let e = e.downcast_ref::<ServerFnError<ApiError>>().unwrap();
+                            if e.is::<ApiError>() {
+                                let e = e.downcast_ref::<ApiError>().unwrap();
                                 match e {
-                                    ServerFnError::WrappedServerError(err) => {
-                                        match err {
-                                            ApiError::InvalidCredentials => {
-                                                "🛈 Incorrect username or password"
-                                            }
-                                            _ => "🛈 Something went wrong. Try again",
-                                        }
+                                    ApiError::InvalidCredentials => {
+                                        "🛈 Incorrect username or password"
                                     }
                                     _ => "🛈 Something went wrong. Try again",
                                 }
@@ -109,15 +104,10 @@ pub fn Register() -> impl IntoView {
                     <span class="error">
                         {move || {
                             let e = e.get().into_iter().next().unwrap().1;
-                            if e.is::<ServerFnError<ApiError>>() {
-                                let e = e.downcast_ref::<ServerFnError<ApiError>>().unwrap();
+                            if e.is::<ApiError>() {
+                                let e = e.downcast_ref::<ApiError>().unwrap();
                                 match e {
-                                    ServerFnError::WrappedServerError(err) => {
-                                        match err {
-                                            ApiError::AlreadyExists => "🛈 Username already exists",
-                                            _ => "🛈 Something went wrong. Try again",
-                                        }
-                                    }
+                                    ApiError::AlreadyExists => "🛈 Username already exists",
                                     _ => "🛈 Something went wrong. Try again",
                                 }
                             } else {
@@ -212,16 +202,11 @@ pub fn Submit() -> impl IntoView {
                     <span class="error">
                         {move || {
                             let e = e.get().into_iter().next().unwrap().1;
-                            if e.is::<ServerFnError<ApiError>>() {
-                                let e = e.downcast_ref::<ServerFnError<ApiError>>().unwrap();
+                            if e.is::<ApiError>() {
+                                let e = e.downcast_ref::<ApiError>().unwrap();
                                 match e {
-                                    ServerFnError::WrappedServerError(err) => {
-                                        match err {
-                                            ApiError::InvalidSection => "🛈 Invalid map name",
-                                            ApiError::InvalidYtId => "🛈 YT video id does not exist",
-                                            _ => "🛈 Something went wrong. Try again",
-                                        }
-                                    }
+                                    ApiError::InvalidSection => "🛈 Invalid map name",
+                                    ApiError::InvalidYtId => "🛈 YT video id does not exist",
                                     _ => "🛈 Something went wrong. Try again",
                                 }
                             } else {

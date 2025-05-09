@@ -25,19 +25,19 @@
         (final: prev: {
           cargo-leptos = prev.cargo-leptos.overrideAttrs (oldAttrs: rec {
             pname = "cargo-leptos";
-            version = "0.2.26";
+            version = "0.2.34";
 
             src = prev.fetchFromGitHub {
               owner = "leptos-rs";
               repo = pname;
               rev = "v${version}";
-              hash = "sha256-v1gNH3pq5db/swsk79nEzgtR4jy3f/xHs4QaLnVcVYU=";
+              hash = "sha256-y15ue6DKyDfX/SOhOoVUVoIx2wnCIJmg7wRBPTSYYok=";
             };
 
             cargoDeps = oldAttrs.cargoDeps.overrideAttrs (prev.lib.const {
               name = "${pname}-vendor.tar.gz";
               inherit src;
-              outputHash = "sha256-ATfnMcwyOGlBDULi57VsLtLsL9n3K9TWbVPHX8N/BV0=";
+              outputHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
             });
           });
         })
@@ -53,7 +53,7 @@
               hash = "sha256-xmpGSSwyJ+pSYF6qUjuMGpYPR5Ipki9mqpid4FcWea0=";
             };
 
-            cargoHash = "sha256-isoeLxxu79EtRA4IXY2Fr8JbydgiFeKs0v9A5l6l20I=";
+            cargoHash = "sha256-UPmWhDnrNGsbXl5E+cfW0UaAbw54zrL6XZx0UPbrLCQ=";
           };
         })
       ];

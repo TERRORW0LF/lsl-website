@@ -2,12 +2,12 @@ use crate::{
     app::{UpdatePfpAction, UserResource},
     server::{
         api::ApiError,
-        auth::{discord_list, DiscordAdd, DiscordDelete, Logout, UpdateBio, UpdateCreds},
+        auth::{DiscordAdd, DiscordDelete, Logout, UpdateBio, UpdateCreds, discord_list},
     },
 };
 use leptos::{either::Either, html::Input, prelude::*};
 use leptos_meta::Title;
-use leptos_router::components::{Outlet, A};
+use leptos_router::components::{A, Outlet};
 use wasm_bindgen::JsCast;
 use web_sys::{Event, FormData, HtmlFormElement, SubmitEvent};
 
@@ -153,15 +153,10 @@ pub fn Username() -> impl IntoView {
                     <span class="error">
                         {move || {
                             let e = e.get().into_iter().next().unwrap().1;
-                            if e.is::<ServerFnError<ApiError>>() {
-                                let e = e.downcast_ref::<ServerFnError<ApiError>>().unwrap();
+                            if e.is::<ApiError>() {
+                                let e = e.downcast_ref::<ApiError>().unwrap();
                                 match e {
-                                    ServerFnError::WrappedServerError(err) => {
-                                        match err {
-                                            ApiError::AlreadyExists => "🛈 Username already exists",
-                                            _ => "🛈 Something went wrong. Try again",
-                                        }
-                                    }
+                                    ApiError::AlreadyExists => "🛈 Username already exists",
                                     _ => "🛈 Something went wrong. Try again",
                                 }
                             } else {
@@ -223,15 +218,10 @@ pub fn Password() -> impl IntoView {
                     <span class="error">
                         {move || {
                             let e = e.get().into_iter().next().unwrap().1;
-                            if e.is::<ServerFnError<ApiError>>() {
-                                let e = e.downcast_ref::<ServerFnError<ApiError>>().unwrap();
+                            if e.is::<ApiError>() {
+                                let e = e.downcast_ref::<ApiError>().unwrap();
                                 match e {
-                                    ServerFnError::WrappedServerError(err) => {
-                                        match err {
-                                            ApiError::InvalidCredentials => "🛈 Incorrect password",
-                                            _ => "🛈 Something went wrong. Try again",
-                                        }
-                                    }
+                                    ApiError::InvalidCredentials => "🛈 Incorrect password",
                                     _ => "🛈 Something went wrong. Try again",
                                 }
                             } else {
@@ -319,15 +309,10 @@ pub fn Bio() -> impl IntoView {
                     <span class="error">
                         {move || {
                             let e = e.get().into_iter().next().unwrap().1;
-                            if e.is::<ServerFnError<ApiError>>() {
-                                let e = e.downcast_ref::<ServerFnError<ApiError>>().unwrap();
+                            if e.is::<ApiError>() {
+                                let e = e.downcast_ref::<ApiError>().unwrap();
                                 match e {
-                                    ServerFnError::WrappedServerError(err) => {
-                                        match err {
-                                            ApiError::InvalidCredentials => "🛈 Incorrect password",
-                                            _ => "🛈 Something went wrong. Try again",
-                                        }
-                                    }
+                                    ApiError::InvalidCredentials => "🛈 Incorrect password",
                                     _ => "🛈 Something went wrong. Try again",
                                 }
                             } else {

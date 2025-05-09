@@ -1,14 +1,14 @@
 use crate::{
     app::UserResource,
     server::{
-        api::{get_maps, get_runs_user, get_user, ApiError, RunFilters},
+        api::{ApiError, RunFilters, get_maps, get_runs_user, get_user},
         auth::Delete,
     },
 };
 use chrono::{Local, NaiveDateTime, TimeZone};
 use leptos::{either::Either, prelude::*};
 use leptos_router::{
-    components::{Form, Outlet, A},
+    components::{A, Form, Outlet},
     hooks::{use_params_map, use_query_map},
 };
 
@@ -337,17 +337,12 @@ pub fn Delete() -> impl IntoView {
                     <span class="error">
                         {move || {
                             let e = e.get().into_iter().next().unwrap().1;
-                            if e.is::<ServerFnError<ApiError>>() {
-                                let e = e.downcast_ref::<ServerFnError<ApiError>>().unwrap();
+                            if e.is::<ApiError>() {
+                                let e = e.downcast_ref::<ApiError>().unwrap();
                                 match e {
-                                    ServerFnError::WrappedServerError(err) => {
-                                        match err {
-                                            ApiError::Unauthenticated => "🛈 Please log in",
-                                            ApiError::Unauthorized => "🛈 Missing permission",
-                                            ApiError::NotFound => "🛈 Invalid run",
-                                            _ => "🛈 Something went wrong. Try again",
-                                        }
-                                    }
+                                    ApiError::Unauthenticated => "🛈 Please log in",
+                                    ApiError::Unauthorized => "🛈 Missing permission",
+                                    ApiError::NotFound => "🛈 Invalid run",
                                     _ => "🛈 Something went wrong. Try again",
                                 }
                             } else {

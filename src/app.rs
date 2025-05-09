@@ -14,7 +14,7 @@ use crate::{
     server::{
         api::ApiError,
         auth::{
-            get_current_user, update_pfp, Login, Logout, Register, UpdateBio, UpdateCreds, User,
+            Login, Logout, Register, UpdateBio, UpdateCreds, User, get_current_user, update_pfp,
         },
     },
 };
@@ -22,18 +22,19 @@ use leptos::{either::*, prelude::*};
 use leptos_meta::MetaTags;
 use leptos_meta::*;
 use leptos_router::{
+    MatchNestedRoutes, NavigateOptions,
     components::{
-        Outlet, ParentRoute, ProtectedParentRoute, ProtectedRoute, Redirect, Route, Router, Routes,
-        A,
+        A, Outlet, ParentRoute, ProtectedParentRoute, ProtectedRoute, Redirect, Route, Router,
+        Routes,
     },
     hooks::use_params_map,
-    path, MatchNestedRoutes, NavigateOptions,
+    path,
 };
-use wasm_bindgen::{prelude::Closure, JsCast};
+use wasm_bindgen::{JsCast, prelude::Closure};
 use web_sys::FormData;
 
-pub type UserResource = Resource<Result<User, ServerFnError<ApiError>>>;
-pub type UpdatePfpAction = Action<FormData, Result<(), ServerFnError<ApiError>>, LocalStorage>;
+pub type UserResource = Resource<Result<User, ApiError>>;
+pub type UpdatePfpAction = Action<FormData, Result<(), ApiError>>;
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {

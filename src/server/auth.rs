@@ -1,7 +1,7 @@
-use crate::server::api::{get_runs_user, ApiError, RunFilters};
+use crate::server::api::{ApiError, RunFilters, get_runs_user};
 use chrono::{DateTime, Local};
 use http::HeaderValue;
-use leptos::prelude::{server, server_fn::codec::PostUrl, ServerFnError};
+use leptos::prelude::{server, server_fn::codec::PostUrl};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use server_fn::codec::{GetUrl, MultipartData, MultipartFormData};
@@ -111,18 +111,18 @@ pub mod ssr {
     use super::{Permissions, Rank};
     pub use super::{User, UserPasshash};
     pub use argon2::{
-        password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
         Argon2, PasswordHash, PasswordVerifier,
+        password_hash::{PasswordHasher, SaltString, rand_core::OsRng},
     };
-    pub use axum::async_trait;
+    pub use async_trait::async_trait;
     pub use axum_session_auth::{Authentication, HasPermission};
     pub use axum_session_sqlx::SessionPgPool;
-    pub use leptos::prelude::{server, use_context, ServerFnError};
+    pub use leptos::prelude::{server, use_context};
     use oauth2::basic::BasicClient;
     use sqlx::types::chrono::{DateTime, Local};
     pub use sqlx::{
-        postgres::{PgConnectOptions, PgPoolOptions},
         PgPool,
+        postgres::{PgConnectOptions, PgPoolOptions},
     };
     use std::collections::HashSet;
     pub use std::env;
@@ -144,18 +144,16 @@ pub mod ssr {
             .unwrap()
     }
 
-    pub fn pool() -> Result<PgPool, ServerFnError<ApiError>> {
-        use_context::<PgPool>().ok_or_else(|| ServerFnError::ServerError("Pool missing.".into()))
+    pub fn pool() -> Result<PgPool, ApiError> {
+        use_context::<PgPool>().ok_or(ApiError::ServerError("Pool missing.".into()))
     }
 
-    pub fn auth() -> Result<AuthSession, ServerFnError<ApiError>> {
-        use_context::<AuthSession>()
-            .ok_or_else(|| ServerFnError::ServerError("Auth session missing.".to_string()))
+    pub fn auth() -> Result<AuthSession, ApiError> {
+        use_context::<AuthSession>().ok_or(ApiError::ServerError("Auth session missing.".into()))
     }
 
-    pub fn oauth() -> Result<BasicClient, ServerFnError<ApiError>> {
-        use_context::<BasicClient>()
-            .ok_or_else(|| ServerFnError::ServerError("OAuth client missing.".to_string()))
+    pub fn oauth() -> Result<BasicClient, ApiError> {
+        use_context::<BasicClient>().ok_or(ApiError::ServerError("OAuth client missing.".into()))
     }
 
     impl User {
@@ -306,28 +304,24 @@ pub mod ssr {
         }
     }
 
-    pub fn hash_password(password: &String) -> Result<String, ServerFnError<ApiError>> {
+    pub fn hash_password(password: &String) -> Result<String, ApiError> {
         let salt = SaltString::generate(&mut OsRng);
         let argon2 = Argon2::default();
         match argon2.hash_password(password.as_bytes(), &salt) {
             Ok(v) => Ok(v.to_string()),
-            Err(_) => Err(ServerFnError::ServerError(
-                "Signup failed: Failed to hash password".to_string(),
+            Err(_) => Err(ApiError::ServerError(
+                "Signup failed: Failed to hash password".into(),
             )),
         }
     }
 
-    pub fn verify_password(
-        pass_hash: &String,
-        password: &String,
-    ) -> Result<(), ServerFnError<ApiError>> {
-        let pwd_parsed = PasswordHash::new(pass_hash).map_err(|_| {
-            ServerFnError::ServerError("Login failed: Failed to hash password".to_string())
-        })?;
+    pub fn verify_password(pass_hash: &String, password: &String) -> Result<(), ApiError> {
+        let pwd_parsed = PasswordHash::new(pass_hash)
+            .map_err(|_| ApiError::ServerError("Login failed: Failed to hash password".into()))?;
 
-        Ok(Argon2::default()
+        Argon2::default()
             .verify_password(password.as_bytes(), &pwd_parsed)
-            .map_err(|_| ApiError::InvalidCredentials)?)
+            .or(Err(ApiError::InvalidCredentials))
     }
 
     pub fn check_password(password: &String) -> bool {
@@ -344,9 +338,9 @@ pub mod ssr {
 }
 
 #[server(GetCurrentUser, prefix="/api", endpoint="user/@me/get", input=PostUrl)]
-pub async fn get_current_user() -> Result<User, ServerFnError<ApiError>> {
+pub async fn get_current_user() -> Result<User, ApiError> {
     use self::ssr::*;
-    Ok(auth()?.current_user.ok_or(ApiError::Unauthenticated)?)
+    auth()?.current_user.ok_or(ApiError::Unauthenticated)
 }
 
 #[server(Register, prefix="/api", endpoint="user/register", input=PostUrl)]
@@ -355,7 +349,7 @@ pub async fn register(
     password: String,
     password_confirm: String,
     remember: Option<String>,
-) -> Result<(), ServerFnError<ApiError>> {
+) -> Result<(), ApiError> {
     use self::ssr::*;
 
     if !check_password(&password) || !check_username(&username) {
@@ -379,9 +373,7 @@ pub async fn register(
 
     let user = User::get_from_username(username, &pool)
         .await
-        .ok_or_else(|| {
-            ServerFnError::ServerError("Signup failed: User does not exist.".to_string())
-        })?;
+        .ok_or_else(|| ApiError::ServerError("Signup failed: User does not exist.".into()))?;
 
     let _ = sqlx::query(
         r#"INSERT INTO permission (user_id, token) 
@@ -409,7 +401,7 @@ pub async fn login(
     password: String,
     remember: Option<String>,
     redirect: Option<String>,
-) -> Result<(), ServerFnError<ApiError>> {
+) -> Result<(), ApiError> {
     use self::ssr::*;
 
     let pool = pool()?;
@@ -435,7 +427,7 @@ pub async fn update_creds(
     username: Option<String>,
     password: Option<PasswordUpdate>,
     redirect: Option<String>,
-) -> Result<(), ServerFnError<ApiError>> {
+) -> Result<(), ApiError> {
     use self::ssr::*;
 
     let auth = auth()?;
@@ -458,7 +450,7 @@ pub async fn update_creds(
         .bind(curr_user.id)
         .execute(&pool)
         .await
-        .map_err(|_| ApiError::AlreadyExists)?;
+        .or(Err(ApiError::AlreadyExists))?;
         auth.cache_clear_user(curr_user.id);
     }
     if let Some(pw) = password {
@@ -481,7 +473,7 @@ pub async fn update_creds(
         .bind(curr_user.id)
         .execute(&pool)
         .await
-        .map_err(|_| ServerFnError::<ApiError>::ServerError("Database update failed".into()))?;
+        .map_err(|_| ApiError::ServerError("Database update failed".into()))?;
         auth.cache_clear_user(curr_user.id);
     }
     if let Some(red) = redirect {
@@ -493,10 +485,7 @@ pub async fn update_creds(
 }
 
 #[server(UpdateBio, prefix="/api", endpoint="user/update/bio", input=PostUrl)]
-pub async fn update_bio(
-    bio: Option<String>,
-    redirect: Option<String>,
-) -> Result<(), ServerFnError<ApiError>> {
+pub async fn update_bio(bio: Option<String>, redirect: Option<String>) -> Result<(), ApiError> {
     use self::ssr::*;
 
     let auth = auth()?;
@@ -518,7 +507,7 @@ pub async fn update_bio(
     .bind(curr_user.id)
     .execute(&pool)
     .await
-    .map_err(|_| ApiError::InvalidCredentials)?;
+    .or(Err(ApiError::InvalidCredentials))?;
     auth.cache_clear_user(curr_user.id);
 
     if let Some(red) = redirect {
@@ -530,10 +519,10 @@ pub async fn update_bio(
 }
 
 #[server(UpdatePfp, prefix="/api", endpoint="user/update/avatar", input=MultipartFormData)]
-pub async fn update_pfp(data: MultipartData) -> Result<(), ServerFnError<ApiError>> {
+pub async fn update_pfp(data: MultipartData) -> Result<(), ApiError> {
     use crate::server::auth::ssr::{auth, pool};
-    use rand::{distributions::Alphanumeric, thread_rng, Rng};
-    use std::fs::{remove_file, File};
+    use rand::{Rng, distributions::Alphanumeric, thread_rng};
+    use std::fs::{File, remove_file};
     use std::io::{BufWriter, Write};
 
     let auth = auth()?;
@@ -549,9 +538,7 @@ pub async fn update_pfp(data: MultipartData) -> Result<(), ServerFnError<ApiErro
 
     if let Ok(Some(mut pfp)) = data.next_field().await {
         if pfp.name().unwrap_or_default() != "avatar" {
-            return Err(ServerFnError::<ApiError>::Args(
-                "Avatar must be only field".into(),
-            ));
+            return Err(ApiError::InvalidInput);
         }
 
         let name: String = thread_rng()
@@ -577,19 +564,19 @@ pub async fn update_pfp(data: MultipartData) -> Result<(), ServerFnError<ApiErro
                             && chunk[1] == 0xD8
                             && chunk[2] == 0xFF)
                         {
-                            return Err(ServerFnError::<ApiError>::Args("Must be jpg".into()));
+                            return Err(ApiError::InvalidInput);
                         }
                     }
                     if count > 4 * 1024 * 1024 {
-                        return Err(ServerFnError::<ApiError>::Args("Too big".into()));
+                        return Err(ApiError::InvalidInput);
                     }
-                    writer.write_all(&chunk).map_err(|_| {
-                        ServerFnError::<ApiError>::ServerError("Failed to save file".into())
-                    })?;
+                    writer
+                        .write_all(&chunk)
+                        .map_err(|_| ApiError::ServerError("Failed to save file".into()))?;
                 }
-                writer.flush().map_err(|_| {
-                    ServerFnError::<ApiError>::ServerError("Failed to save file".into())
-                })?;
+                writer
+                    .flush()
+                    .map_err(|_| ApiError::ServerError("Failed to save file".into()))?;
                 sqlx::query(
                     r#"UPDATE "user"
                     SET pfp = $1
@@ -599,16 +586,12 @@ pub async fn update_pfp(data: MultipartData) -> Result<(), ServerFnError<ApiErro
                 .bind(user.id)
                 .execute(&pool)
                 .await
-                .map_err(|_| {
-                    ServerFnError::<ApiError>::ServerError("Database update failed".into())
-                })?;
+                .map_err(|_| ApiError::ServerError("Database update failed".into()))?;
 
                 auth.cache_clear_user(user.id);
                 Ok(())
             }
-            Err(_) => Err(ServerFnError::<ApiError>::ServerError(
-                "File creation failed".into(),
-            )),
+            Err(_) => Err(ApiError::ServerError("File creation failed".into())),
         };
         match res {
             Ok(_) => {
@@ -621,14 +604,12 @@ pub async fn update_pfp(data: MultipartData) -> Result<(), ServerFnError<ApiErro
             }
         }
     } else {
-        Err(ServerFnError::<ApiError>::Args(
-            "Pfp must be only field".into(),
-        ))
+        Err(ApiError::InvalidInput)
     }
 }
 
 #[server(Logout, prefix="/api", endpoint="user/logout", input=PostUrl)]
-pub async fn logout() -> Result<(), ServerFnError<ApiError>> {
+pub async fn logout() -> Result<(), ApiError> {
     use self::ssr::*;
 
     let auth = auth()?;
@@ -645,10 +626,7 @@ struct SectionId {
 }
 
 #[server(GetRunsCurrentUser, prefix="/api", endpoint="runs/user/@me", input=PostUrl)]
-pub async fn get_runs_current_user(
-    filter: RunFilters,
-    offset: i32,
-) -> Result<Vec<Run>, ServerFnError<ApiError>> {
+pub async fn get_runs_current_user(filter: RunFilters, offset: i32) -> Result<Vec<Run>, ApiError> {
     use self::ssr::*;
 
     leptos::logging::log!("{:?}", filter);
@@ -664,7 +642,7 @@ pub async fn submit(
     map: String,
     time: Decimal,
     yt_id: String,
-) -> Result<(), ServerFnError<ApiError>> {
+) -> Result<(), ApiError> {
     use self::ssr::*;
 
     let auth = auth()?;
@@ -672,7 +650,7 @@ pub async fn submit(
 
     let u = auth.current_user.ok_or(ApiError::Unauthenticated)?;
     if !u.has(&Permissions::Submit) {
-        return Err(ApiError::Unauthorized)?;
+        return Err(ApiError::Unauthorized);
     }
 
     let section_id = sqlx::query_as::<_, SectionId>(
@@ -685,22 +663,22 @@ pub async fn submit(
     .bind(map)
     .fetch_one(&pool)
     .await
-    .map_err(|_| ApiError::InvalidSection)?;
+    .or(Err(ApiError::InvalidSection))?;
 
     let r = reqwest::get(format!(
         "https://www.googleapis.com/youtube/v3/videos?key={}&part=id&id={yt_id}",
         env!("YT_KEY")
     ))
     .await
-    .map_err(|_| ServerFnError::ServerError("YT api request failed".to_string()))?;
+    .map_err(|_| ApiError::ServerError("YT api request failed".into()))?;
 
     let v = r
         .json::<YtJson>()
         .await
-        .map_err(|_| ServerFnError::ServerError("Failed to parse yt api response".to_string()))?;
+        .map_err(|_| ApiError::ServerError("Failed to parse yt api response".into()))?;
 
     if v.page_info.total_results == 0 {
-        Err(ApiError::InvalidYtId.into())
+        Err(ApiError::InvalidYtId)
     } else {
         let proof = format!("https://youtube.com/watch?v={yt_id}");
         let _ = sqlx::query(
@@ -715,7 +693,7 @@ pub async fn submit(
         .bind(u.has(&Permissions::Trusted))
         .execute(&pool)
         .await
-        .map_err(|_| ServerFnError::ServerError("Database insert failed".to_string()))?;
+        .map_err(|_| ApiError::ServerError("Database insert failed".into()))?;
 
         leptos_axum::redirect(&format!(
             "/leaderboard/2.13/{layout}/{}/{}",
@@ -727,7 +705,7 @@ pub async fn submit(
 }
 
 #[server(Verify, prefix="/api", endpoint="runs/verify", input=PostUrl)]
-pub async fn verify(id: i32) -> Result<(), ServerFnError<ApiError>> {
+pub async fn verify(id: i32) -> Result<(), ApiError> {
     use self::ssr::*;
 
     let auth = auth()?;
@@ -735,7 +713,7 @@ pub async fn verify(id: i32) -> Result<(), ServerFnError<ApiError>> {
 
     let u = auth.current_user.ok_or(ApiError::Unauthenticated)?;
     if !u.has(&Permissions::Verify) {
-        return Err(ApiError::Unauthorized)?;
+        return Err(ApiError::Unauthorized);
     }
 
     sqlx::query(
@@ -746,12 +724,12 @@ pub async fn verify(id: i32) -> Result<(), ServerFnError<ApiError>> {
     .bind(id)
     .execute(&pool)
     .await
-    .map_err(|_| ApiError::NotFound)?;
+    .or(Err(ApiError::NotFound))?;
     Ok(())
 }
 
 #[server(Delete, prefix="/api", endpoint="runs/delete", input=PostUrl)]
-pub async fn delete(id: i32, redirect: Option<String>) -> Result<(), ServerFnError<ApiError>> {
+pub async fn delete(id: i32, redirect: Option<String>) -> Result<(), ApiError> {
     use self::ssr::*;
 
     let auth = auth()?;
@@ -759,7 +737,7 @@ pub async fn delete(id: i32, redirect: Option<String>) -> Result<(), ServerFnErr
 
     let u = auth.current_user.ok_or(ApiError::Unauthenticated)?;
     if !u.has(&Permissions::Delete) {
-        return Err(ApiError::Unauthorized)?;
+        return Err(ApiError::Unauthorized);
     }
 
     let num = sqlx::query(
@@ -778,12 +756,12 @@ pub async fn delete(id: i32, redirect: Option<String>) -> Result<(), ServerFnErr
         }
         Ok(())
     } else {
-        Err(ApiError::NotFound)?
+        Err(ApiError::NotFound)
     }
 }
 
 #[server(DiscordList, prefix="/api", endpoint="user/discord/list", input=PostUrl)]
-pub async fn discord_list() -> Result<Vec<Discord>, ServerFnError<ApiError>> {
+pub async fn discord_list() -> Result<Vec<Discord>, ApiError> {
     use self::ssr::*;
 
     let auth = auth()?;
@@ -799,17 +777,17 @@ pub async fn discord_list() -> Result<Vec<Discord>, ServerFnError<ApiError>> {
     .bind(user.id)
     .fetch_all(&pool)
     .await
-    .map_err(|_| ServerFnError::ServerError("Database lookup failed".to_string()))
+    .map_err(|_| ApiError::ServerError("Database lookup failed".into()))
 }
 
 #[server(DiscordAdd, prefix="/api", endpoint="user/discord/add", input=PostUrl)]
-pub async fn discord_add() -> Result<(), ServerFnError<ApiError>> {
+pub async fn discord_add() -> Result<(), ApiError> {
     use self::ssr::*;
     use oauth2::{CsrfToken, Scope};
 
     let auth = auth()?;
     if auth.current_user.is_none() {
-        return Err(ApiError::Unauthenticated)?;
+        return Err(ApiError::Unauthenticated);
     }
     let oauth = oauth()?;
 
@@ -824,9 +802,9 @@ pub async fn discord_add() -> Result<(), ServerFnError<ApiError>> {
 }
 
 #[server(DiscordAuth, prefix="/api", endpoint="user/discord/auth", input=GetUrl)]
-pub async fn discord_auth(code: String, state: String) -> Result<(), ServerFnError<ApiError>> {
+pub async fn discord_auth(code: String, state: String) -> Result<(), ApiError> {
     use self::ssr::*;
-    use oauth2::{reqwest::async_http_client, AuthorizationCode, CsrfToken, TokenResponse};
+    use oauth2::{AuthorizationCode, CsrfToken, TokenResponse, reqwest::async_http_client};
 
     leptos_axum::redirect("/user/@me/dashboard");
 
@@ -838,13 +816,13 @@ pub async fn discord_auth(code: String, state: String) -> Result<(), ServerFnErr
         .get_remove::<CsrfToken>("csrf")
         .ok_or(ApiError::Unauthenticated)?;
     if *csrf.secret() != state {
-        return Err(ApiError::InvalidCredentials)?;
+        return Err(ApiError::InvalidCredentials);
     }
     let token = oauth
         .exchange_code(AuthorizationCode::new(code))
         .request_async(async_http_client)
         .await
-        .map_err(|_| ServerFnError::ServerError("Token exchange failed".into()))?;
+        .map_err(|_| ApiError::ServerError("Token exchange failed".into()))?;
 
     // Fetch user data from discord
     let client = reqwest::Client::new();
@@ -854,10 +832,10 @@ pub async fn discord_auth(code: String, state: String) -> Result<(), ServerFnErr
         .bearer_auth(token.access_token().secret())
         .send()
         .await
-        .map_err(|_| ServerFnError::ServerError("Discord fetch failed".into()))?
+        .map_err(|_| ApiError::ServerError("Discord fetch failed".into()))?
         .json::<Discord>()
         .await
-        .map_err(|_| ServerFnError::ServerError("Discord reponse invalid".into()))?;
+        .map_err(|_| ApiError::ServerError("Discord reponse invalid".into()))?;
     let name = discord_data.name;
     let snowflake = discord_data.snowflake;
 
@@ -878,7 +856,7 @@ pub async fn discord_auth(code: String, state: String) -> Result<(), ServerFnErr
     .bind(user.id)
     .fetch_all(&pool)
     .await
-    .map_err(|_| ServerFnError::ServerError("Database lookup failed".to_string()))?;
+    .map_err(|_| ApiError::ServerError("Database lookup failed".into()))?;
 
     if discord.len() >= 5 {
         return Err(ApiError::AlreadyExists)?;
@@ -894,7 +872,7 @@ pub async fn discord_auth(code: String, state: String) -> Result<(), ServerFnErr
         .bind(snowflake)
         .execute(&pool)
         .await
-        .map_err(|_| ServerFnError::ServerError("Database update failed".to_string()))?;
+        .map_err(|_| ApiError::ServerError("Database update failed".into()))?;
     } else {
         sqlx::query(
             r#"INSERT INTO discord (user_id, name, snowflake)
@@ -905,13 +883,13 @@ pub async fn discord_auth(code: String, state: String) -> Result<(), ServerFnErr
         .bind(snowflake)
         .execute(&pool)
         .await
-        .map_err(|_| ServerFnError::ServerError("Database insert failed".to_string()))?;
+        .map_err(|_| ApiError::ServerError("Database insert failed".into()))?;
     }
     Ok(())
 }
 
 #[server(DiscordDelete, prefix="/api", endpoint="user/discord/delete", input=PostUrl)]
-pub async fn discord_delete(snowflake: String) -> Result<(), ServerFnError<ApiError>> {
+pub async fn discord_delete(snowflake: String) -> Result<(), ApiError> {
     use self::ssr::*;
 
     let auth = auth()?;
@@ -926,6 +904,6 @@ pub async fn discord_delete(snowflake: String) -> Result<(), ServerFnError<ApiEr
     .bind(snowflake)
     .execute(&pool)
     .await
-    .map_err(|_| ServerFnError::ServerError("Database delete failed".to_string()))?;
+    .map_err(|_| ApiError::ServerError("Database delete failed".to_string()))?;
     Ok(())
 }
