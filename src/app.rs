@@ -8,7 +8,7 @@ use crate::{
         home::HomePage,
         leaderboard::{Leaderboard, Section},
         map::Map,
-        ranking::{Ranking, UserRanking},
+        ranking::{Ranking, RankingHeader, UserRanking},
         user::{Delete, ManageRuns, Profile},
     },
     server::{
@@ -23,6 +23,7 @@ use leptos_meta::MetaTags;
 use leptos_meta::*;
 use leptos_router::{
     MatchNestedRoutes, NavigateOptions,
+    any_nested_route::IntoAnyNestedRoute,
     components::{
         A, Outlet, ParentRoute, ProtectedParentRoute, ProtectedRoute, Redirect, Route, Router,
         Routes,
@@ -244,6 +245,7 @@ fn AppRouter() -> impl IntoView {
             <Route path=path!("faq") view=FAQ />
             <Route path=path!("runs") view=Activity />
             <LeaderboardRouter />
+            <RankingRouter />
             <Route path=path!("register") view=Register />
             <Route path=path!("login") view=Login />
             <UserRouter />
@@ -285,61 +287,12 @@ fn UserRouter() -> impl MatchNestedRoutes + Clone {
         />
     }
     .into_inner()
+    .into_any_nested_route()
 }
 
 #[component(transparent)]
 fn LeaderboardRouter() -> impl MatchNestedRoutes + Clone {
     view! {
-        <Route
-            path=path!("ranking/:patch/:layout")
-            view=move || {
-                let patch = Signal::derive(move || {
-                    use_params_map().read().get("patch").unwrap()
-                });
-                let layout = Signal::derive(move || {
-                    use_params_map().read().get("layout").unwrap()
-                });
-                let patches: Vec<(String, String)> = vec![
-                    ("1.00".into(), "Patch 1.00".into()),
-                    ("1.41".into(), "Patch 1.41".into()),
-                    ("1.50".into(), "Patch 1.50".into()),
-                    ("2.00".into(), "Patch 2.00".into()),
-                    ("2.13".into(), "Patch 2.13".into()),
-                ];
-                let layouts = Signal::derive(move || match patch.get().as_str() {
-                    "1.00" => vec![("1".into(), "Layout 1".into()), ("2".into(), "Layout 2".into())],
-                    "1.41" => {
-                        vec![
-                            ("1".into(), "Layout 1".into()),
-                            ("2".into(), "Layout 2".into()),
-                            ("3".into(), "Layout 3".into()),
-                            ("4".into(), "Layout 4".into()),
-                        ]
-                    }
-                    "1.50" | "2.00" => {
-                        vec![
-                            ("1".into(), "Layout 1".into()),
-                            ("2".into(), "Layout 2".into()),
-                            ("3".into(), "Layout 3".into()),
-                            ("4".into(), "Layout 4".into()),
-                            ("5".into(), "Layout 5".into()),
-                        ]
-                    }
-                    "2.13" => {
-                        vec![
-                            ("1".into(), "Layout 1".into()),
-                            ("2".into(), "Layout 2".into()),
-                            ("3".into(), "Layout 3".into()),
-                            ("4".into(), "Layout 4".into()),
-                            ("5".into(), "Layout 5".into()),
-                            ("all".into(), "All".into()),
-                        ]
-                    }
-                    _ => vec![],
-                });
-                view! { <Ranking patches layouts patch layout /> }
-            }
-        />
         <Route
             path=path!("leaderboard")
             view=move || {
@@ -351,15 +304,10 @@ fn LeaderboardRouter() -> impl MatchNestedRoutes + Clone {
         <Route
             path=path!("leaderboard/:patch/:layout/:category")
             view=move || {
-                let patch = Signal::derive(move || {
-                    use_params_map().read().get("patch").unwrap()
-                });
-                let layout = Signal::derive(move || {
-                    use_params_map().read().get("layout").unwrap()
-                });
-                let category = Signal::derive(move || {
-                    use_params_map().read().get("category").unwrap()
-                });
+                let params = use_params_map();
+                let patch = Signal::derive(move || { params.read().get("patch").unwrap() });
+                let layout = Signal::derive(move || { params.read().get("layout").unwrap() });
+                let category = Signal::derive(move || { params.read().get("category").unwrap() });
                 let layouts = Signal::derive(move || match patch.get().as_str() {
                     "1.00" => vec![("1".into(), "Layout 1".into()), ("2".into(), "Layout 2".into())],
                     "1.41" => {
@@ -396,8 +344,9 @@ fn LeaderboardRouter() -> impl MatchNestedRoutes + Clone {
         <Route
             path=path!("leaderboard/map/:map")
             view=move || {
+                let params = use_params_map();
                 let id = Signal::derive(move || {
-                    use_params_map().read().get("map").unwrap().parse::<i32>().unwrap_or(0)
+                    params.read().get("map").unwrap().parse::<i32>().unwrap_or(0)
                 });
                 view! {
                     <section id="leaderboard">
@@ -409,8 +358,9 @@ fn LeaderboardRouter() -> impl MatchNestedRoutes + Clone {
         <ParentRoute
             path=path!("user/:id")
             view=move || {
+                let params = use_params_map();
                 let id = Signal::derive(move || {
-                    use_params_map().read().get("id").unwrap().parse::<i64>().unwrap_or(0)
+                    params.read().get("id").unwrap().parse::<i64>().unwrap_or(0)
                 });
                 view! {
                     <Profile id />
@@ -421,14 +371,11 @@ fn LeaderboardRouter() -> impl MatchNestedRoutes + Clone {
             <Route
                 path=path!("leaderboard/:patch/:layout/:category")
                 view=move || {
-                    let patch = Signal::derive(move || {
-                        use_params_map().read().get("patch").unwrap()
-                    });
-                    let layout = Signal::derive(move || {
-                        use_params_map().read().get("layout").unwrap()
-                    });
+                    let params = use_params_map();
+                    let patch = Signal::derive(move || { params.read().get("patch").unwrap() });
+                    let layout = Signal::derive(move || { params.read().get("layout").unwrap() });
                     let category = Signal::derive(move || {
-                        use_params_map().read().get("category").unwrap()
+                        params.read().get("category").unwrap()
                     });
                     let layouts = Signal::derive(move || match patch.get().as_str() {
                         "1.00" => {
@@ -468,8 +415,9 @@ fn LeaderboardRouter() -> impl MatchNestedRoutes + Clone {
             <Route
                 path=path!("leaderboard/map/:map")
                 view=move || {
+                    let params = use_params_map();
                     let id = Signal::derive(move || {
-                        use_params_map().read().get("map").unwrap().parse::<i32>().unwrap_or(0)
+                        params.read().get("map").unwrap().parse::<i32>().unwrap_or(0)
                     });
                     view! {
                         <section id="leaderboard">
@@ -481,8 +429,9 @@ fn LeaderboardRouter() -> impl MatchNestedRoutes + Clone {
             <Route
                 path=path!("ranking")
                 view=move || {
+                    let params = use_params_map();
                     let id = Signal::derive(move || {
-                        use_params_map().read().get("id").unwrap().parse::<i64>().unwrap_or(0)
+                        params.read().get("id").unwrap().parse::<i64>().unwrap_or(0)
                     });
                     let patches: Vec<(String, String)> = vec![
                         ("1.00".into(), "Patch 1.00".into()),
@@ -496,10 +445,100 @@ fn LeaderboardRouter() -> impl MatchNestedRoutes + Clone {
             />
             <Route
                 path=path!("")
-                view=|| {
+                view=move || {
                     let mut options = NavigateOptions::default();
                     options.replace = true;
                     view! { <Redirect path="leaderboard/2.13/1/standard" options /> }
+                }
+            />
+        </ParentRoute>
+    }
+    .into_inner()
+    .into_any_nested_route()
+}
+
+#[component(transparent)]
+fn RankingRouter() -> impl MatchNestedRoutes + Clone {
+    view! {
+        <ParentRoute
+            path=path!("ranking")
+            view=move || {
+                view! {
+                    <section id="ranking">
+                        <Ranking
+                            patch="2.13"
+                            layout="all"
+                            categories=vec![("all".into(), String::new())]
+                        />
+                        <Outlet />
+                    </section>
+                }
+            }
+        >
+            <Route
+                path=path!(":patch/:layout")
+                view=move || {
+                    let params = use_params_map();
+                    let patch = Signal::derive(move || { params.read().get("patch").unwrap() });
+                    let layout = Signal::derive(move || { params.read().get("layout").unwrap() });
+                    let patches: Vec<(String, String)> = vec![
+                        ("1.00".into(), "Patch 1.00".into()),
+                        ("1.41".into(), "Patch 1.41".into()),
+                        ("1.50".into(), "Patch 1.50".into()),
+                        ("2.00".into(), "Patch 2.00".into()),
+                        ("2.13".into(), "Patch 2.13".into()),
+                    ];
+                    let layouts = Signal::derive(move || match patch.get().as_str() {
+                        "1.00" => {
+                            vec![("1".into(), "Layout 1".into()), ("2".into(), "Layout 2".into())]
+                        }
+                        "1.41" => {
+                            vec![
+                                ("1".into(), "Layout 1".into()),
+                                ("2".into(), "Layout 2".into()),
+                                ("3".into(), "Layout 3".into()),
+                                ("4".into(), "Layout 4".into()),
+                            ]
+                        }
+                        "1.50" | "2.00" | "2.13" => {
+                            vec![
+                                ("1".into(), "Layout 1".into()),
+                                ("2".into(), "Layout 2".into()),
+                                ("3".into(), "Layout 3".into()),
+                                ("4".into(), "Layout 4".into()),
+                                ("5".into(), "Layout 5".into()),
+                            ]
+                        }
+                        _ => vec![],
+                    });
+                    let categories = Signal::derive(move || match patch.get().as_str() {
+                        "1.00" | "1.41" | "1.50" | "2.00" => {
+                            vec![
+                                ("Standard".into(), "Standard".into()),
+                                ("Gravspeed".into(), "Gravspeed".into()),
+                            ]
+                        }
+                        "2.13" => {
+                            vec![
+                                ("Standard".into(), "Standard".into()),
+                                ("Gravspeed".into(), "Gravspeed".into()),
+                                ("All".into(), "Combined".into()),
+                            ]
+                        }
+                        _ => vec![],
+                    });
+                    view! {
+                        <RankingHeader patches layouts />
+                        <Ranking patch layout categories />
+                    }
+                }
+            />
+            <Route
+                path=path!("")
+                view=move || {
+                    let mut options = NavigateOptions::default();
+                    options.replace = true;
+                    view! { <Redirect path="2.13/1" options /> }
                 }
             />
         </ParentRoute>

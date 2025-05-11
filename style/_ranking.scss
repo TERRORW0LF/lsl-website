@@ -1,0 +1,10 @@
+#ranking {
+    .ranking {
+        font-size: 1.2rem;
+
+        .grid-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(50ch, 1fr));
+        }
+    }
+}

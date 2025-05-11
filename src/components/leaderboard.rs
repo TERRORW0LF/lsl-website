@@ -1,13 +1,13 @@
 use leptos::{either::*, prelude::*};
 use leptos_meta::Title;
 use leptos_router::{
-    components::{Form, A},
+    components::{A, Form},
     hooks::{use_params_map, use_query_map},
 };
 use rust_decimal::Decimal;
 use std::{cmp::Ordering, collections::HashMap};
 
-use crate::server::api::{get_runs_category, PartialRun, SectionRuns};
+use crate::server::api::{PartialRun, SectionRuns, get_runs_category};
 
 #[component]
 pub fn Section(
@@ -62,12 +62,7 @@ pub fn Section(
                                 <li>
                                     <A
                                         href=move || {
-                                            format!(
-                                                "../../{}/{}{}",
-                                                c.0,
-                                                category.get(),
-                                                query.get().to_query_string(),
-                                            )
+                                            format!("../{}{}", c.0, query.get().to_query_string())
                                         }
                                         scroll=false
                                     >

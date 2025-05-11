@@ -23,23 +23,28 @@
               rust.stable.latest.default;
         })
         (final: prev: {
-          cargo-leptos = prev.cargo-leptos.overrideAttrs (oldAttrs: rec {
+          cargo-leptos = prev.rustPlatform.buildRustPackage rec {
             pname = "cargo-leptos";
             version = "0.2.34";
 
             src = prev.fetchFromGitHub {
               owner = "leptos-rs";
-              repo = pname;
+              repo = "cargo-leptos";
               rev = "v${version}";
               hash = "sha256-y15ue6DKyDfX/SOhOoVUVoIx2wnCIJmg7wRBPTSYYok=";
             };
 
-            cargoDeps = oldAttrs.cargoDeps.overrideAttrs (prev.lib.const {
-              name = "${pname}-vendor.tar.gz";
-              inherit src;
-              outputHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-            });
-          });
+            nativeBuildInputs = [
+              prev.pkgs.perl
+            ];
+
+            useFetchCargoVendor = true;
+            cargoHash = "sha256-gKl+WfT2cMyMs4wm3gfiDGeT+jtuQMn96UFYgPTflgQ=";
+
+            # https://github.com/leptos-rs/cargo-leptos#dependencies
+            buildFeatures = [ "no_downloads" ]; # cargo-leptos will try to install missing dependencies on its own otherwise
+            doCheck = false; # Check phase tries to query crates.io
+          };
         })
         (final: prev: {
           mdbook-embedify = prev.rustPlatform.buildRustPackage rec {

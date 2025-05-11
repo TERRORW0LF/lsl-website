@@ -210,7 +210,7 @@ pub struct ComboRanking {
     pub patch: String,
     pub layout: String,
     pub category: String,
-    pub runs: Vec<PartialRanking>,
+    pub rankings: Vec<PartialRanking>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -405,25 +405,26 @@ pub async fn get_rankings(
     patch: String,
     layout: String,
     category: String,
-) -> Result<ComboRanking, ApiError> {
+) -> Result<Vec<Ranking>, ApiError> {
     let pool = crate::server::auth::ssr::pool()?;
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
-    let rankings = sqlx::query_as::<_, ComboRanking>(
-        r#"SELECT patch, s.layout, s.category, 
-            COALESCE(NULLIF(ARRAY_AGG((r.id, user_id, u."name", title, rank, rating)
-            ORDER BY r.created_at ASC)
-            FILTER(WHERE r.id IS NOT NULL), '{NULL}'), '{}') AS runs
+    let rankings = sqlx::query_as::<_, Ranking>(
+        r#"SELECT r.id, r.patch, r.layout, r.category, r.user_id, 
+            u.name, r.title, r.rank, r.rating, r.created_at, r.updated_at
         FROM rank r
-        LEFT JOIN "user" u ON user_id = u.id
+        JOIN "user" u ON user_id = u.id
         WHERE patch = $1 AND layout = $2 AND category = $3
-        GROUP BY patch, layout, category;"#,
+        ORDER BY rank ASC;"#,
     )
     .bind(patch)
     .bind(layout)
     .bind(category)
-    .fetch_one(&pool)
+    .fetch_all(&pool)
     .await
-    .or(Err(ApiError::NotFound))?;
+    .or_else(|e| {
+        leptos::logging::log!("{e:?}");
+        Err(ApiError::NotFound)
+    })?;
 
     res_opts.append_header(CACHE_CONTROL, HeaderValue::from_static("max-age=900"));
     Ok(rankings)
@@ -434,9 +435,9 @@ pub async fn get_rankings_user(id: i64) -> Result<Vec<Ranking>, ApiError> {
     let pool = crate::server::auth::ssr::pool()?;
 
     sqlx::query_as::<_, Ranking>(
-        r#"SELECT r.id, patch, layout, category, user_id, 
-            name, title, rank, rating, created_at, updated_at
-        FROM rank
+        r#"SELECT r.id, r.patch, r.layout, r.category, r.user_id, 
+            u.name, r.title, r.rank, r.rating, r.created_at, r.updated_at
+        FROM rank r
         JOIN "user" u ON user_id = u.id
         WHERE user_id = $1;"#,
     )

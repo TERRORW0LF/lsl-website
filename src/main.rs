@@ -82,7 +82,7 @@ async fn main() {
 
     // build our application with a route
     let app = Router::new()
-        .route("/api/*fn_name", get(server_handler).post(server_handler))
+        .route("/api/{*fn_name}", get(server_handler).post(server_handler))
         .leptos_routes_with_handler(routes.clone(), get(leptos_handler))
         .layer(ServiceBuilder::new()
             .layer(SessionLayer::new(session_store))
