@@ -1,10 +1,108 @@
 #ranking {
-    .ranking {
+    margin: 2rem;
+
+    #ranking-header {
+        top: 2.5rem;
+        margin-right: -2rem;
+        margin-left: -2rem;
+        color: var(--grey-0);
+        background-color: var(--grey-900);
+        z-index: 2;
+
+        nav.split-row-nav {
+            background-color: inherit;
+            color: inherit;
+            min-height: 2.5rem;
+
+            [aria-current="page"]>span {
+                border-bottom: 3px solid var(--primary-200);
+            }
+        }
+    }
+
+    section.ranking {
         font-size: 1.2rem;
 
-        .grid-row {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(50ch, 1fr));
+        .ranking {
+            margin-top: 2rem;
+            margin-bottom: 4rem;
+            justify-self: center;
+
+            .category {
+                margin-left: 2.5rem;
+                margin-top: 8rem;
+                margin-bottom: 2rem;
+                color: var(--primary-300);
+            }
+
+            .columns {
+                columns: calc(2rem + 40ch) auto;
+                column-gap: 3rem;
+
+                .grid-row {
+                    display: grid;
+                    height: 2rem;
+                    grid-template-columns: 2rem 1fr 8ch;
+                    column-gap: 0.5rem;
+                    font-size: 1.2rem;
+
+                    * {
+                        align-self: center;
+                    }
+
+                    .narrow {
+                        gap: 0;
+                    }
+
+                    h4 {
+                        font-size: 1.2rem;
+                    }
+
+                    h5 {
+                        font-size: 1rem;
+                    }
+
+                    h6 {
+                        font-size: 0.8rem;
+                    }
+
+                    .rank {
+                        display: flex;
+                        width: 100%;
+                        height: 100%;
+                        justify-content: center;
+                        border-bottom: 1px solid var(--grey-800);
+
+                        &.rank-1 {
+                            background-color: var(--rank-1);
+                        }
+
+                        &.rank-2 {
+                            background-color: var(--rank-2);
+                        }
+
+                        &.rank-3 {
+                            background-color: var(--rank-3);
+                        }
+                    }
+
+                    .name {
+                        font-weight: 300;
+                    }
+
+                    .rating {
+                        justify-self: right;
+
+                        * {
+                            align-self: last baseline;
+                        }
+
+                        h6 {
+                            color: var(--grey-300)
+                        }
+                    }
+                }
+            }
         }
     }
 }

@@ -14,7 +14,7 @@ use crate::{
     server::{
         api::ApiError,
         auth::{
-            Login, Logout, Register, UpdateBio, UpdateCreds, User, get_current_user, update_pfp,
+            get_current_user, update_pfp, Login, Logout, Register, UpdateBio, UpdateCreds, User,
         },
     },
 };
@@ -22,16 +22,15 @@ use leptos::{either::*, prelude::*};
 use leptos_meta::MetaTags;
 use leptos_meta::*;
 use leptos_router::{
-    MatchNestedRoutes, NavigateOptions,
     any_nested_route::IntoAnyNestedRoute,
     components::{
-        A, Outlet, ParentRoute, ProtectedParentRoute, ProtectedRoute, Redirect, Route, Router,
-        Routes,
+        Outlet, ParentRoute, ProtectedParentRoute, ProtectedRoute, Redirect, Route, Router, Routes,
+        A,
     },
     hooks::use_params_map,
-    path,
+    path, MatchNestedRoutes, NavigateOptions,
 };
-use wasm_bindgen::{JsCast, prelude::Closure};
+use wasm_bindgen::{prelude::Closure, JsCast};
 use web_sys::FormData;
 
 pub type UserResource = Resource<Result<User, ApiError>>;
@@ -516,13 +515,13 @@ fn RankingRouter() -> impl MatchNestedRoutes + Clone {
                             vec![
                                 ("Standard".into(), "Standard".into()),
                                 ("Gravspeed".into(), "Gravspeed".into()),
+                                ("All".into(), "Combined".into()),
                             ]
                         }
                         "2.13" => {
                             vec![
                                 ("Standard".into(), "Standard".into()),
                                 ("Gravspeed".into(), "Gravspeed".into()),
-                                ("All".into(), "Combined".into()),
                             ]
                         }
                         _ => vec![],

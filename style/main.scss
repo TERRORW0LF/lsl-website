@@ -52,6 +52,9 @@ b {
 	--error: hsl(0, 100%, 33%);
 	--black: hsl(0, 0%, 0%);
 	--white: hsl(0, 0%, 100%);
+	--rank-1: hsl(49, 100%, 45%);
+	--rank-2: hsl(197, 8%, 56%);
+	--rank-3: hsl(24, 69%, 34%);
 }
 
 :root.light {
@@ -81,42 +84,99 @@ b {
 	--error: hsl(0, 100%, 50%);
 	--black: hsl(0, 0%, 0%);
 	--white: hsl(0, 0%, 100%);
+	--rank-1: hsl(49, 100%, 45%);
+	--rank-2: hsl(197, 8%, 56%);
+	--rank-3: hsl(24, 69%, 34%);
 }
 
 .Surfer {
-	color: var(--primary-800);
+	&.color {
+		color: var(--primary-800);
+	}
+
+	&.bg {
+		background-color: var(--primary-800);
+	}
 
 	&.Super {
-		color: var(--primary-700);
+		&.color {
+			color: var(--primary-700);
+		}
+
+		&.bg {
+			background-color: var(--primary-700);
+		}
 	}
 
 	&.Epic {
-		color: var(--primary-600);
+		&.color {
+			color: var(--primary-600);
+		}
+
+		&.bg {
+			background-color: var(--primary-600);
+		}
 	}
 
 	&.Legendary {
-		color: var(--primary-500);
+		&.color {
+			color: var(--primary-500);
+		}
+
+		&.bg {
+			background-color: var(--primary-500);
+		}
 	}
 
 	&.Mythic {
-		color: var(--primary-400);
+		&.color {
+			color: var(--primary-400);
+		}
+
+		&.bg {
+			background-color: var(--primary-400);
+		}
 	}
 }
 
 .Rank {
-	color: var(--primary-300);
+	&.color {
+		color: var(--primary-300);
+	}
+
+	&.bg {
+		background-color: var(--primary-300);
+	}
 }
 
 .rank-1 {
-	color: hsl(49, 100%, 45%);
+	&.color {
+		color: var(--rank-1);
+	}
+
+	&.bg {
+		background-color: var(--rank-1);
+	}
 }
 
 .rank-2 {
-	color: hsl(197, 8%, 56%);
+	&.color {
+		color: var(--rank-2);
+	}
+
+	&.bg {
+		background-color: var(--rank-2);
+	}
 }
 
 .rank-3 {
-	color: hsl(24, 69%, 34%);
+	&.color {
+		color: var(--rank-3);
+	}
+
+	&.bg {
+		background-color: var(--rank-3);
+	}
 }
 
 html,

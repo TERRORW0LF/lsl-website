@@ -9,7 +9,7 @@ pub fn RankingHeader(
     #[prop(into)] layouts: Signal<Vec<(String, String)>>,
 ) -> impl IntoView {
     view! {
-        <header id="lb_header">
+        <header id="ranking-header">
             <nav class="split-row-nav">
                 <ul class="left-row-nav">
                     <For
@@ -64,45 +64,60 @@ pub fn Ranking(
     );
     view! {
         <section class="ranking">
-            <div class="grid-row">
-                <Suspense fallback=move || {
-                    "Loading..."
-                }>
-                    {move || {
-                        rankings
-                            .get()
-                            .map(|rs| {
-                                rs.into_iter()
-                                    .map(|rs| {
-                                        view! {
-                                            <div class="ranking">
-                                                <ErrorBoundary fallback=move |_| {
-                                                    "Error fetching data."
-                                                }>
+            <Suspense fallback=move || {
+                "Loading..."
+            }>
+                {move || {
+                    rankings
+                        .get()
+                        .map(|rs| {
+                            let mut c = 0;
+                            rs.into_iter()
+                                .map(|rs| {
+                                    c += 1;
+                                    view! {
+                                        <div class="ranking">
+                                            <h3 class="category">
+                                                {move || categories.get()[c - 1].1.clone()}
+                                            </h3>
+                                            <ErrorBoundary fallback=move |_| { "Error fetching data." }>
+                                                <div class="columns">
                                                     {rs
                                                         .map(|rs| {
                                                             rs.into_iter()
                                                                 .map(|r| {
                                                                     view! {
-                                                                        <div class="row">
-                                                                            <h4>{r.rank}</h4>
-                                                                            <h4>{r.username}</h4>
-                                                                            <h4>{r.title.to_string()}</h4>
-                                                                            <h4>{format!("{:3}", r.rating)}</h4>
+                                                                        <div class="grid-row">
+                                                                            <div
+                                                                                class=format!("rank {} bg", r.title.to_string())
+                                                                                class=("rank-1", r.rank == 1)
+                                                                                class=("rank-2", r.rank == 2)
+                                                                                class=("rank-3", r.rank == 3)
+                                                                            >
+                                                                                <h5>{r.rank}</h5>
+                                                                            </div>
+                                                                            <h4 class="name">{r.username}</h4>
+                                                                            <div class="rating row narrow">
+                                                                                <h4 class=format!(
+                                                                                    "{} color",
+                                                                                    r.title.to_string(),
+                                                                                )>{format!("{}", r.rating.round())}</h4>
+                                                                                <h6>"RP"</h6>
+                                                                            </div>
                                                                         </div>
                                                                     }
                                                                 })
                                                                 .collect_view()
                                                         })}
-                                                </ErrorBoundary>
-                                            </div>
-                                        }
-                                    })
-                                    .collect_view()
-                            })
-                    }}
-                </Suspense>
-            </div>
+                                                </div>
+                                            </ErrorBoundary>
+                                        </div>
+                                    }
+                                })
+                                .collect_view()
+                        })
+                }}
+            </Suspense>
         </section>
     }
 }
