@@ -65,14 +65,17 @@ pub fn HomePage() -> impl IntoView {
                                                                 {if let Some(title) = &act.title_old {
                                                                     EitherOf3::A(
                                                                         view! {
-                                                                            <h5 class=title.to_string()>{title.to_string()}</h5>
+                                                                            <h5 class=format!(
+                                                                                "{} color",
+                                                                                title.to_string(),
+                                                                            )>{title.to_string()}</h5>
                                                                         },
                                                                     )
                                                                 } else if let Some(rank) = act.rank_old {
                                                                     EitherOf3::B(
                                                                         view! {
                                                                             <h5 class=format!(
-                                                                                "rank-{rank}",
+                                                                                "rank-{rank} color",
                                                                             )>{format!("#{}", rank.to_string())}</h5>
                                                                         },
                                                                     )
@@ -89,14 +92,17 @@ pub fn HomePage() -> impl IntoView {
                                                                 {if let Some(title) = &act.title_new {
                                                                     EitherOf3::A(
                                                                         view! {
-                                                                            <h5 class=title.to_string()>{title.to_string()}</h5>
+                                                                            <h5 class=format!(
+                                                                                "{} color",
+                                                                                title.to_string(),
+                                                                            )>{title.to_string()}</h5>
                                                                         },
                                                                     )
                                                                 } else if let Some(rank) = act.rank_new {
                                                                     EitherOf3::B(
                                                                         view! {
                                                                             <h5 class=format!(
-                                                                                "rank-{rank}",
+                                                                                "rank-{rank} color",
                                                                             )>{format!("#{}", rank.to_string())}</h5>
                                                                         },
                                                                     )
@@ -172,7 +178,9 @@ pub fn HomePage() -> impl IntoView {
                                                     <div class="row">
                                                         <a href=run.proof target="_blank" class="play"></a>
                                                         <div class="column">
-                                                            <h5>{run.map}</h5>
+                                                            <A href=format!("/leaderboard/map/{}", run.section_id)>
+                                                                <h5>{run.map}</h5>
+                                                            </A>
                                                             <h6>{run.time.to_string()} " sec by " {run.username}</h6>
                                                         </div>
                                                         <div class="column">

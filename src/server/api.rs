@@ -1,8 +1,8 @@
 use super::auth::User;
 use chrono::{DateTime, Local};
-use http::{HeaderValue, header::CACHE_CONTROL};
+use http::{header::CACHE_CONTROL, HeaderValue};
 use leptos::prelude::{
-    FromServerFnError, ServerFnErrorErr, expect_context, server, server_fn::codec::GetUrl,
+    expect_context, server, server_fn::codec::GetUrl, FromServerFnError, ServerFnErrorErr,
 };
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -181,8 +181,8 @@ pub struct SectionRuns {
 pub struct Ranking {
     pub id: i32,
     pub patch: String,
-    pub layout: String,
-    pub category: String,
+    pub layout: Option<String>,
+    pub category: Option<String>,
     pub user_id: i64,
     #[cfg_attr(feature = "ssr", sqlx(rename = "name"))]
     pub username: String,
@@ -208,8 +208,8 @@ pub struct PartialRanking {
 #[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
 pub struct ComboRanking {
     pub patch: String,
-    pub layout: String,
-    pub category: String,
+    pub layout: Option<String>,
+    pub category: Option<String>,
     pub rankings: Vec<PartialRanking>,
 }
 
@@ -403,8 +403,8 @@ pub async fn get_user(id: i64) -> Result<User, ApiError> {
 #[server(GetRankings, prefix="/api", endpoint="ranking", input=GetUrl)]
 pub async fn get_rankings(
     patch: String,
-    layout: String,
-    category: String,
+    layout: Option<String>,
+    category: Option<String>,
 ) -> Result<Vec<Ranking>, ApiError> {
     let pool = crate::server::auth::ssr::pool()?;
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
@@ -413,7 +413,7 @@ pub async fn get_rankings(
             u.name, r.title, r.rank, r.rating, r.created_at, r.updated_at
         FROM rank r
         JOIN "user" u ON user_id = u.id
-        WHERE patch = $1 AND layout = $2 AND category = $3
+        WHERE patch = $1 AND layout IS NOT DISTINCT FROM $2 AND category IS NOT DISTINCT FROM $3
         ORDER BY rank ASC;"#,
     )
     .bind(patch)

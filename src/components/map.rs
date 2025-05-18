@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 
 use charming::{
+    Chart, Echarts, WasmRenderer,
     component::{Axis, DataZoom, FilterMode, Grid, Legend},
     datatype::CompositeValue,
     element::{AxisLabel, AxisType, FormatterFunction, Step, Tooltip, Trigger},
     series::Line,
     theme::Theme,
-    Chart, Echarts, WasmRenderer,
 };
 use chrono::Local;
 use leptos::{either::Either, html::Div, prelude::*};
@@ -15,15 +15,15 @@ use leptos_router::{
     hooks::{use_params_map, use_query_map},
 };
 use rust_decimal::{
-    prelude::{FromPrimitive, ToPrimitive},
     Decimal,
+    prelude::{FromPrimitive, ToPrimitive},
 };
-use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
+use wasm_bindgen::{JsCast, JsValue, prelude::Closure};
 use web_sys::js_sys;
 
 use crate::{
-    components::leaderboard::{filter, sort, Player},
-    server::api::{get_runs_id, PartialRun},
+    components::leaderboard::{Player, filter, sort},
+    server::api::{PartialRun, get_runs_id},
 };
 
 #[component]
@@ -304,62 +304,66 @@ fn MapRunList(map: String, runs: Vec<PartialRun>) -> impl IntoView {
                                     <div
                                         role="definition"
                                         id=format!("run_{}", r.id)
-                                        class="content row"
+                                        class="content"
                                     >
-                                        <Player
-                                            yt_id=r.yt_id.into()
-                                            url=Some(r.proof.clone()).into()
-                                            cover=map.clone()
-                                        />
-                                        <div class="run-data">
-                                            <div class="grid">
-                                                <div class="entry">
-                                                    <h3>"RANK"</h3>
-                                                    <p>"#"{i + 1}</p>
-                                                </div>
-                                                <div class="entry">
-                                                    <h3>"DATE"</h3>
-                                                    <p>
-                                                        {r.created_at.format("%a %d %b %Y %k:%M:%S").to_string()}
-                                                    </p>
-                                                </div>
-                                                <div class="entry">
-                                                    <h3>"USER"</h3>
-                                                    <p>
-                                                        <A href=format!(
-                                                            "/user/{}/leaderboard",
-                                                            r.user_id,
-                                                        )>{r.username}</A>
-                                                    </p>
-                                                </div>
-                                                <div class="entry">
-                                                    <h3>"TIME"</h3>
-                                                    <p>{r.time.to_string()} " sec"</p>
-                                                </div>
-                                                <div class="entry">
-                                                    <h3>"STATUS"</h3>
-                                                    <p>
-                                                        {if r.is_wr {
-                                                            "World Record"
-                                                        } else if r.is_pb {
-                                                            "Personal Best"
-                                                        } else if r.verified {
-                                                            "Verified"
-                                                        } else {
-                                                            "Unverified"
-                                                        }}
-                                                    </p>
-                                                </div>
-                                                <div class="entry">
-                                                    <h3>"PROOF"</h3>
-                                                    <p>
-                                                        <a class="extern".to_string() href=r.proof target="_blank">
-                                                            "link"
-                                                        </a>
-                                                    </p>
+                                        <div>
+                                            <div class="inner row">
+                                                <Player
+                                                    yt_id=r.yt_id.into()
+                                                    url=Some(r.proof.clone()).into()
+                                                    cover=map.clone()
+                                                />
+                                                <div class="run-data">
+                                                    <div class="grid">
+                                                        <div class="entry">
+                                                            <h3>"RANK"</h3>
+                                                            <p>"#"{i + 1}</p>
+                                                        </div>
+                                                        <div class="entry">
+                                                            <h3>"DATE"</h3>
+                                                            <p>
+                                                                {r.created_at.format("%a %d %b %Y %k:%M:%S").to_string()}
+                                                            </p>
+                                                        </div>
+                                                        <div class="entry">
+                                                            <h3>"USER"</h3>
+                                                            <p>
+                                                                <A href=format!(
+                                                                    "/user/{}/leaderboard",
+                                                                    r.user_id,
+                                                                )>{r.username}</A>
+                                                            </p>
+                                                        </div>
+                                                        <div class="entry">
+                                                            <h3>"TIME"</h3>
+                                                            <p>{r.time.to_string()} " sec"</p>
+                                                        </div>
+                                                        <div class="entry">
+                                                            <h3>"STATUS"</h3>
+                                                            <p>
+                                                                {if r.is_wr {
+                                                                    "World Record"
+                                                                } else if r.is_pb {
+                                                                    "Personal Best"
+                                                                } else if r.verified {
+                                                                    "Verified"
+                                                                } else {
+                                                                    "Unverified"
+                                                                }}
+                                                            </p>
+                                                        </div>
+                                                        <div class="entry">
+                                                            <h3>"PROOF"</h3>
+                                                            <p>
+                                                                <a class="extern".to_string() href=r.proof target="_blank">
+                                                                    "link"
+                                                                </a>
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <div class="id">{r.id}</div>
                                                 </div>
                                             </div>
-                                            <div class="id">{r.id}</div>
                                         </div>
                                     </div>
                                 </div>

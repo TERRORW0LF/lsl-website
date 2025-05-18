@@ -82,10 +82,6 @@
         }
     }
 
-    details[open]~div.content {
-        max-height: 13rem;
-    }
-
     .video {
         position: relative;
         display: flex;
@@ -327,7 +323,7 @@
             }
 
             summary {
-                padding: 1rem 0;
+                padding: 0.5rem 0;
 
                 span.icon {
                     background-color: inherit;
@@ -356,7 +352,6 @@
             }
 
             .content {
-                max-height: 0;
                 margin: 0;
 
                 .run-data {

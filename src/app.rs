@@ -14,7 +14,7 @@ use crate::{
     server::{
         api::ApiError,
         auth::{
-            get_current_user, update_pfp, Login, Logout, Register, UpdateBio, UpdateCreds, User,
+            Login, Logout, Register, UpdateBio, UpdateCreds, User, get_current_user, update_pfp,
         },
     },
 };
@@ -22,15 +22,16 @@ use leptos::{either::*, prelude::*};
 use leptos_meta::MetaTags;
 use leptos_meta::*;
 use leptos_router::{
+    MatchNestedRoutes, NavigateOptions,
     any_nested_route::IntoAnyNestedRoute,
     components::{
-        Outlet, ParentRoute, ProtectedParentRoute, ProtectedRoute, Redirect, Route, Router, Routes,
-        A,
+        A, Outlet, ParentRoute, ProtectedParentRoute, ProtectedRoute, Redirect, Route, Router,
+        Routes,
     },
     hooks::use_params_map,
-    path, MatchNestedRoutes, NavigateOptions,
+    path,
 };
-use wasm_bindgen::{prelude::Closure, JsCast};
+use wasm_bindgen::{JsCast, prelude::Closure};
 use web_sys::FormData;
 
 pub type UserResource = Resource<Result<User, ApiError>>;
@@ -466,8 +467,8 @@ fn RankingRouter() -> impl MatchNestedRoutes + Clone {
                     <section id="ranking">
                         <Ranking
                             patch="2.13"
-                            layout="all"
-                            categories=vec![("all".into(), String::new())]
+                            layout=None
+                            categories=vec![(None, "Combined".into())]
                         />
                         <Outlet />
                     </section>
@@ -479,7 +480,7 @@ fn RankingRouter() -> impl MatchNestedRoutes + Clone {
                 view=move || {
                     let params = use_params_map();
                     let patch = Signal::derive(move || { params.read().get("patch").unwrap() });
-                    let layout = Signal::derive(move || { params.read().get("layout").unwrap() });
+                    let layout = Signal::derive(move || { params.read().get("layout") });
                     let patches: Vec<(String, String)> = vec![
                         ("1.00".into(), "Patch 1.00".into()),
                         ("1.41".into(), "Patch 1.41".into()),
@@ -513,15 +514,15 @@ fn RankingRouter() -> impl MatchNestedRoutes + Clone {
                     let categories = Signal::derive(move || match patch.get().as_str() {
                         "1.00" | "1.41" | "1.50" | "2.00" => {
                             vec![
-                                ("Standard".into(), "Standard".into()),
-                                ("Gravspeed".into(), "Gravspeed".into()),
-                                ("All".into(), "Combined".into()),
+                                (Some("Standard".into()), "Standard".into()),
+                                (Some("Gravspeed".into()), "Gravspeed".into()),
+                                (None, "Combined".into()),
                             ]
                         }
                         "2.13" => {
                             vec![
-                                ("Standard".into(), "Standard".into()),
-                                ("Gravspeed".into(), "Gravspeed".into()),
+                                (Some("Standard".into()), "Standard".into()),
+                                (Some("Gravspeed".into()), "Gravspeed".into()),
                             ]
                         }
                         _ => vec![],

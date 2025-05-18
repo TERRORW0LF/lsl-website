@@ -1,13 +1,13 @@
 use leptos::{either::*, prelude::*};
 use leptos_meta::Title;
 use leptos_router::{
-    components::{A, Form},
+    components::{Form, A},
     hooks::{use_params_map, use_query_map},
 };
 use rust_decimal::Decimal;
 use std::{cmp::Ordering, collections::HashMap};
 
-use crate::server::api::{PartialRun, SectionRuns, get_runs_category};
+use crate::server::api::{get_runs_category, PartialRun, SectionRuns};
 
 #[component]
 pub fn Section(
@@ -76,46 +76,50 @@ pub fn Section(
             </nav>
         </header>
         <div role="definition" id="filters" class="content">
-            <Form method="GET" action="">
-                <div class="group">
-                    <h6>"Patch"</h6>
-                    <div class="options">
-                        <A href="../../../1.00/1/standard">"1.00"</A>
-                        <A href="../../../1.41/1/standard">"1.41"</A>
-                        <A href="../../../1.50/1/standard">"1.50"</A>
-                        <A href="../../../2.00/1/standard">"2.00"</A>
-                        <A href="../../../2.13/1/standard">"Current"</A>
-                    </div>
-                </div>
-                <div class="group">
-                    <h6>"Sort by"</h6>
-                    <div class="options">
-                        <input type="radio" name="sort" value="time" id="time" />
-                        <label for="time">"Time"</label>
+            <div>
+                <div class="inner">
+                    <Form method="GET" action="">
+                        <div class="group">
+                            <h6>"Patch"</h6>
+                            <div class="options">
+                                <A href="../../../1.00/1/standard">"1.00"</A>
+                                <A href="../../../1.41/1/standard">"1.41"</A>
+                                <A href="../../../1.50/1/standard">"1.50"</A>
+                                <A href="../../../2.00/1/standard">"2.00"</A>
+                                <A href="../../../2.13/1/standard">"Current"</A>
+                            </div>
+                        </div>
+                        <div class="group">
+                            <h6>"Sort by"</h6>
+                            <div class="options">
+                                <input type="radio" name="sort" value="time" id="time" />
+                                <label for="time">"Time"</label>
 
-                        <input type="radio" name="sort" value="date" id="date" />
-                        <label for="date">"Date"</label>
-                    </div>
+                                <input type="radio" name="sort" value="date" id="date" />
+                                <label for="date">"Date"</label>
+                            </div>
+                        </div>
+                        <div class="group">
+                            <h6>"Filter"</h6>
+                            <div class="options">
+                                <input type="radio" name="filter" value="none" id="none" />
+                                <label for="none">"None"</label>
+                                <input type="radio" name="filter" value="is_pb" id="is_pb" />
+                                <label for="is_pb">"Is PB"</label>
+                                <input type="radio" name="filter" value="is_wr" id="is_wr" />
+                                <label for="is_wr">"Is WR"</label>
+                                <input type="radio" name="filter" value="was_pb" id="was_pb" />
+                                <label for="was_pb">"Was PB"</label>
+                                <input type="radio" name="filter" value="was_wr" id="was_wr" />
+                                <label for="was_wr">"Was WR"</label>
+                                <input type="radio" name="filter" value="verified" id="verified" />
+                                <label for="verified">"Verified"</label>
+                            </div>
+                        </div>
+                        <input type="submit" class="button" value="Apply" />
+                    </Form>
                 </div>
-                <div class="group">
-                    <h6>"Filter"</h6>
-                    <div class="options">
-                        <input type="radio" name="filter" value="none" id="none" />
-                        <label for="none">"None"</label>
-                        <input type="radio" name="filter" value="is_pb" id="is_pb" />
-                        <label for="is_pb">"Is PB"</label>
-                        <input type="radio" name="filter" value="is_wr" id="is_wr" />
-                        <label for="is_wr">"Is WR"</label>
-                        <input type="radio" name="filter" value="was_pb" id="was_pb" />
-                        <label for="was_pb">"Was PB"</label>
-                        <input type="radio" name="filter" value="was_wr" id="was_wr" />
-                        <label for="was_wr">"Was WR"</label>
-                        <input type="radio" name="filter" value="verified" id="verified" />
-                        <label for="verified">"Verified"</label>
-                    </div>
-                </div>
-                <input type="submit" class="button" value="Apply" />
-            </Form>
+            </div>
         </div>
     }
 }
@@ -281,7 +285,7 @@ pub fn Player(
                         view! {
                             <iframe
                                 src=format!(
-                                    "https://www.youtube.com/embed/{}?autoplay=1&rel=0&modestbranding=1&showinfo=0",
+                                    "https://www.youtube-nocookie.com/embed/{}?autoplay=1&rel=0&modestbranding=1&showinfo=0",
                                     yt_id.get().unwrap(),
                                 )
                                 allowfullscreen

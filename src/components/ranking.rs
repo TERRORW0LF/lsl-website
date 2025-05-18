@@ -49,8 +49,8 @@ pub fn RankingHeader(
 #[component]
 pub fn Ranking(
     #[prop(into)] patch: Signal<String>,
-    #[prop(into)] layout: Signal<String>,
-    #[prop(into)] categories: Signal<Vec<(String, String)>>,
+    #[prop(into)] layout: Signal<Option<String>>,
+    #[prop(into)] categories: Signal<Vec<(Option<String>, String)>>,
 ) -> impl IntoView {
     let rankings = Resource::new(
         move || (patch.get(), layout.get(), categories.get()),
@@ -81,35 +81,48 @@ pub fn Ranking(
                                                 {move || categories.get()[c - 1].1.clone()}
                                             </h3>
                                             <ErrorBoundary fallback=move |_| { "Error fetching data." }>
-                                                <div class="columns">
-                                                    {rs
-                                                        .map(|rs| {
-                                                            rs.into_iter()
-                                                                .map(|r| {
-                                                                    view! {
-                                                                        <div class="grid-row">
-                                                                            <div
-                                                                                class=format!("rank {} bg", r.title.to_string())
-                                                                                class=("rank-1", r.rank == 1)
-                                                                                class=("rank-2", r.rank == 2)
-                                                                                class=("rank-3", r.rank == 3)
-                                                                            >
-                                                                                <h5>{r.rank}</h5>
-                                                                            </div>
-                                                                            <h4 class="name">{r.username}</h4>
-                                                                            <div class="rating row narrow">
-                                                                                <h4 class=format!(
-                                                                                    "{} color",
-                                                                                    r.title.to_string(),
-                                                                                )>{format!("{}", r.rating.round())}</h4>
-                                                                                <h6>"RP"</h6>
-                                                                            </div>
-                                                                        </div>
-                                                                    }
-                                                                })
-                                                                .collect_view()
-                                                        })}
+                                                <div role="definition" id="more" class="content">
+                                                    <div>
+                                                        <div class="columns inner">
+                                                            {rs
+                                                                .map(|rs| {
+                                                                    rs.into_iter()
+                                                                        .map(|r| {
+                                                                            view! {
+                                                                                <div class="grid-row">
+                                                                                    <div
+                                                                                        class=format!("rank {} bg", r.title.to_string())
+                                                                                        class=("rank-1", r.rank == 1)
+                                                                                        class=("rank-2", r.rank == 2)
+                                                                                        class=("rank-3", r.rank == 3)
+                                                                                    >
+                                                                                        <h5>{r.rank}</h5>
+                                                                                    </div>
+                                                                                    <A href=format!("/user/{}/ranking", r.user_id)>
+                                                                                        <h4 class="name">{r.username}</h4>
+                                                                                    </A>
+                                                                                    <div class="rating row narrow">
+                                                                                        <h4 class=format!(
+                                                                                            "{} color",
+                                                                                            r.title.to_string(),
+                                                                                        )>{format!("{}", r.rating.round())}</h4>
+                                                                                        <h6>"RP"</h6>
+                                                                                    </div>
+                                                                                </div>
+                                                                            }
+                                                                        })
+                                                                        .collect_view()
+                                                                })}
+                                                        </div>
+                                                    </div>
                                                 </div>
+                                                <details>
+                                                    <summary>
+                                                        <span role="term" aria-details="more" class="icon">
+                                                            ""
+                                                        </span>
+                                                    </summary>
+                                                </details>
                                             </ErrorBoundary>
                                         </div>
                                     }
