@@ -54,7 +54,7 @@ async fn server_handler(
 
 #[tokio::main]
 async fn main() {
-    simple_logger::init_with_level(log::Level::Debug).expect("couldn't initialize logging");
+    simple_logger::init_with_env().expect("couldn't initialize logging");
 
     let pool = connect_to_database().await;
     let session_config = SessionConfig::default().with_table_name("session");

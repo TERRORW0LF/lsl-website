@@ -1,4 +1,4 @@
-use crate::server::api::{ApiError, RunFilters, get_runs_user};
+use crate::server::api::{get_runs_user, ApiError, RunFilters};
 use chrono::{DateTime, Local};
 use http::HeaderValue;
 use leptos::prelude::{server, server_fn::codec::PostUrl};
@@ -111,8 +111,8 @@ pub mod ssr {
     use super::{Permissions, Rank};
     pub use super::{User, UserPasshash};
     pub use argon2::{
+        password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
         Argon2, PasswordHash, PasswordVerifier,
-        password_hash::{PasswordHasher, SaltString, rand_core::OsRng},
     };
     pub use async_trait::async_trait;
     pub use axum_session_auth::{Authentication, HasPermission};
@@ -121,16 +121,15 @@ pub mod ssr {
     use oauth2::basic::BasicClient;
     use sqlx::types::chrono::{DateTime, Local};
     pub use sqlx::{
-        PgPool,
         postgres::{PgConnectOptions, PgPoolOptions},
+        PgPool,
     };
     use std::collections::HashSet;
     pub use std::env;
     pub type AuthSession = axum_session_auth::AuthSession<User, i64, SessionPgPool, PgPool>;
 
     pub async fn connect_to_database() -> PgPool {
-        let mut connect_opts = PgConnectOptions::new();
-        connect_opts = connect_opts
+        let connect_opts = PgConnectOptions::new()
             .database(&std::env::var("PG_DB").unwrap())
             .username(&std::env::var("PG_USER").unwrap())
             .password(&std::env::var("PG_PASS").unwrap())
@@ -521,8 +520,8 @@ pub async fn update_bio(bio: Option<String>, redirect: Option<String>) -> Result
 #[server(UpdatePfp, prefix="/api", endpoint="user/update/avatar", input=MultipartFormData)]
 pub async fn update_pfp(data: MultipartData) -> Result<(), ApiError> {
     use crate::server::auth::ssr::{auth, pool};
-    use rand::{Rng, distributions::Alphanumeric, thread_rng};
-    use std::fs::{File, remove_file};
+    use rand::{distributions::Alphanumeric, thread_rng, Rng};
+    use std::fs::{remove_file, File};
     use std::io::{BufWriter, Write};
 
     let auth = auth()?;
@@ -695,11 +694,7 @@ pub async fn submit(
         .await
         .map_err(|_| ApiError::ServerError("Database insert failed".into()))?;
 
-        leptos_axum::redirect(&format!(
-            "/leaderboard/2.13/{layout}/{}/{}",
-            category.to_lowercase(),
-            section_id.id
-        ));
+        leptos_axum::redirect(&format!("/leaderboard/map/{}", section_id.id));
         Ok(())
     }
 }
@@ -804,7 +799,7 @@ pub async fn discord_add() -> Result<(), ApiError> {
 #[server(DiscordAuth, prefix="/api", endpoint="user/discord/auth", input=GetUrl)]
 pub async fn discord_auth(code: String, state: String) -> Result<(), ApiError> {
     use self::ssr::*;
-    use oauth2::{AuthorizationCode, CsrfToken, TokenResponse, reqwest::async_http_client};
+    use oauth2::{reqwest::async_http_client, AuthorizationCode, CsrfToken, TokenResponse};
 
     leptos_axum::redirect("/user/@me/dashboard");
 

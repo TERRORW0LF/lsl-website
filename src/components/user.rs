@@ -1,14 +1,14 @@
 use crate::{
     app::UserResource,
     server::{
-        api::{ApiError, RunFilters, get_maps, get_runs_user, get_user},
+        api::{get_maps, get_runs_user, get_user, ApiError, RunFilters},
         auth::Delete,
     },
 };
 use chrono::{Local, NaiveDateTime, TimeZone};
 use leptos::{either::Either, prelude::*};
 use leptos_router::{
-    components::{A, Form, Outlet},
+    components::{Form, Outlet, A},
     hooks::{use_params_map, use_query_map},
 };
 
@@ -282,11 +282,11 @@ pub fn ManageRuns() -> impl IntoView {
                             view! {
                                 <A
                                     class:arrow=true
-                                    href=format!(
-                                        "{}$page={}",
-                                        params.get().to_query_string(),
-                                        offset.get() - 1,
-                                    )
+                                    href=move || {
+                                        let mut map = params.get();
+                                        map.replace("page", (offset.get() - 1).to_string());
+                                        map.to_query_string()
+                                    }
                                 >
                                     "<"
                                 </A>
@@ -296,7 +296,9 @@ pub fn ManageRuns() -> impl IntoView {
                 }} <div class="page">{move || offset.get() + 1}</div>
                 <A
                     href=move || {
-                        format!("{}&page={}", params.get().to_query_string(), offset.get() + 1)
+                        let mut map = params.get();
+                        map.replace("page", (offset.get() + 1).to_string());
+                        map.to_query_string()
                     }
                     class:arrow=true
                     class:disabled=move || {
