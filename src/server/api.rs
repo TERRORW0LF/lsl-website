@@ -81,6 +81,7 @@ pub enum Title {
 pub struct RunFilters {
     pub before: Option<DateTime<Local>>,
     pub after: Option<DateTime<Local>>,
+    pub patch: Option<String>,
     pub layout: Option<String>,
     pub category: Option<String>,
     pub map: Option<String>,
@@ -95,6 +96,7 @@ impl Default for RunFilters {
         Self {
             before: None,
             after: None,
+            patch: None,
             layout: None,
             category: None,
             map: None,
@@ -295,27 +297,9 @@ pub async fn get_runs_category(
     Ok(runs)
 }
 
-#[server(GetRunsLatest, prefix="/api", endpoint="runs/latest", input=GetUrl)]
-pub async fn get_runs_latest(offset: i32) -> Result<Vec<Run>, ApiError> {
-    let pool = crate::server::auth::ssr::pool()?;
-    sqlx::query_as::<_, Run>(
-        r#"SELECT run.id, run.created_at, section_id, patch, layout, 
-            category, map, user_id, "name", time, proof, yt_id, verified, is_pb, is_wr
-        FROM run
-        INNER JOIN section s ON section_id = s.id
-        INNER JOIN "user" u ON user_id = u.id
-        ORDER BY run.created_at DESC
-        LIMIT 50 OFFSET $1;"#,
-    )
-    .bind(offset)
-    .fetch_all(&pool)
-    .await
-    .or(Err(ApiError::ServerError("Database lookup failed".into())))
-}
-
-#[server(GetRunsUser, prefix="/api", endpoint="runs/user", input=GetUrl)]
-pub async fn get_runs_user(
-    user_id: i64,
+#[server(GetRuns, prefix="/api", endpoint="runs/user", input=GetUrl)]
+pub async fn get_runs(
+    user_id: Option<i64>,
     filter: RunFilters,
     offset: i32,
 ) -> Result<Vec<Run>, ApiError> {
@@ -328,14 +312,19 @@ pub async fn get_runs_user(
         FROM run
         INNER JOIN section s ON section_id = s.id
         INNER JOIN "user" u ON user_id = u.id 
-        WHERE patch = '2.13'"#,
+        WHERE 1 = 1"#,
     );
-    query.push(" AND user_id = ").push_bind(user_id);
+    if let Some(user) = user_id {
+        query.push(" AND user_id = ").push_bind(user);
+    }
     if let Some(before) = filter.before {
         query.push(" AND run.created_at <= ").push_bind(before);
     }
     if let Some(after) = filter.after {
         query.push(" AND run.created_at >= ").push_bind(after);
+    }
+    if let Some(patch) = filter.patch {
+        query.push(" AND patch = ").push_bind(patch);
     }
     if let Some(layout) = filter.layout {
         query.push(" AND layout = ").push_bind(layout);

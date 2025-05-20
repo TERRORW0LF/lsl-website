@@ -1,6 +1,6 @@
 use crate::{
     components::{
-        activity::Activity,
+        activity::{Activity, Submits},
         auth::{Login, Register, Submit},
         dash::{Avatar, Bio, Dashboard, DiscordList, Password, Username},
         error_template::{AppError, ErrorTemplate},
@@ -243,7 +243,8 @@ fn AppRouter() -> impl IntoView {
                 }
             />
             <Route path=path!("faq") view=FAQ />
-            <Route path=path!("runs") view=Activity />
+            <Route path=path!("runs") view=Submits />
+            <Route path=path!("activity") view=Activity />
             <LeaderboardRouter />
             <RankingRouter />
             <Route path=path!("register") view=Register />

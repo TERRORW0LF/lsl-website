@@ -6,11 +6,12 @@ use leptos::{
 use leptos_meta::Title;
 use leptos_router::components::A;
 
-use crate::server::api::{get_activity_latest, get_potd, get_runs_latest};
+use crate::server::api::{RunFilters, get_activity_latest, get_potd, get_runs};
 
 #[component]
 pub fn HomePage() -> impl IntoView {
-    let runs = OnceResource::new(get_runs_latest(0));
+    let filter = RunFilters::default();
+    let runs = OnceResource::new(get_runs(None, filter, 0));
     let rankings = OnceResource::new(get_activity_latest(0));
     let potd = OnceResource::new(get_potd());
 
@@ -157,7 +158,7 @@ pub fn HomePage() -> impl IntoView {
                                 })
                         }}
                     </Suspense>
-                    <A href="" attr:class="button secondary">
+                    <A href="/activity" attr:class="button secondary">
                         "Show More"
                     </A>
                 </div>
@@ -216,7 +217,7 @@ pub fn HomePage() -> impl IntoView {
                                 })
                         }}
                     </Suspense>
-                    <A href="" attr:class="button secondary">
+                    <A href="/runs" attr:class="button secondary">
                         "Show More"
                     </A>
                 </div>

@@ -1,14 +1,14 @@
 use crate::{
     app::UserResource,
     server::{
-        api::{get_maps, get_runs_user, get_user, ApiError, RunFilters},
+        api::{ApiError, RunFilters, get_maps, get_runs, get_user},
         auth::Delete,
     },
 };
 use chrono::{Local, NaiveDateTime, TimeZone};
 use leptos::{either::Either, prelude::*};
 use leptos_router::{
-    components::{Form, Outlet, A},
+    components::{A, Form, Outlet},
     hooks::{use_params_map, use_query_map},
 };
 
@@ -55,6 +55,7 @@ pub fn ManageRuns() -> impl IntoView {
         params.with(|p| RunFilters {
             sort: p.get("sort").unwrap_or("date".into()),
             ascending: !p.get("order").is_none_or(|s| s == "desc"),
+            patch: Some("2.13".into()),
             layout: p.get("layout"),
             category: p.get("category"),
             map: p.get("map"),
@@ -93,12 +94,12 @@ pub fn ManageRuns() -> impl IntoView {
         move || (filters.get(), delete.version().get(), offset.get()),
         move |f| async move {
             let user = user.await?;
-            get_runs_user(user.id, f.0, f.2 * 50).await
+            get_runs(Some(user.id), f.0, f.2 * 50).await
         },
     );
 
     view! {
-        <section id="manage-runs">
+        <section id="runs" class="manage">
             <Outlet />
             <details>
                 <summary>
@@ -108,116 +109,128 @@ pub fn ManageRuns() -> impl IntoView {
                 </summary>
             </details>
             <div role="definition" id="filters" class="content">
-                <Form method="GET" action="">
-                    <div class="row">
-                        <div class="input-box">
-                            <label for="sort" class="indicator">
-                                "Sort By"
-                            </label>
-                            <select class="select" name="sort" id="sort">
-                                <option value="date">"Date"</option>
-                                <option value="time">"Time"</option>
-                                <option value="section">"Section"</option>
-                            </select>
+                <div>
+                    <Form method="GET" action="" attr:class="inner">
+                        <div class="row">
+                            <div class="input-box">
+                                <label for="sort" class="indicator">
+                                    "Sort By"
+                                </label>
+                                <select class="select" name="sort" id="sort">
+                                    <option value="date">"Date"</option>
+                                    <option value="time">"Time"</option>
+                                    <option value="section">"Section"</option>
+                                </select>
+                            </div>
+                            <div class="input-box">
+                                <label for="order" class="indicator">
+                                    "Order By"
+                                </label>
+                                <select class="select" name="order" id="order">
+                                    <option value="asc">"Ascending"</option>
+                                    <option value="desc">"Descending"</option>
+                                </select>
+                            </div>
+                            <div class="input-box">
+                                <label for="before" class="indicator">
+                                    "Before"
+                                </label>
+                                <input
+                                    class="select"
+                                    type="datetime-local"
+                                    name="before"
+                                    id="before"
+                                />
+                            </div>
+                            <div class="input-box">
+                                <label for="after" class="indicator">
+                                    "After"
+                                </label>
+                                <input
+                                    class="select"
+                                    type="datetime-local"
+                                    name="after"
+                                    id="after"
+                                />
+                            </div>
+                            <div class="input-box">
+                                <label for="faster" class="indicator">
+                                    "Faster Than"
+                                </label>
+                                <input
+                                    class="select"
+                                    type="number"
+                                    name="faster"
+                                    id="faster"
+                                    min="0"
+                                    step="0.001"
+                                />
+                            </div>
+                            <div class="input-box">
+                                <label for="slower" class="indicator">
+                                    "Slower Than"
+                                </label>
+                                <input
+                                    class="select"
+                                    type="number"
+                                    name="slower"
+                                    id="slower"
+                                    min="0"
+                                    step="0.001"
+                                />
+                            </div>
+                            <div class="input-box">
+                                <label for="layout" class="indicator">
+                                    "Layout"
+                                </label>
+                                <select class="select" name="layout" id="layout">
+                                    <option value="">"All"</option>
+                                    <option value="1">"Layout 1"</option>
+                                    <option value="2">"Layout 2"</option>
+                                    <option value="3">"Layout 3"</option>
+                                    <option value="4">"Layout 4"</option>
+                                    <option value="5">"Layout 5"</option>
+                                </select>
+                            </div>
+                            <div class="input-box">
+                                <label for="category" class="indicator">
+                                    "Category"
+                                </label>
+                                <select class="select" name="category" id="category">
+                                    <option value="">"All"</option>
+                                    <option value="Standard">"Standard"</option>
+                                    <option value="Gravspeed">"Gravspeed"</option>
+                                </select>
+                            </div>
+                            <div class="input-box">
+                                <label for="map" class="indicator">
+                                    "Map"
+                                </label>
+                                <input class="select" list="maps" name="map" id="map" />
+                                <datalist id="maps">
+                                    <Await future=get_maps() let:maps>
+                                        {match maps {
+                                            Ok(v) => {
+                                                Either::Left(
+                                                    v
+                                                        .into_iter()
+                                                        .map(|m| {
+                                                            view! {
+                                                                <option value=m.name.clone()>{m.name.clone()}</option>
+                                                            }
+                                                        })
+                                                        .collect_view(),
+                                                )
+                                            }
+                                            Err(_) => Either::Right(view! {}),
+                                        }}
+                                    </Await>
+                                </datalist>
+                            </div>
                         </div>
-                        <div class="input-box">
-                            <label for="order" class="indicator">
-                                "Order By"
-                            </label>
-                            <select class="select" name="order" id="order">
-                                <option value="asc">"Ascending"</option>
-                                <option value="desc">"Descending"</option>
-                            </select>
-                        </div>
-                        <div class="input-box">
-                            <label for="before" class="indicator">
-                                "Before"
-                            </label>
-                            <input class="select" type="datetime-local" name="before" id="before" />
-                        </div>
-                        <div class="input-box">
-                            <label for="after" class="indicator">
-                                "After"
-                            </label>
-                            <input class="select" type="datetime-local" name="after" id="after" />
-                        </div>
-                        <div class="input-box">
-                            <label for="faster" class="indicator">
-                                "Faster Than"
-                            </label>
-                            <input
-                                class="select"
-                                type="number"
-                                name="faster"
-                                id="faster"
-                                min="0"
-                                step="0.001"
-                            />
-                        </div>
-                        <div class="input-box">
-                            <label for="slower" class="indicator">
-                                "Slower Than"
-                            </label>
-                            <input
-                                class="select"
-                                type="number"
-                                name="slower"
-                                id="slower"
-                                min="0"
-                                step="0.001"
-                            />
-                        </div>
-                        <div class="input-box">
-                            <label for="layout" class="indicator">
-                                "Layout"
-                            </label>
-                            <select class="select" name="layout" id="layout">
-                                <option value="">"All"</option>
-                                <option value="1">"Layout 1"</option>
-                                <option value="2">"Layout 2"</option>
-                                <option value="3">"Layout 3"</option>
-                                <option value="4">"Layout 4"</option>
-                                <option value="5">"Layout 5"</option>
-                            </select>
-                        </div>
-                        <div class="input-box">
-                            <label for="category" class="indicator">
-                                "Category"
-                            </label>
-                            <select class="select" name="category" id="category">
-                                <option value="">"All"</option>
-                                <option value="Standard">"Standard"</option>
-                                <option value="Gravspeed">"Gravspeed"</option>
-                            </select>
-                        </div>
-                        <div class="input-box">
-                            <label for="map" class="indicator">
-                                "Map"
-                            </label>
-                            <input class="select" list="maps" name="map" id="map" />
-                            <datalist id="maps">
-                                <Await future=get_maps() let:maps>
-                                    {match maps {
-                                        Ok(v) => {
-                                            Either::Left(
-                                                v
-                                                    .into_iter()
-                                                    .map(|m| {
-                                                        view! {
-                                                            <option value=m.name.clone()>{m.name.clone()}</option>
-                                                        }
-                                                    })
-                                                    .collect_view(),
-                                            )
-                                        }
-                                        Err(_) => Either::Right(view! {}),
-                                    }}
-                                </Await>
-                            </datalist>
-                        </div>
-                    </div>
-                    <input type="submit" class="button" value="Apply" />
-                </Form>
+                        <input type="submit" class="button" value="Apply" />
+                    </Form>
+                </div>
             </div>
             <div class="grid">
                 <span class="heading">"id"</span>
