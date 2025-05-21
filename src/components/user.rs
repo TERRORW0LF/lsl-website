@@ -53,8 +53,7 @@ pub fn ManageRuns() -> impl IntoView {
     let params = use_query_map();
     let filters = Signal::derive(move || {
         params.with(|p| RunFilters {
-            sort: p.get("sort").unwrap_or("date".into()),
-            ascending: !p.get("order").is_none_or(|s| s == "desc"),
+            user: None,
             patch: Some("2.13".into()),
             layout: p.get("layout"),
             category: p.get("category"),
@@ -77,6 +76,8 @@ pub fn ManageRuns() -> impl IntoView {
                     Local.from_local_datetime(&ndt).earliest()
                 })
                 .flatten(),
+            sort: p.get("sort").unwrap_or("date".into()),
+            ascending: !p.get("order").is_none_or(|s| s == "desc"),
         })
     });
     let offset = Signal::derive(move || {
@@ -92,14 +93,15 @@ pub fn ManageRuns() -> impl IntoView {
     let user = expect_context::<UserResource>();
     let runs = Resource::new(
         move || (filters.get(), delete.version().get(), offset.get()),
-        move |f| async move {
+        move |mut f| async move {
             let user = user.await?;
-            get_runs(Some(user.id), f.0, f.2 * 50).await
+            f.0.user = Some(user.id);
+            get_runs(f.0, f.2 * 50).await
         },
     );
 
     view! {
-        <section id="runs" class="manage">
+        <section id="filter-list" class="manage">
             <Outlet />
             <details>
                 <summary>
@@ -128,7 +130,9 @@ pub fn ManageRuns() -> impl IntoView {
                                 </label>
                                 <select class="select" name="order" id="order">
                                     <option value="asc">"Ascending"</option>
-                                    <option value="desc">"Descending"</option>
+                                    <option selected value="desc">
+                                        "Descending"
+                                    </option>
                                 </select>
                             </div>
                             <div class="input-box">

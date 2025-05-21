@@ -1,4 +1,4 @@
-use crate::server::api::{RunFilters, get_maps, get_runs};
+use crate::server::api::{ActivityFilters, RunFilters, get_activity, get_maps, get_runs};
 use chrono::{Local, NaiveDateTime, TimeZone};
 use leptos::{either::Either, prelude::*};
 use leptos_router::{
@@ -8,10 +8,287 @@ use leptos_router::{
 
 #[component]
 pub fn Activity() -> impl IntoView {
+    let params = use_query_map();
+    let filters = Signal::derive(move || {
+        params.with(|p| ActivityFilters {
+            event: p.get("event"),
+            user: p.get("user").map(|v| v.parse::<i64>().ok()).flatten(),
+            patch: p.get("patch"),
+            layout: p.get("layout"),
+            category: p.get("category"),
+            before: p
+                .get("before")
+                .map(|s| {
+                    let st = s.chars().take(16).collect::<String>();
+                    let ndt = NaiveDateTime::parse_from_str(&st, "%Y-%m-%dT%H:%M").ok()?;
+                    Local.from_local_datetime(&ndt).latest()
+                })
+                .flatten(),
+            after: p
+                .get("after")
+                .map(|s| {
+                    let st = s.chars().take(16).collect::<String>();
+                    let ndt = NaiveDateTime::parse_from_str(&st, "%Y-%m-%dT%H:%M").ok()?;
+                    Local.from_local_datetime(&ndt).earliest()
+                })
+                .flatten(),
+            sort: p.get("sort").unwrap_or("date".into()),
+            ascending: !p.get("order").is_none_or(|s| s == "desc"),
+        })
+    });
+    let offset = Signal::derive(move || {
+        params
+            .get()
+            .get("page")
+            .unwrap_or(String::from("0"))
+            .parse::<i32>()
+            .unwrap()
+    });
+    let activities = Resource::new(
+        move || (filters.get(), offset.get()),
+        move |f| async move { get_activity(f.0, f.1 * 50).await },
+    );
+
     view! {
-        <section id="activity">
-            <h1>"Coming"</h1>
-            <img src="/soon.jpg" alt="soon tm" />
+        <section id="filter-list" class="activity">
+            <details>
+                <summary>
+                    <span role="term" aria-details="filters" class="icon">
+                        "Show Filters"
+                    </span>
+                </summary>
+            </details>
+            <div role="definition" id="filters" class="content">
+                <div>
+                    <Form method="GET" action="" attr:class="inner">
+                        <div class="row">
+                            <div class="input-box">
+                                <label for="sort" class="indicator">
+                                    "Sort By"
+                                </label>
+                                <select class="select" name="sort" id="sort">
+                                    <option value="date">"Date"</option>
+                                    <option value="section">"Section"</option>
+                                </select>
+                            </div>
+                            <div class="input-box">
+                                <label for="order" class="indicator">
+                                    "Order By"
+                                </label>
+                                <select class="select" name="order" id="order">
+                                    <option value="asc">"Ascending"</option>
+                                    <option selected value="desc">
+                                        "Descending"
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="input-box">
+                                <label for="before" class="indicator">
+                                    "Before"
+                                </label>
+                                <input
+                                    class="select"
+                                    type="datetime-local"
+                                    name="before"
+                                    id="before"
+                                />
+                            </div>
+                            <div class="input-box">
+                                <label for="after" class="indicator">
+                                    "After"
+                                </label>
+                                <input
+                                    class="select"
+                                    type="datetime-local"
+                                    name="after"
+                                    id="after"
+                                />
+                            </div>
+                            <div class="input-box">
+                                <label for="event" class="indicator">
+                                    "Event"
+                                </label>
+                                <select class="select" name="event" id="event">
+                                    <option value="">"All"</option>
+                                    <option value="join">"User Joined"</option>
+                                    <option value="rank">"Rank changed"</option>
+                                    <option value="title">"Title changed"</option>
+                                </select>
+                            </div>
+                            <div class="input-box">
+                                <label for="user" class="indicator">
+                                    "User ID"
+                                </label>
+                                <input
+                                    class="select"
+                                    type="number"
+                                    name="user"
+                                    id="user"
+                                    min="1"
+                                    step="1"
+                                />
+                            </div>
+                            <div class="input-box">
+                                <label for="patch" class="indicator">
+                                    "Patch"
+                                </label>
+                                <select class="select" name="patch" id="patch">
+                                    <option value="">"All"</option>
+                                    <option value="1.00">"1.00"</option>
+                                    <option value="1.41">"1.41"</option>
+                                    <option value="1.50">"1.50"</option>
+                                    <option value="2.00">"2.00"</option>
+                                    <option value="2.13">"Current"</option>
+                                </select>
+                            </div>
+                            <div class="input-box">
+                                <label for="layout" class="indicator">
+                                    "Layout"
+                                </label>
+                                <select class="select" name="layout" id="layout">
+                                    <option value="">"All"</option>
+                                    <option value="1">"Layout 1"</option>
+                                    <option value="2">"Layout 2"</option>
+                                    <option value="3">"Layout 3"</option>
+                                    <option value="4">"Layout 4"</option>
+                                    <option value="5">"Layout 5"</option>
+                                </select>
+                            </div>
+                            <div class="input-box">
+                                <label for="category" class="indicator">
+                                    "Category"
+                                </label>
+                                <select class="select" name="category" id="category">
+                                    <option value="">"All"</option>
+                                    <option value="Standard">"Standard"</option>
+                                    <option value="Gravspeed">"Gravspeed"</option>
+                                </select>
+                            </div>
+                        </div>
+                        <input type="submit" class="button" value="Apply" />
+                    </Form>
+                </div>
+            </div>
+            <div class="grid">
+                <span class="heading">"date"</span>
+                <span class="heading">"user"</span>
+                <span class="heading">"patch"</span>
+                <span class="heading">"layout"</span>
+                <span class="heading">"category"</span>
+                <span class="heading">"old title"</span>
+                <span class="heading">"new title"</span>
+                <span class="heading">"old rank"</span>
+                <span class="heading">"new rank"</span>
+                <div class="divider header"></div>
+                <Suspense fallback=|| { "Fetching Runs" }>
+                    <ErrorBoundary fallback=|_| {
+                        view! { <div class="error-display">"You are not logged in"</div> }
+                    }>
+                        {move || {
+                            activities
+                                .get()
+                                .map(|res| {
+                                    res.map(|runs| {
+                                        runs.into_iter()
+                                            .map(|r| {
+                                                view! {
+                                                    <span>
+                                                        {format!("{}", r.created_at.format("%d/%m/%Y %H:%M"))}
+                                                    </span>
+                                                    <span>{r.username}</span>
+                                                    <span>
+                                                        {r
+                                                            .patch
+                                                            .map(|v| format!("Patch {v}"))
+                                                            .unwrap_or("-".into())}
+                                                    </span>
+                                                    <span>
+                                                        {r
+                                                            .layout
+                                                            .map(|v| format!("Layout {v}"))
+                                                            .unwrap_or("-".into())}
+                                                    </span>
+                                                    <span>{r.category.unwrap_or("-".into())}</span>
+                                                    <span class=format!(
+                                                        "{} color",
+                                                        r.title_old.map(|v| v.to_string()).unwrap_or_default(),
+                                                    )>
+                                                        {r
+                                                            .title_old
+                                                            .clone()
+                                                            .map(|v| v.to_string())
+                                                            .unwrap_or("-".into())}
+                                                    </span>
+                                                    <span class=format!(
+                                                        "{} color",
+                                                        r.title_new.map(|v| v.to_string()).unwrap_or_default(),
+                                                    )>
+                                                        {r
+                                                            .title_new
+                                                            .clone()
+                                                            .map(|v| v.to_string())
+                                                            .unwrap_or("-".into())}
+                                                    </span>
+                                                    <span class=format!(
+                                                        "rank-{} color",
+                                                        r.rank_old.map(|v| v.to_string()).unwrap_or_default(),
+                                                    )>
+                                                        {r.rank_old.map(|v| format!("#{v}")).unwrap_or("-".into())}
+                                                    </span>
+                                                    <span class=format!(
+                                                        "rank-{} color",
+                                                        r.rank_new.map(|v| v.to_string()).unwrap_or_default(),
+                                                    )>
+                                                        {r.rank_new.map(|v| format!("#{v}")).unwrap_or("-".into())}
+                                                    </span>
+                                                    <div class="divider"></div>
+                                                }
+                                            })
+                                            .collect::<Vec<_>>()
+                                    })
+                                })
+                        }}
+                    </ErrorBoundary>
+                </Suspense>
+            </div>
+            <div class="pages row">
+                {move || {
+                    if offset.read() == 0 {
+                        Either::Left(view! { <div class="arrow disabled">"<"</div> })
+                    } else {
+                        Either::Right(
+                            view! {
+                                <A
+                                    class:arrow=true
+                                    href=move || {
+                                        let mut map = params.get();
+                                        map.replace("page", (offset.get() - 1).to_string());
+                                        map.to_query_string()
+                                    }
+                                >
+                                    "<"
+                                </A>
+                            },
+                        )
+                    }
+                }} <div class="page">{move || offset.get() + 1}</div>
+                <A
+                    href=move || {
+                        let mut map = params.get();
+                        map.replace("page", (offset.get() + 1).to_string());
+                        map.to_query_string()
+                    }
+                    class:arrow=true
+                    class:disabled=move || {
+                        activities
+                            .get()
+                            .map(|res| res.map(|r| r.len()).unwrap_or_default())
+                            .unwrap_or_default() < 50
+                    }
+                >
+                    ">"
+                </A>
+            </div>
         </section>
     }
 }
@@ -21,8 +298,7 @@ pub fn Submits() -> impl IntoView {
     let params = use_query_map();
     let filters = Signal::derive(move || {
         params.with(|p| RunFilters {
-            sort: p.get("sort").unwrap_or("date".into()),
-            ascending: !p.get("order").is_none_or(|s| s == "desc"),
+            user: p.get("user").map(|v| v.parse::<i64>().ok()).flatten(),
             patch: p.get("patch"),
             layout: p.get("layout"),
             category: p.get("category"),
@@ -45,6 +321,8 @@ pub fn Submits() -> impl IntoView {
                     Local.from_local_datetime(&ndt).earliest()
                 })
                 .flatten(),
+            sort: p.get("sort").unwrap_or("date".into()),
+            ascending: !p.get("order").is_none_or(|s| s == "desc"),
         })
     });
     let offset = Signal::derive(move || {
@@ -57,11 +335,11 @@ pub fn Submits() -> impl IntoView {
     });
     let runs = Resource::new(
         move || (filters.get(), offset.get()),
-        move |f| async move { get_runs(None, f.0, f.1 * 50).await },
+        move |f| async move { get_runs(f.0, f.1 * 50).await },
     );
 
     view! {
-        <section id="runs">
+        <section id="filter-list" class="runs">
             <details>
                 <summary>
                     <span role="term" aria-details="filters" class="icon">
@@ -89,7 +367,9 @@ pub fn Submits() -> impl IntoView {
                                 </label>
                                 <select class="select" name="order" id="order">
                                     <option value="asc">"Ascending"</option>
-                                    <option value="desc">"Descending"</option>
+                                    <option selected value="desc">
+                                        "Descending"
+                                    </option>
                                 </select>
                             </div>
                             <div class="input-box">
@@ -138,6 +418,19 @@ pub fn Submits() -> impl IntoView {
                                     id="slower"
                                     min="0"
                                     step="0.001"
+                                />
+                            </div>
+                            <div class="input-box">
+                                <label for="user" class="indicator">
+                                    "User ID"
+                                </label>
+                                <input
+                                    class="select"
+                                    type="number"
+                                    name="user"
+                                    id="user"
+                                    min="1"
+                                    step="1"
                                 />
                             </div>
                             <div class="input-box">

@@ -1,8 +1,8 @@
 use super::auth::User;
 use chrono::{DateTime, Local};
-use http::{header::CACHE_CONTROL, HeaderValue};
+use http::{HeaderValue, header::CACHE_CONTROL};
 use leptos::prelude::{
-    expect_context, server, server_fn::codec::GetUrl, FromServerFnError, ServerFnErrorErr,
+    FromServerFnError, ServerFnErrorErr, expect_context, server, server_fn::codec::GetUrl,
 };
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -79,14 +79,15 @@ pub enum Title {
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
 pub struct RunFilters {
-    pub before: Option<DateTime<Local>>,
-    pub after: Option<DateTime<Local>>,
+    pub user: Option<i64>,
     pub patch: Option<String>,
     pub layout: Option<String>,
     pub category: Option<String>,
     pub map: Option<String>,
     pub faster: Option<Decimal>,
     pub slower: Option<Decimal>,
+    pub before: Option<DateTime<Local>>,
+    pub after: Option<DateTime<Local>>,
     pub sort: String,
     pub ascending: bool,
 }
@@ -94,14 +95,44 @@ pub struct RunFilters {
 impl Default for RunFilters {
     fn default() -> Self {
         Self {
-            before: None,
-            after: None,
+            user: None,
             patch: None,
             layout: None,
             category: None,
             map: None,
             faster: None,
             slower: None,
+            before: None,
+            after: None,
+            sort: String::from("created_at"),
+            ascending: false,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
+pub struct ActivityFilters {
+    pub event: Option<String>,
+    pub user: Option<i64>,
+    pub patch: Option<String>,
+    pub layout: Option<String>,
+    pub category: Option<String>,
+    pub before: Option<DateTime<Local>>,
+    pub after: Option<DateTime<Local>>,
+    pub sort: String,
+    pub ascending: bool,
+}
+
+impl Default for ActivityFilters {
+    fn default() -> Self {
+        Self {
+            event: None,
+            user: None,
+            patch: None,
+            layout: None,
+            category: None,
+            before: None,
+            after: None,
             sort: String::from("created_at"),
             ascending: false,
         }
@@ -298,11 +329,7 @@ pub async fn get_runs_category(
 }
 
 #[server(GetRuns, prefix="/api", endpoint="runs/user", input=GetUrl)]
-pub async fn get_runs(
-    user_id: Option<i64>,
-    filter: RunFilters,
-    offset: i32,
-) -> Result<Vec<Run>, ApiError> {
+pub async fn get_runs(filter: RunFilters, offset: i32) -> Result<Vec<Run>, ApiError> {
     use sqlx::{Postgres, QueryBuilder};
 
     let pool = crate::server::auth::ssr::pool()?;
@@ -314,7 +341,7 @@ pub async fn get_runs(
         INNER JOIN "user" u ON user_id = u.id 
         WHERE 1 = 1"#,
     );
-    if let Some(user) = user_id {
+    if let Some(user) = filter.user {
         query.push(" AND user_id = ").push_bind(user);
     }
     if let Some(before) = filter.before {
@@ -341,16 +368,16 @@ pub async fn get_runs(
     if let Some(slower) = filter.slower {
         query.push(" AND time >= ").push_bind(slower);
     }
+    let asc = match filter.ascending {
+        true => "ASC",
+        false => "DESC",
+    };
     query
         .push(" ORDER BY ")
         .push(match filter.sort.as_str() {
-            "section" => "layout, category, map",
-            "time" => "time",
-            _ => "run.created_at",
-        })
-        .push(match filter.ascending {
-            true => " ASC",
-            false => " DESC",
+            "section" => format!("patch {asc}, layout {asc}, category {asc}, map {asc}"),
+            "time" => format!("time {asc}"),
+            _ => format!("run.created_at {asc}"),
         })
         .push(" LIMIT 50 OFFSET ")
         .push_bind(offset)
@@ -458,21 +485,63 @@ pub async fn get_potd() -> Result<User, ApiError> {
 }
 
 #[server(GetActivity, prefix="/api", endpoint="activity/get", input=GetUrl)]
-pub async fn get_activity_latest(offset: i32) -> Result<Vec<Activity>, ApiError> {
+pub async fn get_activity(filter: ActivityFilters, offset: i32) -> Result<Vec<Activity>, ApiError> {
+    use sqlx::{Postgres, QueryBuilder};
+
     let pool = crate::server::auth::ssr::pool()?;
-    sqlx::query_as::<_, Activity>(
+    let mut query = QueryBuilder::<Postgres>::new(
         r#"SELECT a.id, a.user_id, name, rank_id, patch, layout, category, 
                     title_old, title_new, rank_old, rank_new, a.created_at
                 FROM activity a
                 INNER JOIN "user" u ON a.user_id = u.id
                 LEFT JOIN rank r ON rank_id = r.id
-                ORDER BY a.created_at DESC
-                LIMIT 50 OFFSET $1;"#,
-    )
-    .bind(offset)
-    .fetch_all(&pool)
-    .await
-    .or(Err(ApiError::ServerError(
-        "Database lookup failed".to_string(),
-    )))
+                WHERE 1 = 1"#,
+    );
+    if let Some(event) = filter.event {
+        match event.as_str() {
+            "join" => query.push(" AND rank_id IS NULL"),
+            "rank" => query.push(" AND rank_new IS NOT NULL"),
+            "title" => query.push(" AND title_new IS NOT NULL"),
+            _ => &mut query,
+        };
+    }
+    if let Some(user) = filter.user {
+        query.push(" AND a.user_id = ").push_bind(user);
+    }
+    if let Some(patch) = filter.patch {
+        query.push(" AND patch = ").push_bind(patch);
+    }
+    if let Some(layout) = filter.layout {
+        query.push(" AND layout = ").push_bind(layout);
+    }
+    if let Some(category) = filter.category {
+        query.push(" AND category = ").push_bind(category);
+    }
+    if let Some(before) = filter.before {
+        query.push(" AND a.created_at <= ").push_bind(before);
+    }
+    if let Some(after) = filter.after {
+        query.push(" AND a.created_at >= ").push_bind(after);
+    }
+    let asc = match filter.ascending {
+        true => " ASC",
+        false => " DESC",
+    };
+    query
+        .push(" ORDER BY ")
+        .push(match filter.sort.as_str() {
+            "section" => format!("patch {asc}, layout {asc}, category {asc}"),
+            _ => format!("a.created_at {asc}"),
+        })
+        .push(" LIMIT 50 OFFSET ")
+        .push_bind(offset)
+        .push(";");
+
+    query
+        .build_query_as::<Activity>()
+        .fetch_all(&pool)
+        .await
+        .or(Err(ApiError::ServerError(
+            "Database lookup failed".to_string(),
+        )))
 }

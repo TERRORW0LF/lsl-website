@@ -32,7 +32,7 @@
     }
 }
 
-#runs {
+#filter-list {
     margin: 2rem;
 
     details {
@@ -110,7 +110,6 @@
 
     .grid {
         display: grid;
-        grid-template-columns: 1fr 32ch 1fr 1fr 1fr 1.5fr 0.5fr 11ch;
         gap: 0.5rem 1rem;
         align-items: center;
 
@@ -196,6 +195,22 @@
                     height: 1.4rem;
                     background-color: var(--error);
                 }
+            }
+        }
+    }
+
+    &.runs {
+        .grid {
+            grid-template-columns: 1fr 32ch 1fr 1fr 1fr 1.5fr 0.5fr 11ch;
+        }
+    }
+
+    &.activity {
+        .grid {
+            grid-template-columns: 1fr 32ch 1fr 1fr 1fr 1fr 1fr 0.5fr 0.5fr;
+
+            .divider {
+                grid-column: 1 / 10;
             }
         }
     }

@@ -6,13 +6,12 @@ use leptos::{
 use leptos_meta::Title;
 use leptos_router::components::A;
 
-use crate::server::api::{RunFilters, get_activity_latest, get_potd, get_runs};
+use crate::server::api::{ActivityFilters, RunFilters, get_activity, get_potd, get_runs};
 
 #[component]
 pub fn HomePage() -> impl IntoView {
-    let filter = RunFilters::default();
-    let runs = OnceResource::new(get_runs(None, filter, 0));
-    let rankings = OnceResource::new(get_activity_latest(0));
+    let runs = OnceResource::new(get_runs(RunFilters::default(), 0));
+    let rankings = OnceResource::new(get_activity(ActivityFilters::default(), 0));
     let potd = OnceResource::new(get_potd());
 
     view! {
