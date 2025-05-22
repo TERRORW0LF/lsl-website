@@ -99,6 +99,13 @@ pub fn ManageRuns() -> impl IntoView {
             get_runs(f.0, f.2 * 50).await
         },
     );
+    let last = Signal::derive(move || {
+        let mut last = true;
+        runs.map(|res| {
+            let _ = res.as_ref().inspect(|v| last = v.len() < 50);
+        });
+        last
+    });
 
     view! {
         <section id="filter-list" class="manage">
@@ -311,22 +318,26 @@ pub fn ManageRuns() -> impl IntoView {
                         )
                     }
                 }} <div class="page">{move || offset.get() + 1}</div>
-                <A
-                    href=move || {
-                        let mut map = params.get();
-                        map.replace("page", (offset.get() + 1).to_string());
-                        map.to_query_string()
+                {move || {
+                    if *last.read() {
+                        Either::Left(view! { <div class="arrow disabled">">"</div> })
+                    } else {
+                        Either::Right(
+                            view! {
+                                <A
+                                    class:arrow=true
+                                    href=move || {
+                                        let mut map = params.get();
+                                        map.replace("page", (offset.get() + 1).to_string());
+                                        map.to_query_string()
+                                    }
+                                >
+                                    ">"
+                                </A>
+                            },
+                        )
                     }
-                    class:arrow=true
-                    class:disabled=move || {
-                        runs
-                            .get()
-                            .map(|res| res.map(|r| r.len()).unwrap_or_default())
-                            .unwrap_or_default() < 50
-                    }
-                >
-                    ">"
-                </A>
+                }}
             </div>
         </section>
     }
