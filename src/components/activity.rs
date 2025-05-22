@@ -262,46 +262,37 @@ pub fn Activity() -> impl IntoView {
                 </Suspense>
             </div>
             <div class="pages row">
-                {move || {
-                    if offset.read() == 0 {
-                        Either::Left(view! { <div class="arrow disabled">"<"</div> })
-                    } else {
-                        Either::Right(
-                            view! {
-                                <A
-                                    class:arrow=true
-                                    href=move || {
-                                        let mut map = params.get();
-                                        map.replace("page", (offset.get() - 1).to_string());
-                                        map.to_query_string()
-                                    }
-                                >
-                                    "<"
-                                </A>
-                            },
-                        )
-                    }
-                }} <div class="page">{move || offset.get() + 1}</div>
-                {move || {
-                    if *last.read() {
-                        Either::Left(view! { <div class="arrow disabled">">"</div> })
-                    } else {
-                        Either::Right(
-                            view! {
-                                <A
-                                    class:arrow=true
-                                    href=move || {
-                                        let mut map = params.get();
-                                        map.replace("page", (offset.get() + 1).to_string());
-                                        map.to_query_string()
-                                    }
-                                >
-                                    ">"
-                                </A>
-                            },
-                        )
-                    }
-                }}
+                <Show
+                    when=move || offset.read() != 0
+                    fallback=|| view! { <div class="arrow disabled">"<"</div> }
+                >
+                    <A
+                        class:arrow=true
+                        href=move || {
+                            let mut map = params.get();
+                            map.replace("page", (offset.get() - 1).to_string());
+                            map.to_query_string()
+                        }
+                    >
+                        "<"
+                    </A>
+                </Show>
+                <div class="page">{move || offset.get() + 1}</div>
+                <Show
+                    when=move || !*last.read()
+                    fallback=|| view! { <div class="arrow disabled">">"</div> }
+                >
+                    <A
+                        class:arrow=true
+                        href=move || {
+                            let mut map = params.get();
+                            map.replace("page", (offset.get() + 1).to_string());
+                            map.to_query_string()
+                        }
+                    >
+                        ">"
+                    </A>
+                </Show>
             </div>
         </section>
     }
@@ -564,46 +555,37 @@ pub fn Submits() -> impl IntoView {
                 </Suspense>
             </div>
             <div class="pages row">
-                {move || {
-                    if offset.read() == 0 {
-                        Either::Left(view! { <div class="arrow disabled">"<"</div> })
-                    } else {
-                        Either::Right(
-                            view! {
-                                <A
-                                    class:arrow=true
-                                    href=move || {
-                                        let mut map = params.get();
-                                        map.replace("page", (offset.get() - 1).to_string());
-                                        map.to_query_string()
-                                    }
-                                >
-                                    "<"
-                                </A>
-                            },
-                        )
-                    }
-                }} <div class="page">{move || offset.get() + 1}</div>
-                {move || {
-                    if *last.read() {
-                        Either::Left(view! { <div class="arrow disabled">">"</div> })
-                    } else {
-                        Either::Right(
-                            view! {
-                                <A
-                                    class:arrow=true
-                                    href=move || {
-                                        let mut map = params.get();
-                                        map.replace("page", (offset.get() + 1).to_string());
-                                        map.to_query_string()
-                                    }
-                                >
-                                    ">"
-                                </A>
-                            },
-                        )
-                    }
-                }}
+                <Show
+                    when=move || offset.read() != 0
+                    fallback=|| view! { <div class="arrow disabled">"<"</div> }
+                >
+                    <A
+                        class:arrow=true
+                        href=move || {
+                            let mut map = params.get();
+                            map.replace("page", (offset.get() - 1).to_string());
+                            map.to_query_string()
+                        }
+                    >
+                        "<"
+                    </A>
+                </Show>
+                <div class="page">{move || offset.get() + 1}</div>
+                <Show
+                    when=move || !*last.read()
+                    fallback=|| view! { <div class="arrow disabled">">"</div> }
+                >
+                    <A
+                        class:arrow=true
+                        href=move || {
+                            let mut map = params.get();
+                            map.replace("page", (offset.get() + 1).to_string());
+                            map.to_query_string()
+                        }
+                    >
+                        ">"
+                    </A>
+                </Show>
             </div>
         </section>
     }
