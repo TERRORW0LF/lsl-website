@@ -1,13 +1,13 @@
 use leptos::{either::*, prelude::*};
 use leptos_meta::Title;
 use leptos_router::{
-    components::{Form, A},
+    components::{A, Form},
     hooks::{use_params_map, use_query_map},
 };
 use rust_decimal::Decimal;
 use std::{cmp::Ordering, collections::HashMap};
 
-use crate::server::api::{get_runs_category, PartialRun, SectionRuns};
+use crate::server::api::{PartialRun, SectionRuns, get_runs_category};
 
 #[component]
 pub fn Section(
@@ -188,8 +188,12 @@ pub fn LeaderboardEntry(map: SectionRuns) -> impl IntoView {
     let map_name = map.map.clone();
     let (top_run, set_top_run) = signal::<Option<PartialRun>>(None);
     let (sel_run, set_sel_run) = signal::<Option<PartialRun>>(None);
-    let yt_id = Signal::derive(move || sel_run.get().map(|r| r.yt_id).flatten());
-    let fallback_url = Signal::derive(move || sel_run.get().map(|r| r.proof));
+    let proof = Signal::derive(move || {
+        sel_run.get().map(|r| Proof {
+            yt_id: r.yt_id,
+            url: r.proof,
+        })
+    });
 
     view! {
         <div class="lb_entry">
@@ -214,7 +218,7 @@ pub fn LeaderboardEntry(map: SectionRuns) -> impl IntoView {
                 }}
             </div>
             <div class="content">
-                <Player yt_id url=fallback_url cover=map.map />
+                <Player proof cover=map.map />
                 <div class="lb_entry_ranks">
                     <Show
                         when=move || top_run.with(|r| r.is_some())
@@ -264,71 +268,78 @@ pub fn LeaderboardEntry(map: SectionRuns) -> impl IntoView {
     }
 }
 
+#[derive(Clone, PartialEq, Eq)]
+pub struct Proof {
+    pub yt_id: Option<String>,
+    pub url: String,
+}
+
 #[component]
-pub fn Player(
-    yt_id: Signal<Option<String>>,
-    url: Signal<Option<String>>,
-    cover: String,
-) -> impl IntoView {
+pub fn Player(proof: Signal<Option<Proof>>, cover: String) -> impl IntoView {
     let (play, set_play) = signal(false);
     Effect::new(move |old: Option<Option<String>>| {
-        if old.flatten() != *url.read() {
+        let url = proof.get().map(|p| p.url);
+        if old.flatten() != url {
             set_play(false);
         }
-        url.get()
+        url
     });
     view! {
         <div class="video">
-            {move || {
-                if *play.read() && yt_id.read().is_some() {
-                    EitherOf3::A(
-                        view! {
-                            <iframe
-                                src=format!(
-                                    "https://www.youtube-nocookie.com/embed/{}?autoplay=1&rel=0&modestbranding=1&showinfo=0",
-                                    yt_id.get().unwrap(),
-                                )
-                                allowfullscreen
-                            ></iframe>
-                        },
-                    )
-                } else if let Some(url) = url.get() {
-                    let url2 = url.clone();
-                    if *play.read() {
-                        Effect::new(move |_| { window().open_with_url_and_target(&url, "_blank") });
-                    }
-                    EitherOf3::B(
-                        view! {
+            <Show
+                when=move || *play.read()
+                fallback=move || {
+                    view! {
+                        <Show when=move || proof.read().is_some()>
                             <div class="buttons">
-                                <button class="play-wrapper" on:click=move |_| { set_play(true) }>
-                                    <div></div>
-                                </button>
+                                <Show
+                                    when=move || proof.get().unwrap().yt_id.is_some()
+                                    fallback=move || {
+                                        view! {
+                                            <a
+                                                href=move || proof.get().unwrap().url
+                                                class="play-wrapper"
+                                                target="_blank"
+                                            >
+                                                <div></div>
+                                            </a>
+                                        }
+                                    }
+                                >
+                                    <button
+                                        class="play-wrapper"
+                                        on:click=move |_| { set_play(true) }
+                                    >
+                                        <div></div>
+                                    </button>
+                                </Show>
                                 <br />
-                                <a class="external" href=url2 target="_blank">
+                                <a
+                                    class="external"
+                                    href=move || proof.get().unwrap().url
+                                    target="_blank"
+                                >
                                     "Open in new Tab"
                                 </a>
                             </div>
-                            <div class="no-vid">
-                                <img
-                                    src=format!("/cdn/maps/{}.jpg", cover)
-                                    alt=format!("Picture of {}", cover)
-                                />
-                            </div>
-                        },
-                    )
-                } else {
-                    EitherOf3::C(
-                        view! {
-                            <div class="no-vid">
-                                <img
-                                    src=format!("/cdn/maps/{}.jpg", cover)
-                                    alt=format!("Picture of {}", cover)
-                                />
-                            </div>
-                        },
-                    )
+                        </Show>
+                        <div class="no-vid">
+                            <img
+                                src=format!("/cdn/maps/{}.jpg", cover)
+                                alt=format!("Picture of {}", cover)
+                            />
+                        </div>
+                    }
                 }
-            }}
+            >
+                <iframe
+                    src=format!(
+                        "https://www.youtube-nocookie.com/embed/{}?autoplay=1&rel=0&modestbranding=1&showinfo=0",
+                        proof.get().unwrap().yt_id.unwrap(),
+                    )
+                    allowfullscreen
+                ></iframe>
+            </Show>
         </div>
     }
 }

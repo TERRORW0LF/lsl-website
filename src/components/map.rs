@@ -22,7 +22,7 @@ use wasm_bindgen::{JsCast, JsValue, prelude::Closure};
 use web_sys::js_sys;
 
 use crate::{
-    components::leaderboard::{Player, filter, sort},
+    components::leaderboard::{Player, Proof, filter, sort},
     server::api::{PartialRun, get_runs_id},
 };
 
@@ -309,8 +309,11 @@ fn MapRunList(map: String, runs: Vec<PartialRun>) -> impl IntoView {
                                         <div>
                                             <div class="inner row">
                                                 <Player
-                                                    yt_id=r.yt_id.into()
-                                                    url=Some(r.proof.clone()).into()
+                                                    proof=Proof {
+                                                        yt_id: r.yt_id,
+                                                        url: r.proof.clone(),
+                                                    }
+                                                        .into()
                                                     cover=map.clone()
                                                 />
                                                 <div class="run-data">

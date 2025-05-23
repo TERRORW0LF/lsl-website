@@ -314,21 +314,23 @@ pub fn ManageRuns() -> impl IntoView {
                     </A>
                 </Show>
                 <div class="page">{move || offset.get() + 1}</div>
-                <Show
-                    when=move || !*last.read()
-                    fallback=|| view! { <div class="arrow disabled">">"</div> }
-                >
-                    <A
-                        class:arrow=true
-                        href=move || {
-                            let mut map = params.get();
-                            map.replace("page", (offset.get() + 1).to_string());
-                            map.to_query_string()
-                        }
+                <Suspense fallback=|| view! { <div class="arrow disabled">">"</div> }>
+                    <Show
+                        when=move || !*last.read()
+                        fallback=|| view! { <div class="arrow disabled">">"</div> }
                     >
-                        ">"
-                    </A>
-                </Show>
+                        <A
+                            class:arrow=true
+                            href=move || {
+                                let mut map = params.get();
+                                map.replace("page", (offset.get() + 1).to_string());
+                                map.to_query_string()
+                            }
+                        >
+                            ">"
+                        </A>
+                    </Show>
+                </Suspense>
             </div>
         </section>
     }

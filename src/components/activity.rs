@@ -52,7 +52,6 @@ pub fn Activity() -> impl IntoView {
         let mut last = true;
         activities.map(|res| {
             let _ = res.as_ref().inspect(|v| {
-                leptos::logging::log!("{}", v.len());
                 last = v.len() < 50;
             });
         });
@@ -278,21 +277,23 @@ pub fn Activity() -> impl IntoView {
                     </A>
                 </Show>
                 <div class="page">{move || offset.get() + 1}</div>
-                <Show
-                    when=move || !*last.read()
-                    fallback=|| view! { <div class="arrow disabled">">"</div> }
-                >
-                    <A
-                        class:arrow=true
-                        href=move || {
-                            let mut map = params.get();
-                            map.replace("page", (offset.get() + 1).to_string());
-                            map.to_query_string()
-                        }
+                <Suspense fallback=|| view! { <div class="arrow disabled">">"</div> }>
+                    <Show
+                        when=move || !*last.read()
+                        fallback=|| view! { <div class="arrow disabled">">"</div> }
                     >
-                        ">"
-                    </A>
-                </Show>
+                        <A
+                            class:arrow=true
+                            href=move || {
+                                let mut map = params.get();
+                                map.replace("page", (offset.get() + 1).to_string());
+                                map.to_query_string()
+                            }
+                        >
+                            ">"
+                        </A>
+                    </Show>
+                </Suspense>
             </div>
         </section>
     }
@@ -571,21 +572,23 @@ pub fn Submits() -> impl IntoView {
                     </A>
                 </Show>
                 <div class="page">{move || offset.get() + 1}</div>
-                <Show
-                    when=move || !*last.read()
-                    fallback=|| view! { <div class="arrow disabled">">"</div> }
-                >
-                    <A
-                        class:arrow=true
-                        href=move || {
-                            let mut map = params.get();
-                            map.replace("page", (offset.get() + 1).to_string());
-                            map.to_query_string()
-                        }
+                <Suspense fallback=|| view! { <div class="arrow disabled">">"</div> }>
+                    <Show
+                        when=move || !*last.read()
+                        fallback=|| view! { <div class="arrow disabled">">"</div> }
                     >
-                        ">"
-                    </A>
-                </Show>
+                        <A
+                            class:arrow=true
+                            href=move || {
+                                let mut map = params.get();
+                                map.replace("page", (offset.get() + 1).to_string());
+                                map.to_query_string()
+                            }
+                        >
+                            ">"
+                        </A>
+                    </Show>
+                </Suspense>
             </div>
         </section>
     }
