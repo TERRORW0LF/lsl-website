@@ -11,11 +11,11 @@ pub fn Activity() -> impl IntoView {
     let params = use_query_map();
     let filters = Signal::derive(move || {
         params.with(|p| ActivityFilters {
-            event: p.get("event"),
+            event: p.get("event").filter(|v| !v.is_empty()),
             user: p.get("user").map(|v| v.parse::<i64>().ok()).flatten(),
-            patch: p.get("patch"),
-            layout: p.get("layout"),
-            category: p.get("category"),
+            patch: p.get("patch").filter(|v| !v.is_empty()),
+            layout: p.get("layout").filter(|v| !v.is_empty()),
+            category: p.get("category").filter(|v| !v.is_empty()),
             before: p
                 .get("before")
                 .map(|s| {
@@ -32,8 +32,14 @@ pub fn Activity() -> impl IntoView {
                     Local.from_local_datetime(&ndt).earliest()
                 })
                 .flatten(),
-            sort: p.get("sort").unwrap_or("date".into()),
-            ascending: !p.get("order").is_none_or(|s| s == "desc"),
+            sort: p
+                .get("sort")
+                .filter(|v| !v.is_empty())
+                .unwrap_or("date".into()),
+            ascending: !p
+                .get("order")
+                .filter(|v| !v.is_empty())
+                .is_none_or(|s| s == "desc"),
         })
     });
     let offset = Signal::derive(move || {
@@ -305,10 +311,10 @@ pub fn Submits() -> impl IntoView {
     let filters = Signal::derive(move || {
         params.with(|p| RunFilters {
             user: p.get("user").map(|v| v.parse::<i64>().ok()).flatten(),
-            patch: p.get("patch"),
-            layout: p.get("layout"),
-            category: p.get("category"),
-            map: p.get("map"),
+            patch: p.get("patch").filter(|v| !v.is_empty()),
+            layout: p.get("layout").filter(|v| !v.is_empty()),
+            category: p.get("category").filter(|v| !v.is_empty()),
+            map: p.get("map").filter(|v| !v.is_empty()),
             faster: p.get("faster").map(|s| s.parse().ok()).flatten(),
             slower: p.get("slower").map(|s| s.parse().ok()).flatten(),
             before: p
@@ -327,8 +333,14 @@ pub fn Submits() -> impl IntoView {
                     Local.from_local_datetime(&ndt).earliest()
                 })
                 .flatten(),
-            sort: p.get("sort").unwrap_or("date".into()),
-            ascending: !p.get("order").is_none_or(|s| s == "desc"),
+            sort: p
+                .get("sort")
+                .filter(|v| !v.is_empty())
+                .unwrap_or("date".into()),
+            ascending: !p
+                .get("order")
+                .filter(|v| !v.is_empty())
+                .is_none_or(|s| s == "desc"),
         })
     });
     let offset = Signal::derive(move || {

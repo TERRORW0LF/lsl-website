@@ -55,9 +55,9 @@ pub fn ManageRuns() -> impl IntoView {
         params.with(|p| RunFilters {
             user: None,
             patch: Some("2.13".into()),
-            layout: p.get("layout"),
-            category: p.get("category"),
-            map: p.get("map"),
+            layout: p.get("layout").filter(|v| !v.is_empty()),
+            category: p.get("category").filter(|v| !v.is_empty()),
+            map: p.get("map").filter(|v| !v.is_empty()),
             faster: p.get("faster").map(|s| s.parse().ok()).flatten(),
             slower: p.get("slower").map(|s| s.parse().ok()).flatten(),
             before: p
@@ -76,8 +76,14 @@ pub fn ManageRuns() -> impl IntoView {
                     Local.from_local_datetime(&ndt).earliest()
                 })
                 .flatten(),
-            sort: p.get("sort").unwrap_or("date".into()),
-            ascending: !p.get("order").is_none_or(|s| s == "desc"),
+            sort: p
+                .get("sort")
+                .filter(|v| !v.is_empty())
+                .unwrap_or("date".into()),
+            ascending: !p
+                .get("order")
+                .filter(|v| !v.is_empty())
+                .is_none_or(|s| s == "desc"),
         })
     });
     let offset = Signal::derive(move || {
