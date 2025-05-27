@@ -8,6 +8,7 @@ chrono = "0.4.38"
 log = "0.4"
 reqwest = { version = "0.12.9", features = ["json"] }
 rust_decimal = "1.36.0"
+serde = { version = "1.0.188", features = ["derive"] }
 serde_json = "1.0.140"
 simple_logger = "5"
 sqlx = { version = "0.8.5", features = ["postgres", "runtime-tokio", "tls-rustls", "chrono", "rust_decimal"] }

@@ -2,6 +2,7 @@ use chrono::{DateTime, Local, TimeDelta};
 use log::debug;
 use reqwest::Client;
 use rust_decimal::Decimal;
+use serde::Deserialize;
 use serde_json::json;
 use sqlx::postgres::{PgConnectOptions, PgListener};
 use sqlx::prelude::FromRow;
@@ -185,14 +186,14 @@ async fn main() {
 
                     match activity {
                         Ok(a) => {
-                            if let Some(t_new) = a.title_new && let Some(t_old) = a.title_old {
-                                send_title(&a.name, &t_new, &t_old, &activity_client).await;
-                            } else if let Some(r_new) = a.rank_new && let Some(r_old) = a.rank_old {
-                                send_rank(&a.name, &r_new, &r_old, &activity_client).await;
+                            if let Some(ref t_new) = a.title_new && let Some(ref t_old) = a.title_old {
+                                send_title(&a.name, t_new, t_old, &activity_client).await;
+                            } else if let Some(ref r_new) = a.rank_new && let Some(ref r_old) = a.rank_old {
+                                send_rank(&a.name, r_new, r_old, &activity_client).await;
                             } else {
                                 send_join(&a.name, &activity_client).await;
                             }
-                            if let Some(t_new) = a.title_new {
+                            if let Some(ref t_new) = a.title_new {
                                 let discord = query_as::<_, Discord>(
                                     r#"SELECT id, access, refresh, expires_at
                                     FROM discord
@@ -348,26 +349,26 @@ async fn update_title(activity: &Activity, auth: &Vec<Discord>, client: &Client,
         let _ = client
             .put(format!("https://discord.com/api/v10/users/@me/applications/{}/role-connection", 
                 std::env::var("DISCORD_ID").unwrap()))
-            .bearer_auth(token)
+            .bearer_auth(token.unwrap())
             .json(&json!({
                 "platform_name": "Lucio Surf League",
                 "platform_username": activity.name,
                 "metadata": {
-                    "title": activity.title_new.unwrap() as i32
+                    "title": activity.title_new.as_ref().unwrap().clone() as i32
                 }
-            }));
+            })).send().await;
     }
 }
 
 async fn get_access_token(tokens: &Discord, client: &Client, pool: &PgPool) -> Result<String, ()> {
     if tokens.expires_at > Local::now() {
-        return tokens.access;
+        return Ok(tokens.access.clone());
     }
     match client.post("https://discord.com/api/v10/oauth2/token")
         .form(&[("client_id", std::env::var("DISCORD_ID").unwrap()), 
             ("client_secret", std::env::var("DISCORD_SECRET").unwrap()),
             ("grant_type", "refresh_token".into()), 
-            ("refresh_token", tokens.refresh)])
+            ("refresh_token", tokens.refresh.clone())])
         .send().await {
             Ok(res) => {
                 let auth = res.json::<AuthRes>().await.or(Err(()))?;
@@ -375,13 +376,13 @@ async fn get_access_token(tokens: &Discord, client: &Client, pool: &PgPool) -> R
                     r#"UPDATE discord
                     SET access = $1, refresh = $2, expires_at = $3
                     WHERE id = $4"#)
-                .bind(auth.access_token)
+                .bind(auth.access_token.clone())
                 .bind(auth.refresh_token)
                 .bind(Local::now() + TimeDelta::seconds(auth.expires_in))
                 .bind(tokens.id)
                 .execute(pool)
                 .await;
-                auth.access_token
+                Ok(auth.access_token)
             }
             Err(_) => Err(())
         }

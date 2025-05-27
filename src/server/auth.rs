@@ -1,5 +1,5 @@
 use crate::server::api::ApiError;
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Local, TimeDelta};
 use http::HeaderValue;
 use leptos::prelude::{server, server_fn::codec::PostUrl};
 use rust_decimal::Decimal;
@@ -111,8 +111,8 @@ pub mod ssr {
     use super::{Permissions, Rank};
     pub use super::{User, UserPasshash};
     pub use argon2::{
+        password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
         Argon2, PasswordHash, PasswordVerifier,
-        password_hash::{PasswordHasher, SaltString, rand_core::OsRng},
     };
     pub use async_trait::async_trait;
     pub use axum_session_auth::{Authentication, HasPermission};
@@ -121,8 +121,8 @@ pub mod ssr {
     use oauth2::basic::BasicClient;
     use sqlx::types::chrono::{DateTime, Local};
     pub use sqlx::{
-        PgPool,
         postgres::{PgConnectOptions, PgPoolOptions},
+        PgPool,
     };
     use std::collections::HashSet;
     pub use std::env;
@@ -520,8 +520,8 @@ pub async fn update_bio(bio: Option<String>, redirect: Option<String>) -> Result
 #[server(UpdatePfp, prefix="/api", endpoint="user/update/avatar", input=MultipartFormData)]
 pub async fn update_pfp(data: MultipartData) -> Result<(), ApiError> {
     use crate::server::auth::ssr::{auth, pool};
-    use rand::{Rng, distributions::Alphanumeric, thread_rng};
-    use std::fs::{File, remove_file};
+    use rand::{distributions::Alphanumeric, thread_rng, Rng};
+    use std::fs::{remove_file, File};
     use std::io::{BufWriter, Write};
 
     let auth = auth()?;
@@ -778,7 +778,8 @@ pub async fn discord_add() -> Result<(), ApiError> {
 
     let (auth_url, csrf_token) = oauth
         .authorize_url(CsrfToken::new_random)
-        .add_scope(Scope::new("identify".to_string()))
+        .add_scope(Scope::new("identify".into()))
+        .add_scope(Scope::new("role_connections.write".into()))
         .url();
 
     auth.session.set("csrf", csrf_token);
@@ -789,7 +790,7 @@ pub async fn discord_add() -> Result<(), ApiError> {
 #[server(DiscordAuth, prefix="/api", endpoint="user/discord/auth", input=GetUrl)]
 pub async fn discord_auth(code: String, state: String) -> Result<(), ApiError> {
     use self::ssr::*;
-    use oauth2::{AuthorizationCode, CsrfToken, TokenResponse, reqwest::async_http_client};
+    use oauth2::{reqwest::async_http_client, AuthorizationCode, CsrfToken, TokenResponse};
 
     leptos_axum::redirect("/user/@me/dashboard");
 
@@ -823,12 +824,6 @@ pub async fn discord_auth(code: String, state: String) -> Result<(), ApiError> {
         .map_err(|_| ApiError::ServerError("Discord reponse invalid".into()))?;
     let name = discord_data.name;
     let snowflake = discord_data.snowflake;
-
-    let _ = oauth
-        .revoke_token(token.access_token().into())
-        .unwrap()
-        .request_async(async_http_client)
-        .await;
 
     let pool = pool()?;
 

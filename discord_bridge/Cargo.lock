@@ -361,6 +361,7 @@ dependencies = [
  "log",
  "reqwest",
  "rust_decimal",
+ "serde",
  "serde_json",
  "simple_logger",
  "sqlx",
