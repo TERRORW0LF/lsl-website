@@ -1,11 +1,11 @@
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Local, TimeDelta};
 use log::debug;
 use reqwest::Client;
 use rust_decimal::Decimal;
 use serde_json::json;
 use sqlx::postgres::{PgConnectOptions, PgListener};
 use sqlx::prelude::FromRow;
-use sqlx::{PgPool, query_as};
+use sqlx::{query, query_as, PgPool};
 use urlencoding::encode;
 use strum::Display;
 
@@ -13,24 +13,25 @@ use strum::Display;
 #[sqlx(type_name = "title")]
 pub enum Title {
     #[strum(to_string = "No Title")]
-    None,
+    None = 0,
     #[strum(to_string = "Surfer")]
-    Surfer,
+    Surfer = 1,
     #[strum(to_string = "Super Surfer")]
-    SuperSurfer,
+    SuperSurfer = 2,
     #[strum(to_string = "Epic Surfer")]
-    EpicSurfer,
+    EpicSurfer = 3,
     #[strum(to_string = "Legendary Surfer")]
-    LegendarySurfer,
+    LegendarySurfer = 4,
     #[strum(to_string = "Mythic Surfer")]
-    MythicSurfer,
+    MythicSurfer = 5,
     #[strum(to_string = "Rank 1")]
-    TopOne,
+    TopOne = 6,
 }
 
 #[derive(Clone, FromRow)]
 struct Activity {
     id: i32,
+    user_id: i64,
     name: String,
     title_old: Option<Title>,
     title_new: Option<Title>,
@@ -73,6 +74,23 @@ struct WrRun {
     created_at: DateTime<Local>,
 }
 
+#[derive(Clone, FromRow)]
+struct Discord {
+    id: i32,
+    access: String,
+    refresh: String,
+    expires_at: DateTime<Local>,
+}
+
+#[derive(Deserialize)]
+struct AuthRes {
+    access_token: String,
+    token_type: String,
+    expires_in: i64,
+    refresh_token: String,
+    scope: String,
+}
+
 #[tokio::main]
 async fn main() {
     simple_logger::init_with_env().expect("couldn't initialize logging");
@@ -101,7 +119,7 @@ async fn main() {
                         FROM run r
                         INNER JOIN "user" u ON r.user_id = u.id
                         INNER JOIN section s ON r.section_id = s.id
-                        WHERE r.id = $1::integer"#,
+                        WHERE r.id = $1::integer;"#,
                     )
                     .bind(notification.payload())
                     .fetch_one(&submit_pool)
@@ -116,7 +134,7 @@ async fn main() {
                                     INNER JOIN "user" u ON r.user_id = u.id
                                     WHERE section_id = $1
                                     ORDER BY time ASC, created_at ASC
-                                    LIMIT 1"#,
+                                    LIMIT 1;"#,
                                 )
                                 .bind(r.section_id)
                                 .fetch_optional(&submit_pool)
@@ -130,7 +148,7 @@ async fn main() {
                                     FROM run
                                     WHERE section_id = $1 AND user_id = $2
                                     ORDER BY time ASC, created_at ASC
-                                    LIMIT 1"#,
+                                    LIMIT 1;"#,
                                 )
                                 .bind(r.section_id)
                                 .bind(r.user_id)
@@ -155,11 +173,11 @@ async fn main() {
             match listener.recv().await {
                 Ok(notification) => {
                     let activity = query_as::<_, Activity>(
-                        r#"SELECT a.id, u.name, a.title_old, a.title_new, 
+                        r#"SELECT a.id, a.user_id, u.name, a.title_old, a.title_new, 
                             a.rank_old, a.rank_new, a.created_at
                         FROM activity a
                         INNER JOIN "user" u ON a.user_id = u.id
-                        WHERE a.id = $1::integer"#,
+                        WHERE a.id = $1::integer;"#,
                     )
                     .bind(notification.payload())
                     .fetch_one(&activity_pool)
@@ -173,6 +191,21 @@ async fn main() {
                                 send_rank(&a.name, &r_new, &r_old, &activity_client).await;
                             } else {
                                 send_join(&a.name, &activity_client).await;
+                            }
+                            if let Some(t_new) = a.title_new {
+                                let discord = query_as::<_, Discord>(
+                                    r#"SELECT id, access, refresh, expires_at
+                                    FROM discord
+                                    WHERE user_id = $1;"#
+                                )
+                                .bind(a.user_id)
+                                .fetch_all(&activity_pool)
+                                .await;
+
+                                match discord {
+                                    Ok(d) => update_title(&a, &d, &activity_client, &activity_pool).await,
+                                    Err(_) => {},
+                                }
                             }
                         }
                         Err(e) => debug!("{e:?}"),
@@ -304,4 +337,52 @@ async fn send_join(name: &String, client: &Client) {
             "title": format!("{name} joined the leaderboards!")
         }]
     })).send().await;
+}
+
+async fn update_title(activity: &Activity, auth: &Vec<Discord>, client: &Client, pool: &PgPool) {
+    for tokens in auth {
+        let token = get_access_token(tokens, client, pool).await;
+        if token.is_err() {
+            return;
+        }
+        let _ = client
+            .put(format!("https://discord.com/api/v10/users/@me/applications/{}/role-connection", 
+                std::env::var("DISCORD_ID").unwrap()))
+            .bearer_auth(token)
+            .json(&json!({
+                "platform_name": "Lucio Surf League",
+                "platform_username": activity.name,
+                "metadata": {
+                    "title": activity.title_new.unwrap() as i32
+                }
+            }));
+    }
+}
+
+async fn get_access_token(tokens: &Discord, client: &Client, pool: &PgPool) -> Result<String, ()> {
+    if tokens.expires_at > Local::now() {
+        return tokens.access;
+    }
+    match client.post("https://discord.com/api/v10/oauth2/token")
+        .form(&[("client_id", std::env::var("DISCORD_ID").unwrap()), 
+            ("client_secret", std::env::var("DISCORD_SECRET").unwrap()),
+            ("grant_type", "refresh_token".into()), 
+            ("refresh_token", tokens.refresh)])
+        .send().await {
+            Ok(res) => {
+                let auth = res.json::<AuthRes>().await.or(Err(()))?;
+                let _ = query(
+                    r#"UPDATE discord
+                    SET access = $1, refresh = $2, expires_at = $3
+                    WHERE id = $4"#)
+                .bind(auth.access_token)
+                .bind(auth.refresh_token)
+                .bind(Local::now() + TimeDelta::seconds(auth.expires_in))
+                .bind(tokens.id)
+                .execute(pool)
+                .await;
+                auth.access_token
+            }
+            Err(_) => Err(())
+        }
 }

@@ -111,8 +111,8 @@ pub mod ssr {
     use super::{Permissions, Rank};
     pub use super::{User, UserPasshash};
     pub use argon2::{
-        password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
         Argon2, PasswordHash, PasswordVerifier,
+        password_hash::{PasswordHasher, SaltString, rand_core::OsRng},
     };
     pub use async_trait::async_trait;
     pub use axum_session_auth::{Authentication, HasPermission};
@@ -121,8 +121,8 @@ pub mod ssr {
     use oauth2::basic::BasicClient;
     use sqlx::types::chrono::{DateTime, Local};
     pub use sqlx::{
-        postgres::{PgConnectOptions, PgPoolOptions},
         PgPool,
+        postgres::{PgConnectOptions, PgPoolOptions},
     };
     use std::collections::HashSet;
     pub use std::env;
@@ -520,8 +520,8 @@ pub async fn update_bio(bio: Option<String>, redirect: Option<String>) -> Result
 #[server(UpdatePfp, prefix="/api", endpoint="user/update/avatar", input=MultipartFormData)]
 pub async fn update_pfp(data: MultipartData) -> Result<(), ApiError> {
     use crate::server::auth::ssr::{auth, pool};
-    use rand::{distributions::Alphanumeric, thread_rng, Rng};
-    use std::fs::{remove_file, File};
+    use rand::{Rng, distributions::Alphanumeric, thread_rng};
+    use std::fs::{File, remove_file};
     use std::io::{BufWriter, Write};
 
     let auth = auth()?;
@@ -789,7 +789,7 @@ pub async fn discord_add() -> Result<(), ApiError> {
 #[server(DiscordAuth, prefix="/api", endpoint="user/discord/auth", input=GetUrl)]
 pub async fn discord_auth(code: String, state: String) -> Result<(), ApiError> {
     use self::ssr::*;
-    use oauth2::{reqwest::async_http_client, AuthorizationCode, CsrfToken, TokenResponse};
+    use oauth2::{AuthorizationCode, CsrfToken, TokenResponse, reqwest::async_http_client};
 
     leptos_axum::redirect("/user/@me/dashboard");
 
@@ -849,10 +849,13 @@ pub async fn discord_auth(code: String, state: String) -> Result<(), ApiError> {
     if discord.iter().any(|d| d.snowflake == snowflake) {
         sqlx::query(
             r#"UPDATE discord
-            SET name = $1
-            WHERE user_id = $2 AND snowflake = $3;"#,
+            SET name = $1, access = $2, refresh = $3, expires_at = $4
+            WHERE user_id = $5 AND snowflake = $6;"#,
         )
         .bind(name)
+        .bind(token.access_token().secret())
+        .bind(token.refresh_token().unwrap().secret())
+        .bind(Local::now() + TimeDelta::seconds(token.expires_in().unwrap().as_secs() as i64))
         .bind(user.id)
         .bind(snowflake)
         .execute(&pool)
@@ -860,12 +863,15 @@ pub async fn discord_auth(code: String, state: String) -> Result<(), ApiError> {
         .map_err(|_| ApiError::ServerError("Database update failed".into()))?;
     } else {
         sqlx::query(
-            r#"INSERT INTO discord (user_id, name, snowflake)
-            VALUES ($1, $2, $3);"#,
+            r#"INSERT INTO discord (user_id, name, snowflake, access, refresh, expires_at)
+            VALUES ($1, $2, $3, $4, $5, $6);"#,
         )
         .bind(user.id)
         .bind(name)
         .bind(snowflake)
+        .bind(token.access_token().secret())
+        .bind(token.refresh_token().unwrap().secret())
+        .bind(Local::now() + TimeDelta::seconds(token.expires_in().unwrap().as_secs() as i64))
         .execute(&pool)
         .await
         .map_err(|_| ApiError::ServerError("Database insert failed".into()))?;
