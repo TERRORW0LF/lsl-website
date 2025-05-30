@@ -14,9 +14,11 @@ use axum_session_sqlx::{SessionPgPool, SessionPgSessionStore};
 use http::Request;
 use leptos::prelude::*;
 use leptos_axum::{generate_route_list, handle_server_fns_with_context, LeptosRoutes};
-use lsl_website::{app::*, server::auth::ssr::{AuthSession, connect_to_database, User}, state::AppState};
+use lsl_website::{app::*, state::AppState};
 use sqlx::PgPool;
 use tower::ServiceBuilder;
+use server::auth::ssr::connect_to_database;
+use types::{leptos::AuthSession, api::User};
 
 async fn leptos_handler(
     state: State<AppState>,

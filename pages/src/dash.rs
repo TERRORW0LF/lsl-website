@@ -1,13 +1,11 @@
-use crate::{
-    app::{UpdatePfpAction, UserResource},
-    server::{
-        api::ApiError,
-        auth::{DiscordAdd, DiscordDelete, Logout, UpdateBio, UpdateCreds, discord_list},
-    },
-};
 use leptos::{either::Either, html::Input, prelude::*};
 use leptos_meta::Title;
 use leptos_router::components::{A, Outlet};
+use server::auth::{DiscordAdd, DiscordDelete, Logout, UpdateBio, UpdateCreds, discord_list};
+use types::{
+    api::ApiError,
+    leptos::{UpdatePfpAction, UserResource},
+};
 use wasm_bindgen::JsCast;
 use web_sys::{Event, FormData, HtmlFormElement, SubmitEvent};
 

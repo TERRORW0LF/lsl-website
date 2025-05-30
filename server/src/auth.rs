@@ -1,132 +1,26 @@
-use crate::server::api::ApiError;
-use chrono::{DateTime, Local, TimeDelta};
+use chrono::{Local, TimeDelta};
 use http::HeaderValue;
 use leptos::prelude::{server, server_fn::codec::PostUrl};
 use rust_decimal::Decimal;
-use serde::{Deserialize, Serialize};
 use server_fn::codec::{GetUrl, MultipartData, MultipartFormData};
-use std::collections::HashSet;
-
-use super::api::Title;
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]
-#[cfg_attr(feature = "ssr", derive(sqlx::Type), sqlx(type_name = "permissions"))]
-pub enum Permissions {
-    View,
-    Submit,
-    Trusted,
-    Delete,
-    Verify,
-    ManageRuns,
-    ManageUsers,
-    Administrator,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct User {
-    pub id: i64,
-    pub username: String,
-    pub bio: Option<String>,
-    pub pfp: String,
-    pub ranks: Vec<Rank>,
-    pub permissions: HashSet<Permissions>,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
-pub struct Rank {
-    pub patch: String,
-    pub layout: Option<String>,
-    pub category: Option<String>,
-    pub title: Title,
-    pub rank: i32,
-    pub rating: f64,
-    pub percentage: f64,
-    pub created_at: DateTime<Local>,
-    pub updated_at: DateTime<Local>,
-}
-
-// Explicitly is not Serialize/Deserialize!
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct UserPasshash(String);
-
-impl Default for User {
-    fn default() -> Self {
-        let permissions = HashSet::new();
-
-        Self {
-            id: -1,
-            username: "Guest".into(),
-            bio: None,
-            permissions,
-            ranks: Vec::new(),
-            pfp: "default".into(),
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
-pub struct Discord {
-    #[serde(rename = "username")]
-    pub name: String,
-    #[serde(rename = "id")]
-    pub snowflake: String,
-}
-
-#[derive(serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct YtVidJson {
-    kind: String,
-    etag: String,
-    id: String,
-}
-
-#[derive(serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct YtPageInfo {
-    total_results: i32,
-    results_per_page: i32,
-}
-
-#[derive(serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct YtJson {
-    kind: String,
-    etag: String,
-    items: Vec<YtVidJson>,
-    page_info: YtPageInfo,
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
-pub struct PasswordUpdate {
-    old: String,
-    new: String,
-}
+use types::api::*;
 
 #[cfg(feature = "ssr")]
 pub mod ssr {
-    use crate::server::api::ApiError;
-
-    use super::{Permissions, Rank};
-    pub use super::{User, UserPasshash};
     pub use argon2::{
-        password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
         Argon2, PasswordHash, PasswordVerifier,
+        password_hash::{PasswordHasher, SaltString, rand_core::OsRng},
     };
-    pub use async_trait::async_trait;
     pub use axum_session_auth::{Authentication, HasPermission};
     pub use axum_session_sqlx::SessionPgPool;
     pub use leptos::prelude::{server, use_context};
     use oauth2::basic::BasicClient;
-    use sqlx::types::chrono::{DateTime, Local};
     pub use sqlx::{
-        postgres::{PgConnectOptions, PgPoolOptions},
         PgPool,
+        postgres::{PgConnectOptions, PgPoolOptions},
     };
-    use std::collections::HashSet;
     pub use std::env;
-    pub type AuthSession = axum_session_auth::AuthSession<User, i64, SessionPgPool, PgPool>;
+    pub use types::{api::*, internal::*, leptos::AuthSession};
 
     pub async fn connect_to_database() -> PgPool {
         let connect_opts = PgConnectOptions::new()
@@ -153,154 +47,6 @@ pub mod ssr {
 
     pub fn oauth() -> Result<BasicClient, ApiError> {
         use_context::<BasicClient>().ok_or(ApiError::ServerError("OAuth client missing.".into()))
-    }
-
-    impl User {
-        pub async fn get_with_passhash(id: i64, pool: &PgPool) -> Option<(Self, UserPasshash)> {
-            let pg_user = sqlx::query_as::<_, PgUser>("SELECT * FROM \"user\" WHERE id = $1")
-                .bind(id)
-                .fetch_one(pool)
-                .await
-                .ok()?;
-
-            //lets just get all the tokens the user can use, we will only use the full permissions if modifying them.
-            let pg_user_perms = sqlx::query_as::<_, PgPermissionToken>(
-                "SELECT token FROM permission WHERE user_id = $1;",
-            )
-            .bind(id)
-            .fetch_all(pool)
-            .await
-            .ok()?;
-
-            let pg_user_ranks = sqlx::query_as::<_, Rank>(
-                r#"SELECT patch, layout, category, title, rank, rating, percentage, created_at, updated_at
-                    FROM rank
-                    WHERE user_id = $1;
-                "#,
-            )
-            .bind(id)
-            .fetch_all(pool)
-            .await
-            .ok()?;
-
-            Some(pg_user.into_user(Some(pg_user_perms), Some(pg_user_ranks)))
-        }
-
-        pub async fn get(id: i64, pool: &PgPool) -> Option<Self> {
-            User::get_with_passhash(id, pool)
-                .await
-                .map(|(user, _)| user)
-        }
-
-        pub async fn get_from_username_with_passhash(
-            name: String,
-            pool: &PgPool,
-        ) -> Option<(Self, UserPasshash)> {
-            let pg_user =
-                sqlx::query_as::<_, PgUser>("SELECT * FROM \"user\" WHERE \"name\" = $1;")
-                    .bind(name)
-                    .fetch_one(pool)
-                    .await
-                    .ok()?;
-
-            //lets just get all the tokens the user can use, we will only use the full permissions if modifying them.
-            let pg_user_perms = sqlx::query_as::<_, PgPermissionToken>(
-                "SELECT token FROM permission WHERE user_id = $1;",
-            )
-            .bind(pg_user.id)
-            .fetch_all(pool)
-            .await
-            .ok()?;
-
-            let pg_user_ranks = sqlx::query_as::<_, Rank>(
-                r#"SELECT patch, layout, category, title, rank, rating, percentage, created_at, updated_at
-                    FROM rank
-                    WHERE user_id = $1;
-                "#,
-            )
-            .bind(pg_user.id)
-            .fetch_all(pool)
-            .await
-            .ok()?;
-
-            Some(pg_user.into_user(Some(pg_user_perms), Some(pg_user_ranks)))
-        }
-
-        pub async fn get_from_username(name: String, pool: &PgPool) -> Option<Self> {
-            User::get_from_username_with_passhash(name, pool)
-                .await
-                .map(|(user, _)| user)
-        }
-
-        pub fn has(&self, perm: &Permissions) -> bool {
-            self.permissions.contains(&Permissions::Administrator)
-                || self.permissions.contains(perm)
-        }
-    }
-
-    #[derive(sqlx::FromRow, Clone)]
-    pub struct PgPermissionToken {
-        pub token: Permissions,
-    }
-
-    #[async_trait]
-    impl Authentication<User, i64, PgPool> for User {
-        async fn load_user(userid: i64, pool: Option<&PgPool>) -> Result<User, anyhow::Error> {
-            let pool = pool.unwrap();
-
-            User::get(userid, pool)
-                .await
-                .ok_or_else(|| anyhow::anyhow!("Cannot get user"))
-        }
-
-        fn is_authenticated(&self) -> bool {
-            true
-        }
-
-        fn is_active(&self) -> bool {
-            true
-        }
-
-        fn is_anonymous(&self) -> bool {
-            false
-        }
-    }
-
-    #[derive(sqlx::FromRow, Clone)]
-    pub struct PgUser {
-        pub id: i64,
-        pub name: String,
-        pub bio: Option<String>,
-        pub created_at: DateTime<Local>,
-        pub password: String,
-        pub pfp: String,
-    }
-
-    impl PgUser {
-        pub fn into_user(
-            self,
-            pg_user_perms: Option<Vec<PgPermissionToken>>,
-            pg_user_ranks: Option<Vec<Rank>>,
-        ) -> (User, UserPasshash) {
-            (
-                User {
-                    id: self.id,
-                    username: self.name,
-                    bio: self.bio,
-                    permissions: if let Some(user_perms) = pg_user_perms {
-                        user_perms
-                            .into_iter()
-                            .map(|x| x.token)
-                            .collect::<HashSet<Permissions>>()
-                    } else {
-                        HashSet::<Permissions>::new()
-                    },
-                    ranks: pg_user_ranks.unwrap_or_default(),
-                    pfp: self.pfp,
-                },
-                UserPasshash(self.password),
-            )
-        }
     }
 
     pub fn hash_password(password: &String) -> Result<String, ApiError> {
@@ -519,9 +265,9 @@ pub async fn update_bio(bio: Option<String>, redirect: Option<String>) -> Result
 
 #[server(UpdatePfp, prefix="/api", endpoint="user/update/avatar", input=MultipartFormData)]
 pub async fn update_pfp(data: MultipartData) -> Result<(), ApiError> {
-    use crate::server::auth::ssr::{auth, pool};
-    use rand::{distributions::Alphanumeric, thread_rng, Rng};
-    use std::fs::{remove_file, File};
+    use crate::auth::ssr::{auth, pool};
+    use rand::{Rng, distributions::Alphanumeric, thread_rng};
+    use std::fs::{File, remove_file};
     use std::io::{BufWriter, Write};
 
     let auth = auth()?;
@@ -790,7 +536,7 @@ pub async fn discord_add() -> Result<(), ApiError> {
 #[server(DiscordAuth, prefix="/api", endpoint="user/discord/auth", input=GetUrl)]
 pub async fn discord_auth(code: String, state: String) -> Result<(), ApiError> {
     use self::ssr::*;
-    use oauth2::{reqwest::async_http_client, AuthorizationCode, CsrfToken, TokenResponse};
+    use oauth2::{AuthorizationCode, CsrfToken, TokenResponse, reqwest::async_http_client};
 
     leptos_axum::redirect("/user/@me/dashboard");
 

@@ -526,8 +526,9 @@ checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 
 [[package]]
 name = "charming"
-version = "0.4.0"
-source = "git+https://github.com/yuankunzhang/charming.git?rev=6fe7362ba9f635471c712ea2dee5709960ed7e62#6fe7362ba9f635471c712ea2dee5709960ed7e62"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7b8bbf1b08b7fbaa314067d8a4882832f155fcef947d66d8ac30bff4e108471f"
 dependencies = [
  "handlebars",
  "js-sys",
@@ -590,6 +591,10 @@ dependencies = [
  "lazy_static",
  "windows-sys 0.59.0",
 ]
+
+[[package]]
+name = "components"
+version = "0.1.0"
 
 [[package]]
 name = "concurrent-queue"
@@ -867,6 +872,37 @@ dependencies = [
 ]
 
 [[package]]
+name = "derive_builder"
+version = "0.20.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "507dfb09ea8b7fa618fcf76e953f4f5e192547945816d5358edffe39f6f94947"
+dependencies = [
+ "derive_builder_macro",
+]
+
+[[package]]
+name = "derive_builder_core"
+version = "0.20.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2d5bcf7b024d6835cfb3d473887cd966994907effbe9227e8c8219824d06c4e8"
+dependencies = [
+ "darling",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.96",
+]
+
+[[package]]
+name = "derive_builder_macro"
+version = "0.20.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ab63b0e2bf4d5928aff72e83a7dace85d7bba5fe12dcc3c5a572d78caffd3f3c"
+dependencies = [
+ "derive_builder_core",
+ "syn 2.0.96",
+]
+
+[[package]]
 name = "digest"
 version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -876,6 +912,23 @@ dependencies = [
  "const-oid",
  "crypto-common",
  "subtle",
+]
+
+[[package]]
+name = "discord_bridge"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "log",
+ "reqwest 0.12.12",
+ "rust_decimal",
+ "serde",
+ "serde_json",
+ "simple_logger",
+ "sqlx",
+ "strum 0.27.1",
+ "tokio",
+ "urlencoding",
 ]
 
 [[package]]
@@ -1284,16 +1337,18 @@ dependencies = [
 
 [[package]]
 name = "handlebars"
-version = "4.5.0"
+version = "6.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "faa67bab9ff362228eb3d00bd024a4965d8231bbb7921167f0cfa66c6626b225"
+checksum = "759e2d5aea3287cb1190c8ec394f42866cb5bf74fcbf213f354e3c856ea26098"
 dependencies = [
+ "derive_builder",
  "log",
+ "num-order",
  "pest",
  "pest_derive",
  "serde",
  "serde_json",
- "thiserror 1.0.69",
+ "thiserror 2.0.12",
 ]
 
 [[package]]
@@ -1901,7 +1956,7 @@ dependencies = [
  "tachys",
  "tokio",
  "tower",
- "tower-http 0.6.2",
+ "tower-http",
 ]
 
 [[package]]
@@ -2122,19 +2177,13 @@ checksum = "04cbf5b083de1c7e0222a7a51dbfdba1cbe1c6ab0b15e29fff3f6c077fd9cd9f"
 name = "lsl-website"
 version = "0.1.0"
 dependencies = [
- "anyhow",
- "argon2",
- "async-trait",
  "axum",
  "axum_session",
  "axum_session_auth",
  "axum_session_sqlx",
  "cfg-if",
- "charming",
- "chrono",
  "console_error_panic_hook",
  "console_log",
- "futures",
  "http 1.2.0",
  "leptos",
  "leptos_axum",
@@ -2142,20 +2191,14 @@ dependencies = [
  "leptos_router",
  "log",
  "oauth2",
- "rand 0.8.5",
+ "pages",
  "reqwest 0.12.12",
- "rust_decimal",
- "serde",
- "server_fn",
+ "server",
  "simple_logger",
  "sqlx",
- "strum",
- "thiserror 1.0.69",
  "tokio",
- "tokio-stream",
  "tower",
- "tower-http 0.5.2",
- "tracing",
+ "types",
  "wasm-bindgen",
  "web-sys",
 ]
@@ -2331,6 +2374,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "num-modular"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "17bb261bf36fa7d83f4c294f834e91256769097b3cb505d44831e0a179ac647f"
+
+[[package]]
+name = "num-order"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "537b596b97c40fcf8056d153049eb22f481c17ebce72a513ec9286e4986d1bb6"
+dependencies = [
+ "num-modular",
+]
+
+[[package]]
 name = "num-traits"
 version = "0.2.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2459,6 +2517,28 @@ name = "or_poisoned"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8c04f5d74368e4d0dfe06c45c8627c81bd7c317d52762d118fb9b3076f6420fd"
+
+[[package]]
+name = "pages"
+version = "0.1.0"
+dependencies = [
+ "cfg-if",
+ "charming",
+ "chrono",
+ "futures",
+ "http 1.2.0",
+ "leptos",
+ "leptos_axum",
+ "leptos_meta",
+ "leptos_router",
+ "rust_decimal",
+ "server",
+ "server_fn",
+ "thiserror 1.0.69",
+ "types",
+ "wasm-bindgen",
+ "web-sys",
+]
 
 [[package]]
 name = "parking"
@@ -3361,9 +3441,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.139"
+version = "1.0.140"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "44f86c3acccc9c65b153fe1b85a3be07fe5515274ec9f0653b4a0875731c72a6"
+checksum = "20068b6e96dc6c9bd23e01df8827e6c7e1f2fddd43c21810382803c136b99373"
 dependencies = [
  "itoa",
  "memchr",
@@ -3441,6 +3521,33 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.96",
+]
+
+[[package]]
+name = "server"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "argon2",
+ "axum_session",
+ "axum_session_auth",
+ "axum_session_sqlx",
+ "chrono",
+ "http 1.2.0",
+ "leptos",
+ "leptos_axum",
+ "leptos_meta",
+ "leptos_router",
+ "oauth2",
+ "rand 0.8.5",
+ "reqwest 0.12.12",
+ "rust_decimal",
+ "serde",
+ "server_fn",
+ "sqlx",
+ "strum 0.26.3",
+ "thiserror 1.0.69",
+ "types",
 ]
 
 [[package]]
@@ -3862,7 +3969,16 @@ version = "0.26.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8fec0f0aef304996cf250b31b5a10dee7980c85da9d759361292b8bca5a18f06"
 dependencies = [
- "strum_macros",
+ "strum_macros 0.26.4",
+]
+
+[[package]]
+name = "strum"
+version = "0.27.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f64def088c51c9510a8579e3c5d67c65349dcf755e5479ad3d010aa6454e2c32"
+dependencies = [
+ "strum_macros 0.27.1",
 ]
 
 [[package]]
@@ -3870,6 +3986,19 @@ name = "strum_macros"
 version = "0.26.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4c6bee85a5a24955dc440386795aa378cd9cf82acd5f764469152d2270e581be"
+dependencies = [
+ "heck",
+ "proc-macro2",
+ "quote",
+ "rustversion",
+ "syn 2.0.96",
+]
+
+[[package]]
+name = "strum_macros"
+version = "0.27.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c77a8c5abcaf0f9ce05d62342b7d298c346515365c36b673df4ebe3ced01fde8"
 dependencies = [
  "heck",
  "proc-macro2",
@@ -4295,31 +4424,6 @@ dependencies = [
 
 [[package]]
 name = "tower-http"
-version = "0.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e9cd434a998747dd2c4276bc96ee2e0c7a2eadf3cae88e52be55a05fa9053f5"
-dependencies = [
- "bitflags 2.8.0",
- "bytes",
- "futures-util",
- "http 1.2.0",
- "http-body 1.0.1",
- "http-body-util",
- "http-range-header",
- "httpdate",
- "mime",
- "mime_guess",
- "percent-encoding",
- "pin-project-lite",
- "tokio",
- "tokio-util",
- "tower-layer",
- "tower-service",
- "tracing",
-]
-
-[[package]]
-name = "tower-http"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "403fa3b783d4b626a8ad51d766ab03cb6d2dbfc46b1c5d4448395e6628dc9697"
@@ -4437,6 +4541,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
 
 [[package]]
+name = "types"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "axum_session",
+ "axum_session_auth",
+ "axum_session_sqlx",
+ "chrono",
+ "leptos",
+ "leptos_meta",
+ "leptos_router",
+ "rust_decimal",
+ "serde",
+ "sqlx",
+ "strum 0.26.3",
+ "thiserror 1.0.69",
+ "web-sys",
+]
+
+[[package]]
 name = "ucd-trie"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4514,6 +4639,12 @@ dependencies = [
  "percent-encoding",
  "serde",
 ]
+
+[[package]]
+name = "urlencoding"
+version = "2.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "daf8dba3b7eb870caf1ddeed7bc9d2a049f3cfdfae7cb521b087cc33ae4c49da"
 
 [[package]]
 name = "utf-8"

@@ -1,0 +1,31 @@
+[package]
+name = "types"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+chrono.workspace = true
+leptos.workspace = true
+leptos_meta.workspace = true
+leptos_router.workspace = true
+rust_decimal.workspace = true
+serde.workspace = true
+strum.workspace = true
+thiserror.workspace = true
+web-sys.workspace = true
+anyhow = { workspace = true, optional = true }
+async-trait = { workspace = true, optional = true }
+axum_session = { workspace = true, optional = true }
+axum_session_auth = { workspace = true, optional = true }
+axum_session_sqlx = { workspace = true, optional = true }
+sqlx = { workspace = true, optional = true }
+
+[features]
+default = [ "ssr" ]
+ssr = [
+    "dep:anyhow",
+    "dep:async-trait",
+    "dep:axum_session_auth",
+    "dep:axum_session_sqlx",
+    "dep:sqlx",
+]

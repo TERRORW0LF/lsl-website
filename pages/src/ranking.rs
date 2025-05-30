@@ -1,7 +1,7 @@
-use crate::server::api::get_rankings;
 use futures::future::join_all;
 use leptos::prelude::*;
 use leptos_router::components::A;
+use server::api::get_rankings;
 
 #[component]
 pub fn RankingHeader(

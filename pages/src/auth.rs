@@ -1,10 +1,11 @@
-use crate::server::{
-    api::{ApiError, Map, get_maps},
-    auth::{Login, Register, Submit},
-};
 use leptos::{either::*, prelude::*};
 use leptos_meta::Title;
 use leptos_router::{components::A, hooks::use_query_map};
+use server::{
+    api::get_maps,
+    auth::{Login, Register, Submit},
+};
+use types::api::{ApiError, Map};
 use web_sys::Event;
 
 #[component]

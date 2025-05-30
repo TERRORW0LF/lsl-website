@@ -1,280 +1,10 @@
-use super::auth::User;
-use chrono::{DateTime, Local};
 use http::{HeaderValue, header::CACHE_CONTROL};
-use leptos::prelude::{
-    FromServerFnError, ServerFnErrorErr, expect_context, server, server_fn::codec::GetUrl,
-};
-use rust_decimal::Decimal;
-use serde::{Deserialize, Serialize};
-use server_fn::codec::JsonEncoding;
-use strum::{Display, EnumString};
-use thiserror::Error;
-
-#[derive(Clone, Debug, Error, EnumString, Serialize, Deserialize)]
-pub enum ApiError {
-    #[error("Unauthorized")]
-    #[strum(to_string = "Unauthorized")]
-    Unauthorized,
-    #[error("Unauthenticated")]
-    #[strum(to_string = "Unauthenticated")]
-    Unauthenticated,
-    #[error("Invalid Input")]
-    #[strum(to_string = "Invalid Input")]
-    InvalidInput,
-    #[error("Invalid Credentials")]
-    #[strum(to_string = "Invalid Credentials")]
-    InvalidCredentials,
-    #[error("Invalid Section")]
-    #[strum(to_string = "Invalid Section")]
-    InvalidSection,
-    #[error("Invalid YouTube ID")]
-    #[strum(to_string = "Invalid YouTube ID")]
-    InvalidYtId,
-    #[error("Already Exists")]
-    #[strum(to_string = "Already Exists")]
-    AlreadyExists,
-    #[error("Not Found")]
-    #[strum(to_string = "Not Found")]
-    NotFound,
-    #[error("Client Error: {0}")]
-    ClientError(String),
-    #[error("Server Error: {0}")]
-    ServerError(String),
-}
-
-impl FromServerFnError for ApiError {
-    type Encoder = JsonEncoding;
-
-    fn from_server_fn_error(value: ServerFnErrorErr) -> Self {
-        use ServerFnErrorErr::*;
-
-        match value {
-            UnsupportedRequestMethod(v) | Request(v) | Deserialization(v) | Serialization(v) => {
-                ApiError::ClientError(v)
-            }
-            Registration(v) | MiddlewareError(v) | ServerError(v) | Args(v) | MissingArg(v)
-            | Response(v) => ApiError::ServerError(v),
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Display, Serialize, Deserialize, Hash)]
-#[cfg_attr(feature = "ssr", derive(sqlx::Type), sqlx(type_name = "title"))]
-pub enum Title {
-    #[strum(to_string = "No Title")]
-    None,
-    #[strum(to_string = "Surfer")]
-    Surfer,
-    #[strum(to_string = "Super Surfer")]
-    SuperSurfer,
-    #[strum(to_string = "Epic Surfer")]
-    EpicSurfer,
-    #[strum(to_string = "Legendary Surfer")]
-    LegendarySurfer,
-    #[strum(to_string = "Mythic Surfer")]
-    MythicSurfer,
-    #[strum(to_string = "Rank 1")]
-    TopOne,
-}
-
-#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
-pub struct RunFilters {
-    pub user: Option<i64>,
-    pub patch: Option<String>,
-    pub layout: Option<String>,
-    pub category: Option<String>,
-    pub map: Option<String>,
-    pub faster: Option<Decimal>,
-    pub slower: Option<Decimal>,
-    pub before: Option<DateTime<Local>>,
-    pub after: Option<DateTime<Local>>,
-    pub sort: String,
-    pub ascending: bool,
-}
-
-impl Default for RunFilters {
-    fn default() -> Self {
-        Self {
-            user: None,
-            patch: None,
-            layout: None,
-            category: None,
-            map: None,
-            faster: None,
-            slower: None,
-            before: None,
-            after: None,
-            sort: String::from("created_at"),
-            ascending: false,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
-pub struct ActivityFilters {
-    pub event: Option<String>,
-    pub user: Option<i64>,
-    pub patch: Option<String>,
-    pub layout: Option<String>,
-    pub category: Option<String>,
-    pub before: Option<DateTime<Local>>,
-    pub after: Option<DateTime<Local>>,
-    pub sort: String,
-    pub ascending: bool,
-}
-
-impl Default for ActivityFilters {
-    fn default() -> Self {
-        Self {
-            event: None,
-            user: None,
-            patch: None,
-            layout: None,
-            category: None,
-            before: None,
-            after: None,
-            sort: String::from("created_at"),
-            ascending: false,
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
-pub struct Run {
-    pub id: i32,
-    pub section_id: i32,
-    pub patch: String,
-    pub layout: String,
-    pub category: String,
-    pub map: String,
-    pub user_id: i64,
-    #[cfg_attr(feature = "ssr", sqlx(rename = "name"))]
-    pub username: String,
-    pub time: Decimal,
-    pub proof: String,
-    pub yt_id: Option<String>,
-    pub verified: bool,
-    pub is_pb: bool,
-    pub is_wr: bool,
-    pub created_at: DateTime<Local>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "ssr", derive(sqlx::Type), sqlx(no_pg_array))]
-pub struct PartialRun {
-    pub id: i32,
-    pub section_id: i32,
-    pub user_id: i64,
-    pub username: String,
-    pub time: Decimal,
-    pub proof: String,
-    pub yt_id: Option<String>,
-    pub verified: bool,
-    pub is_pb: bool,
-    pub is_wr: bool,
-    pub created_at: DateTime<Local>,
-}
-
-// WARNING: Absolutely horrid hack to make query_as function work with array_agg
-// Probably destroys type safety, make sure to always double check queries
-#[cfg(feature = "ssr")]
-impl sqlx::postgres::PgHasArrayType for PartialRun {
-    fn array_type_info() -> sqlx::postgres::PgTypeInfo {
-        sqlx::postgres::PgTypeInfo::with_name("_record")
-    }
-    fn array_compatible(_ty: &sqlx::postgres::PgTypeInfo) -> bool {
-        true
-    }
-}
-
-#[cfg(feature = "ssr")]
-impl sqlx::postgres::PgHasArrayType for PartialRanking {
-    fn array_type_info() -> sqlx::postgres::PgTypeInfo {
-        sqlx::postgres::PgTypeInfo::with_name("_record")
-    }
-    fn array_compatible(_ty: &sqlx::postgres::PgTypeInfo) -> bool {
-        true
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
-pub struct SectionRuns {
-    pub id: i32,
-    pub patch: String,
-    pub layout: String,
-    pub category: String,
-    pub map: String,
-    pub runs: Vec<PartialRun>,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
-pub struct Ranking {
-    pub id: i32,
-    pub patch: String,
-    pub layout: Option<String>,
-    pub category: Option<String>,
-    pub user_id: i64,
-    #[cfg_attr(feature = "ssr", sqlx(rename = "name"))]
-    pub username: String,
-    pub title: Title,
-    pub rank: i32,
-    pub rating: f64,
-    pub created_at: DateTime<Local>,
-    pub updated_at: DateTime<Local>,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "ssr", derive(sqlx::Type), sqlx(no_pg_array))]
-pub struct PartialRanking {
-    pub id: i32,
-    pub user_id: i64,
-    pub username: String,
-    pub title: Title,
-    pub rank: i32,
-    pub rating: f64,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
-pub struct ComboRanking {
-    pub patch: String,
-    pub layout: Option<String>,
-    pub category: Option<String>,
-    pub rankings: Vec<PartialRanking>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
-pub struct Map {
-    #[cfg_attr(feature = "ssr", sqlx(rename = "map"))]
-    pub name: String,
-    pub code: String,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
-pub struct Activity {
-    pub id: i32,
-    pub user_id: i64,
-    #[cfg_attr(feature = "ssr", sqlx(rename = "name"))]
-    pub username: String,
-    pub rank_id: Option<i32>,
-    pub patch: Option<String>,
-    pub layout: Option<String>,
-    pub category: Option<String>,
-    pub title_old: Option<Title>,
-    pub title_new: Option<Title>,
-    pub rank_old: Option<i32>,
-    pub rank_new: Option<i32>,
-    pub created_at: DateTime<Local>,
-}
+use leptos::prelude::{expect_context, server, server_fn::codec::GetUrl};
+use types::api::*;
 
 #[server(GetRunsId, prefix="/api", endpoint="runs/id", input=GetUrl)]
 pub async fn get_runs_id(id: i32) -> Result<SectionRuns, ApiError> {
-    let pool = crate::server::auth::ssr::pool()?;
+    let pool = crate::auth::ssr::pool()?;
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let runs = sqlx::query_as::<_, SectionRuns>(
         r#"SELECT s.id, s.patch, s.layout, s.category, s.map,
@@ -303,7 +33,7 @@ pub async fn get_runs_category(
     layout: String,
     category: String,
 ) -> Result<Vec<SectionRuns>, ApiError> {
-    let pool = crate::server::auth::ssr::pool()?;
+    let pool = crate::auth::ssr::pool()?;
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let runs = sqlx::query_as::<_, SectionRuns>(
         r#"SELECT s.id, patch, layout, category, map,
@@ -332,7 +62,7 @@ pub async fn get_runs_category(
 pub async fn get_runs(filter: RunFilters, offset: i32) -> Result<Vec<Run>, ApiError> {
     use sqlx::{Postgres, QueryBuilder};
 
-    let pool = crate::server::auth::ssr::pool()?;
+    let pool = crate::auth::ssr::pool()?;
     let mut query = QueryBuilder::<Postgres>::new(
         r#"SELECT run.id, run.created_at, section_id, patch, layout, 
             category, map, user_id, "name", time, proof, yt_id, verified, is_pb, is_wr
@@ -393,7 +123,7 @@ pub async fn get_runs(filter: RunFilters, offset: i32) -> Result<Vec<Run>, ApiEr
 
 #[server(GetMaps, prefix="/api", endpoint="maps", input=GetUrl)]
 pub async fn get_maps() -> Result<Vec<Map>, ApiError> {
-    let pool = crate::server::auth::ssr::pool()?;
+    let pool = crate::auth::ssr::pool()?;
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let maps = sqlx::query_as::<_, Map>(
         r#"SELECT map, code
@@ -412,7 +142,9 @@ pub async fn get_maps() -> Result<Vec<Map>, ApiError> {
 
 #[server(GetUser, prefix="/api", endpoint="user/get", input=GetUrl)]
 pub async fn get_user(id: i64) -> Result<User, ApiError> {
-    let pool = crate::server::auth::ssr::pool()?;
+    use crate::auth::ssr::*;
+
+    let pool = pool()?;
     User::get(id, &pool).await.ok_or(ApiError::NotFound)
 }
 
@@ -422,7 +154,7 @@ pub async fn get_rankings(
     layout: Option<String>,
     category: Option<String>,
 ) -> Result<Vec<Ranking>, ApiError> {
-    let pool = crate::server::auth::ssr::pool()?;
+    let pool = crate::auth::ssr::pool()?;
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let rankings = sqlx::query_as::<_, Ranking>(
         r#"SELECT r.id, r.patch, r.layout, r.category, r.user_id, 
@@ -448,7 +180,7 @@ pub async fn get_rankings(
 
 #[server(GetRankingsUser, prefix="/api", endpoint="ranking/user", input=GetUrl)]
 pub async fn get_rankings_user(id: i64) -> Result<Vec<Ranking>, ApiError> {
-    let pool = crate::server::auth::ssr::pool()?;
+    let pool = crate::auth::ssr::pool()?;
 
     sqlx::query_as::<_, Ranking>(
         r#"SELECT r.id, r.patch, r.layout, r.category, r.user_id, 
@@ -470,7 +202,9 @@ struct UserId {
 
 #[server(GetPotd, prefix="/api", endpoint="user/get/potd", input=GetUrl)]
 pub async fn get_potd() -> Result<User, ApiError> {
-    let pool = crate::server::auth::ssr::pool()?;
+    use crate::auth::ssr::*;
+
+    let pool = pool()?;
     let id = sqlx::query_as::<_, UserId>(
         r#"SELECT id
         FROM "user"
@@ -488,7 +222,7 @@ pub async fn get_potd() -> Result<User, ApiError> {
 pub async fn get_activity(filter: ActivityFilters, offset: i32) -> Result<Vec<Activity>, ApiError> {
     use sqlx::{Postgres, QueryBuilder};
 
-    let pool = crate::server::auth::ssr::pool()?;
+    let pool = crate::auth::ssr::pool()?;
     let mut query = QueryBuilder::<Postgres>::new(
         r#"SELECT a.id, a.user_id, name, rank_id, patch, layout, category, 
                     title_old, title_new, rank_old, rank_new, a.created_at

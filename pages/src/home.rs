@@ -6,7 +6,8 @@ use leptos::{
 use leptos_meta::Title;
 use leptos_router::components::A;
 
-use crate::server::api::{ActivityFilters, RunFilters, get_activity, get_potd, get_runs};
+use server::api::{get_activity, get_potd, get_runs};
+use types::api::{ActivityFilters, RunFilters};
 
 #[component]
 pub fn HomePage() -> impl IntoView {

@@ -4,7 +4,7 @@ use charming::{
     Chart, Echarts, WasmRenderer,
     component::{Axis, DataZoom, FilterMode, Grid, Legend},
     datatype::CompositeValue,
-    element::{AxisLabel, AxisType, FormatterFunction, Step, Tooltip, Trigger},
+    element::{AxisLabel, AxisType, JsFunction, Step, Tooltip, Trigger},
     series::Line,
     theme::Theme,
 };
@@ -21,10 +21,9 @@ use rust_decimal::{
 use wasm_bindgen::{JsCast, JsValue, prelude::Closure};
 use web_sys::js_sys;
 
-use crate::{
-    components::leaderboard::{Player, Proof, filter, sort},
-    server::api::{PartialRun, get_runs_id},
-};
+use crate::leaderboard::{Player, Proof, filter, sort};
+use server::api::get_runs_id;
+use types::api::PartialRun;
 
 #[component]
 pub fn Map(id: Signal<i32>) -> impl IntoView {
@@ -123,7 +122,7 @@ fn Chart(mut runs: Vec<PartialRun>) -> impl IntoView {
             .legend(Legend::new())
             .grid(Grid::new().contain_label(true).left(25).right(50))
             .tooltip(Tooltip::new().trigger(Trigger::Item).formatter(
-                FormatterFunction::new_with_args(
+                JsFunction::new_with_args(
                     "params",
                     r#"
                         const date = new Date(params.data[0]);
@@ -173,7 +172,7 @@ fn Chart(mut runs: Vec<PartialRun>) -> impl IntoView {
                         .to_f64()
                         .unwrap(),
                     )
-                    .axis_label(AxisLabel::new().formatter(FormatterFunction::new_with_args(
+                    .axis_label(AxisLabel::new().formatter(JsFunction::new_with_args(
                         "value",
                         "return `${value} sec`",
                     ))),

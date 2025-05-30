@@ -7,7 +7,8 @@ use leptos_router::{
 use rust_decimal::Decimal;
 use std::{cmp::Ordering, collections::HashMap};
 
-use crate::server::api::{PartialRun, SectionRuns, get_runs_category};
+use server::api::get_runs_category;
+use types::api::{PartialRun, SectionRuns};
 
 #[component]
 pub fn Section(

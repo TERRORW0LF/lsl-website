@@ -1,23 +1,3 @@
-use crate::{
-    components::{
-        activity::{Activity, Submits},
-        auth::{Login, Register, Submit},
-        dash::{Avatar, Bio, Dashboard, DiscordList, Password, Username},
-        error_template::{AppError, ErrorTemplate},
-        faq::FAQ,
-        home::HomePage,
-        leaderboard::{Leaderboard, Section},
-        map::Map,
-        ranking::{Ranking, RankingHeader, UserRanking},
-        user::{Delete, ManageRuns, Profile},
-    },
-    server::{
-        api::ApiError,
-        auth::{
-            Login, Logout, Register, UpdateBio, UpdateCreds, User, get_current_user, update_pfp,
-        },
-    },
-};
 use leptos::{either::*, prelude::*};
 use leptos_meta::MetaTags;
 use leptos_meta::*;
@@ -31,11 +11,19 @@ use leptos_router::{
     hooks::use_params_map,
     path,
 };
+use pages::{
+    Activity, Dashboard, ErrorTemplate, FAQ, HomePage, Leaderboard, Login, ManageRuns, Map,
+    Profile, Ranking, Register, Submit, Submits, UserRanking,
+    dash::{Avatar, Bio, DiscordList, Password, Username},
+    error_template::AppError,
+    leaderboard::Section,
+    ranking::RankingHeader,
+    user::Delete,
+};
+use server::auth::{Login, Logout, Register, UpdateBio, UpdateCreds, get_current_user, update_pfp};
+use types::leptos::UserResource;
 use wasm_bindgen::{JsCast, prelude::Closure};
 use web_sys::FormData;
-
-pub type UserResource = Resource<Result<User, ApiError>>;
-pub type UpdatePfpAction = Action<FormData, Result<(), ApiError>>;
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
