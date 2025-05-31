@@ -433,13 +433,14 @@ fn LeaderboardRouter() -> impl MatchNestedRoutes + Clone {
                 }
             />
             <Route
-                path=path!("")
+                path=path!("leaderboard")
                 view=move || {
                     let mut options = NavigateOptions::default();
                     options.replace = true;
-                    view! { <Redirect path="leaderboard/2.13/1/standard" options /> }
+                    view! { <Redirect path="2.13/1/standard" options /> }
                 }
             />
+            <Route path=path!("") view=move || view!{} />
         </ParentRoute>
     }
     .into_inner()
