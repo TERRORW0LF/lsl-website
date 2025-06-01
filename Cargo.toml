@@ -18,7 +18,9 @@ leptos_meta = "0.8.2"
 leptos_router = "0.8.2"
 rust_decimal = "1.36.0"
 serde = { version = "1.0.188", features = ["derive"] }
+serde_json = "1.0.140"
 thiserror = "1.0.38"
+urlencoding = "2.1.3"
 log = "0.4"
 server_fn = { version = "0.8.2", features = ["multipart"] }
 simple_logger = "5"

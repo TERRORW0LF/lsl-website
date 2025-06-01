@@ -58,23 +58,23 @@ impl FromServerFnError for ApiError {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Display, Serialize, Deserialize, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Display, Serialize, Deserialize, Hash)]
 #[cfg_attr(feature = "ssr", derive(sqlx::Type), sqlx(type_name = "title"))]
 pub enum Title {
     #[strum(to_string = "No Title")]
-    None,
+    None = 0,
     #[strum(to_string = "Surfer")]
-    Surfer,
+    Surfer = 1,
     #[strum(to_string = "Super Surfer")]
-    SuperSurfer,
+    SuperSurfer = 2,
     #[strum(to_string = "Epic Surfer")]
-    EpicSurfer,
+    EpicSurfer = 3,
     #[strum(to_string = "Legendary Surfer")]
-    LegendarySurfer,
+    LegendarySurfer = 4,
     #[strum(to_string = "Mythic Surfer")]
-    MythicSurfer,
+    MythicSurfer = 5,
     #[strum(to_string = "Rank 1")]
-    TopOne,
+    TopOne = 6,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
@@ -161,12 +161,17 @@ pub struct Run {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "ssr", derive(sqlx::Type), sqlx(no_pg_array))]
+#[cfg_attr(
+    feature = "ssr",
+    derive(sqlx::Type),
+    derive(sqlx::FromRow),
+    sqlx(no_pg_array)
+)]
 pub struct PartialRun {
     pub id: i32,
     pub section_id: i32,
     pub user_id: i64,
-    pub username: String,
+    pub name: String,
     pub time: Decimal,
     pub proof: String,
     pub yt_id: Option<String>,

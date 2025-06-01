@@ -90,7 +90,7 @@ fn Chart(mut runs: Vec<PartialRun>) -> impl IntoView {
         if run.time > max && run.time <= Decimal::from_i32(90).unwrap() {
             max = run.time;
         }
-        if let Some(user) = users.get_mut(&run.username) {
+        if let Some(user) = users.get_mut(&run.name) {
             user.push(CompositeValue::Array(vec![
                 CompositeValue::String(run.created_at.to_rfc3339()),
                 CompositeValue::Number(charming::datatype::NumericValue::Float(
@@ -99,7 +99,7 @@ fn Chart(mut runs: Vec<PartialRun>) -> impl IntoView {
             ]));
         } else {
             users.insert(
-                run.username.clone(),
+                run.name.clone(),
                 vec![CompositeValue::Array(vec![
                     CompositeValue::String(run.created_at.to_rfc3339()),
                     CompositeValue::Number(charming::datatype::NumericValue::Float(
@@ -265,7 +265,7 @@ fn MapRunList(map: String, runs: Vec<PartialRun>) -> impl IntoView {
                         each=runs_disp
                         key=|r| r.1.id
                         children=move |(i, r)| {
-                            let username = r.username.clone();
+                            let username = r.name.clone();
                             view! {
                                 <div class="map-entry">
                                     <details>
@@ -333,7 +333,7 @@ fn MapRunList(map: String, runs: Vec<PartialRun>) -> impl IntoView {
                                                                 <A href=format!(
                                                                     "/user/{}/leaderboard",
                                                                     r.user_id,
-                                                                )>{r.username}</A>
+                                                                )>{r.name}</A>
                                                             </p>
                                                         </div>
                                                         <div class="entry">
