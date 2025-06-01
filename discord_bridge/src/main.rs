@@ -123,12 +123,12 @@ async fn main() {
 
                     match activity {
                         Ok(a) => {
-                            if let Some(ref t_new) = a.title_new && let Some(ref t_old) = a.title_old {
-                                send_title(&a.username, t_new, t_old, &activity_client).await;
-                            } else if let Some(ref r_new) = a.rank_new && let Some(ref r_old) = a.rank_old {
-                                send_rank(&a.username, r_new, r_old, &activity_client).await;
+                            if a.title_old.is_some() && a.title_new.is_some() {
+                                send_title(&a, &activity_client).await;
+                            } else if a.rank_old.is_some() && a.rank_new.is_some() {
+                                send_rank(&a, &activity_client).await;
                             } else {
-                                send_join(&a.username, &activity_client).await;
+                                send_join(&a, &activity_client).await;
                             }
                             if a.title_new.is_some() && a.layout.is_none() && a.category.is_none() {
                                 let discord = query_as::<_, Discord>(
@@ -284,33 +284,39 @@ async fn send_wr(new: &Run, old: &Option<PartialRun>, client: &Client) {
     })).send().await;
 }
 
-async fn send_title(name: &String, new: &Title, old: &Title, client: &Client) {
+async fn send_title(activity: &Activity, client: &Client) {
+    let new = activity.title_new.as_ref().unwrap();
+    let old = activity.title_old.as_ref().unwrap();
     let _ = client.post(std::env::var("ACTIVITY_WEBHOOK").unwrap()).json(&json!({
         "embeds": [{
             "color": if new > old { 7798548 } else { 12064000 },
             "title": "Title update",
-            "description": format!("User: *{name}*"),
+            "description": format!("User: *{}*\nCombo: *Layout {} - {}*", 
+                activity.username, 
+                activity.layout.as_ref().unwrap(), 
+                activity.category.as_ref().unwrap(),
+            ),
             "fields": [{
-                "name": "New Title",
-                "value": new.to_string(),
+                "name": old.to_string(),
+                "value": "",
                 "inline": true
             },
             {
-                "name": "Old Title",
-                "value": old.to_string(),
+                "name": new.to_string(),
+                "value": "",
                 "inline": true
             }]
         }]
     })).send().await;
 }
 
-async fn send_rank(_name: &String, _new: &i32, _old: &i32, _client: &Client) {}
+async fn send_rank(_activity: &Activity, _client: &Client) {}
 
-async fn send_join(name: &String, client: &Client) {
+async fn send_join(activity: &Activity, client: &Client) {
     let _ = client.post(std::env::var("ACTIVITY_WEBHOOK").unwrap()).json(&json!({
         "embeds": [{
             "color": 1342207,
-            "title": format!("{name} joined the leaderboards!")
+            "title": format!("{} joined the leaderboards!", activity.username)
         }]
     })).send().await;
 }
