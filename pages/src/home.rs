@@ -248,8 +248,8 @@ pub fn HomePage() -> impl IntoView {
                                                     Either::Left(
                                                         view! {
                                                             <div class="row narrow">
-                                                                <h6 class=format!("rank-{}", r.rank)>"#" {r.rank}</h6>
-                                                                <h6 class=r.title.to_string()>{r.title.to_string()}</h6>
+                                                                <h6 class=format!("rank-{} color", r.rank)>"#" {r.rank}</h6>
+                                                                <h6 class=format!("{} color", r.title.to_string())>{r.title.to_string()}</h6>
                                                             </div>
                                                         },
                                                     )
@@ -282,11 +282,11 @@ pub fn HomePage() -> impl IntoView {
                                                     view! {
                                                         <div class="row">
                                                             <div class="column">
-                                                                <h5 class=format!("rank-{}", r.rank)>"#"{r.rank}</h5>
+                                                                <h5 class=format!("rank-{} color", r.rank)>"#"{r.rank}</h5>
                                                                 <h6>"Layout "{r.layout.clone()}</h6>
                                                             </div>
                                                             <div class="column">
-                                                                <h5 class=r.title.to_string()>{r.title.to_string()}</h5>
+                                                                <h5 class=format!("{} color", r.title.to_string())>{r.title.to_string()}</h5>
                                                                 <h6>{format!("{:.0} Rating", r.rating)}</h6>
                                                             </div>
                                                         </div>
@@ -314,11 +314,11 @@ pub fn HomePage() -> impl IntoView {
                                                     view! {
                                                         <div class="row">
                                                             <div class="column">
-                                                                <h5 class=format!("rank-{}", r.rank)>"#"{r.rank}</h5>
+                                                                <h5 class=format!("rank-{} color", r.rank)>"#"{r.rank}</h5>
                                                                 <h6>"Layout "{r.layout.clone()}</h6>
                                                             </div>
                                                             <div class="column">
-                                                                <h5 class=r.title.to_string()>{r.title.to_string()}</h5>
+                                                                <h5 class=format!("{} color", r.title.to_string())>{r.title.to_string()}</h5>
                                                                 <h6>{format!("{:.0} Rating", r.rating)}</h6>
                                                             </div>
                                                         </div>
