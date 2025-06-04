@@ -6,14 +6,14 @@ use leptos::{
 use leptos_meta::Title;
 use leptos_router::components::A;
 
-use server::api::{get_activity, get_potd, get_runs};
+use server::api::{get_activity, get_rand_user, get_runs};
 use types::api::{ActivityFilters, RunFilters};
 
 #[component]
 pub fn HomePage() -> impl IntoView {
     let runs = OnceResource::new(get_runs(RunFilters::default(), 0));
     let rankings = OnceResource::new(get_activity(ActivityFilters::default(), 0));
-    let potd = OnceResource::new(get_potd());
+    let potd = OnceResource::new(get_rand_user());
 
     view! {
         <Title text="Home" />
@@ -249,7 +249,10 @@ pub fn HomePage() -> impl IntoView {
                                                         view! {
                                                             <div class="row narrow">
                                                                 <h6 class=format!("rank-{} color", r.rank)>"#" {r.rank}</h6>
-                                                                <h6 class=format!("{} color", r.title.to_string())>{r.title.to_string()}</h6>
+                                                                <h6 class=format!(
+                                                                    "{} color",
+                                                                    r.title.to_string(),
+                                                                )>{r.title.to_string()}</h6>
                                                             </div>
                                                         },
                                                     )
@@ -286,7 +289,10 @@ pub fn HomePage() -> impl IntoView {
                                                                 <h6>"Layout "{r.layout.clone()}</h6>
                                                             </div>
                                                             <div class="column">
-                                                                <h5 class=format!("{} color", r.title.to_string())>{r.title.to_string()}</h5>
+                                                                <h5 class=format!(
+                                                                    "{} color",
+                                                                    r.title.to_string(),
+                                                                )>{r.title.to_string()}</h5>
                                                                 <h6>{format!("{:.0} Rating", r.rating)}</h6>
                                                             </div>
                                                         </div>
@@ -318,7 +324,10 @@ pub fn HomePage() -> impl IntoView {
                                                                 <h6>"Layout "{r.layout.clone()}</h6>
                                                             </div>
                                                             <div class="column">
-                                                                <h5 class=format!("{} color", r.title.to_string())>{r.title.to_string()}</h5>
+                                                                <h5 class=format!(
+                                                                    "{} color",
+                                                                    r.title.to_string(),
+                                                                )>{r.title.to_string()}</h5>
                                                                 <h6>{format!("{:.0} Rating", r.rating)}</h6>
                                                             </div>
                                                         </div>

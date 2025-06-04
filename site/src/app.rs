@@ -440,7 +440,7 @@ fn LeaderboardRouter() -> impl MatchNestedRoutes + Clone {
                     view! { <Redirect path="2.13/1/standard" options /> }
                 }
             />
-            <Route path=path!("") view=move || view!{} />
+            <Route path=path!("") view=move || view! {} />
         </ParentRoute>
     }
     .into_inner()
