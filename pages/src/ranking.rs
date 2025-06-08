@@ -3,36 +3,18 @@ use leptos_router::components::A;
 use server::api::get_rankings;
 
 #[component]
-pub fn RankingHeader(
-    #[prop(into)] patches: Signal<Vec<(String, String)>>,
-    #[prop(into)] layouts: Signal<Vec<(String, String)>>,
-) -> impl IntoView {
+pub fn RankingHeader(#[prop(into)] links: Signal<Vec<(String, String)>>) -> impl IntoView {
     view! {
         <header id="ranking-header">
             <nav class="split-row-nav">
                 <ul class="left-row-nav">
                     <For
-                        each=patches
-                        key=|p| p.0.to_owned()
-                        children=move |p| {
-                            view! {
-                                <li>
-                                    <A href=format!("../../{}/1", p.0) scroll=false>
-                                        <span class="text">{p.1}</span>
-                                    </A>
-                                </li>
-                            }
-                        }
-                    />
-                </ul>
-                <ul class="right-row-nav">
-                    <For
-                        each=layouts
+                        each=links
                         key=|l| l.0.to_owned()
                         children=move |l| {
                             view! {
                                 <li>
-                                    <A href=format!("../{}", l.0) scroll=false>
+                                    <A href=l.0 scroll=false>
                                         <span class="text">{l.1}</span>
                                     </A>
                                 </li>
@@ -46,7 +28,7 @@ pub fn RankingHeader(
 }
 
 #[component]
-pub fn Ranking(
+pub fn ComboRanking(
     #[prop(into)] patch: Signal<String>,
     #[prop(into)] layout: Signal<Option<String>>,
     #[prop(into)] categories: Signal<Vec<(Option<String>, String)>>,

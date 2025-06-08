@@ -8,7 +8,7 @@ pub use faq::FAQ;
 pub use home::HomePage;
 pub use leaderboard::Leaderboard;
 pub use map::Map;
-pub use ranking::Ranking;
+pub use ranking::ComboRanking;
 pub use ranking::UserRanking;
 pub use submits::Submits;
 pub use user::ManageRuns;

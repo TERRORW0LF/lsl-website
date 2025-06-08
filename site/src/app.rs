@@ -12,8 +12,8 @@ use leptos_router::{
     path,
 };
 use pages::{
-    Activity, Dashboard, ErrorTemplate, FAQ, HomePage, Leaderboard, Login, ManageRuns, Map,
-    Profile, Ranking, Register, Submit, Submits, UserRanking,
+    Activity, ComboRanking, Dashboard, ErrorTemplate, FAQ, HomePage, Leaderboard, Login,
+    ManageRuns, Map, Profile, Register, Submit, Submits, UserRanking,
     dash::{Avatar, Bio, DiscordList, Password, Username},
     error_template::AppError,
     leaderboard::Section,
@@ -119,10 +119,10 @@ pub fn App() -> impl IntoView {
                             <A href="/home">"Home"</A>
                         </li>
                         <li>
-                            <A href="/leaderboard">"Leaderboard"</A>
+                            <A href="/leaderboard/2.13/1/standard">"Leaderboard"</A>
                         </li>
                         <li>
-                            <A href="/ranking">"Ranking"</A>
+                            <A href="/ranking/2.13/1">"Ranking"</A>
                         </li>
                         <li>
                             <a href="https://discord.com/invite/G9QBCDY" rel="external">
@@ -447,37 +447,39 @@ fn LeaderboardRouter() -> impl MatchNestedRoutes + Clone {
     .into_any_nested_route()
 }
 
+#[derive(Clone)]
+struct Patch(Signal<String>);
+
 #[component(transparent)]
 fn RankingRouter() -> impl MatchNestedRoutes + Clone {
     view! {
         <ParentRoute
-            path=path!("ranking")
+            path=path!("/ranking")
             view=move || {
+                let patches: Vec<(String, String)> = vec![
+                    ("1.00".into(), "Patch 1.00".into()),
+                    ("1.41".into(), "Patch 1.41".into()),
+                    ("1.50".into(), "Patch 1.50".into()),
+                    ("2.00".into(), "Patch 2.00".into()),
+                    ("2.13".into(), "Patch 2.13".into()),
+                ];
                 view! {
                     <section id="ranking">
-                        <Ranking
-                            patch="2.13"
-                            layout=None
-                            categories=vec![(None, "Combined".into())]
-                        />
+                        <RankingHeader links=patches />
                         <Outlet />
                     </section>
                 }
             }
         >
             <Route
-                path=path!(":patch/:layout")
+                path=path!("")
+                view=|| view! { <p>"Please select a patch to view the rankings of."</p> }
+            />
+            <ParentRoute
+                path=path!(":patch")
                 view=move || {
                     let params = use_params_map();
-                    let patch = Signal::derive(move || { params.read().get("patch").unwrap() });
-                    let layout = Signal::derive(move || { params.read().get("layout") });
-                    let patches: Vec<(String, String)> = vec![
-                        ("1.00".into(), "Patch 1.00".into()),
-                        ("1.41".into(), "Patch 1.41".into()),
-                        ("1.50".into(), "Patch 1.50".into()),
-                        ("2.00".into(), "Patch 2.00".into()),
-                        ("2.13".into(), "Patch 2.13".into()),
-                    ];
+                    let patch = Signal::derive(move || { params.get().get("patch").unwrap() });
                     let layouts = Signal::derive(move || match patch.get().as_str() {
                         "1.00" => {
                             vec![("1".into(), "Layout 1".into()), ("2".into(), "Layout 2".into())]
@@ -501,37 +503,52 @@ fn RankingRouter() -> impl MatchNestedRoutes + Clone {
                         }
                         _ => vec![],
                     });
-                    let categories = Signal::derive(move || match patch.get().as_str() {
-                        "1.00" | "1.41" | "1.50" | "2.00" => {
-                            vec![
-                                (Some("Standard".into()), "Standard".into()),
-                                (Some("Gravspeed".into()), "Gravspeed".into()),
-                                (None, "Combined".into()),
-                            ]
-                        }
-                        "2.13" => {
-                            vec![
-                                (Some("Standard".into()), "Standard".into()),
-                                (Some("Gravspeed".into()), "Gravspeed".into()),
-                            ]
-                        }
-                        _ => vec![],
-                    });
+                    provide_context(Patch(patch));
                     view! {
-                        <RankingHeader patches layouts />
-                        <Ranking patch layout categories />
+                        <ComboRanking
+                            patch=patch
+                            layout=None
+                            categories=vec![(None, "Combined".into())]
+                        />
+                        <RankingHeader links=layouts />
+                        <Outlet />
                     }
                 }
-            />
-            <Route
-                path=path!("")
-                view=move || {
-                    let mut options = NavigateOptions::default();
-                    options.replace = true;
-                    view! { <Redirect path="2.13/1" options /> }
-                }
-            />
+            >
+                <Route
+                    path=path!(":layout")
+                    view=move || {
+                        let params = use_params_map();
+                        let patch = expect_context::<Patch>().0;
+                        let layout = Signal::derive(move || { params.read().get("layout") });
+                        let categories = Signal::derive(move || match patch.get().as_str() {
+                            "1.00" | "1.41" | "1.50" | "2.00" => {
+                                vec![
+                                    (Some("Standard".into()), "Standard".into()),
+                                    (Some("Gravspeed".into()), "Gravspeed".into()),
+                                    (None, "Combined".into()),
+                                ]
+                            }
+                            "2.13" => {
+                                vec![
+                                    (Some("Standard".into()), "Standard".into()),
+                                    (Some("Gravspeed".into()), "Gravspeed".into()),
+                                ]
+                            }
+                            _ => vec![],
+                        });
+                        view! { <ComboRanking patch layout categories /> }
+                    }
+                />
+                <Route
+                    path=path!("")
+                    view=|| {
+                        view! { <p>"Please select a layout to view the rankings of."</p> }
+                    }
+                />
+            </ParentRoute>
         </ParentRoute>
     }
     .into_inner()
+    .into_any_nested_route()
 }

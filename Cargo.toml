@@ -1,3 +1,10 @@
+[patch.crates-io]
+leptos_router = { path = "../leptos-aria-current/router" }
+leptos = { path = "../leptos-aria-current/leptos" }
+leptos_meta = { path = "../leptos-aria-current/meta" }
+server_fn = { path = "../leptos-aria-current/server_fn" }
+leptos_axum = { path = "../leptos-aria-current/integrations/axum" }
+
 [workspace]
 members = ["site", "pages", "components", "server", "discord_bridge"]
 exclude = ["tutorial"]
@@ -13,9 +20,9 @@ console_error_panic_hook = "0.1"
 console_log = "1"
 futures = { version = "0.3.31" }
 http = "1.1.0"
-leptos = { version = "0.8.2", features = ["nightly"] }
-leptos_meta = "0.8.2"
-leptos_router = "0.8.2"
+leptos = { version = "0.8.3", features = ["nightly"] }
+leptos_meta = "0.8.3"
+leptos_router = "0.8.3"
 rust_decimal = "1.36.0"
 serde = { version = "1.0.188", features = ["derive"] }
 serde_json = "1.0.140"
@@ -33,7 +40,7 @@ axum = { version = "0.8", features = ["macros"] }
 axum_session = "0.16"
 axum_session_auth = "0.16"
 axum_session_sqlx = { version = "0.5", features = ["postgres", "tls-rustls"] }
-leptos_axum = "0.8.2"
+leptos_axum = "0.8.3"
 oauth2 = "4.4.2"
 rand = "0.8.5"
 reqwest = { version = "0.12.9", features = ["json"] }
