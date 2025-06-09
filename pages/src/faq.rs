@@ -4,18 +4,16 @@ use leptos_router::{components::A, hooks::use_location};
 
 #[component]
 pub fn FAQ() -> impl IntoView {
-    let hash = use_location().hash;
+    let hash_memo = use_location().hash;
+    let (hash, set_hash) = signal(String::new());
+    Effect::new(move |_| set_hash.set(hash_memo.get()));
 
     view! {
         <Title text="FAQ" />
         <h1>"FAQ"</h1>
         <section id="faq">
             <section id="codes">
-                <details open=move || {
-                    leptos::logging::log!("{}", hash.get());
-                    leptos::logging::log!("{}", (hash.get() == "#codes"));
-                    (hash.get() == "#codes").then_some("")
-                }>
+                <details open=move || (hash.get() == "#codes").then_some("")>
                     <summary>
                         <h2 role="term" aria-details="filters" class="icon">
                             "Workshop Codes"
