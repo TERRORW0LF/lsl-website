@@ -152,6 +152,10 @@
         margin-bottom: 2rem;
     }
 
+    >.row {
+        align-items: first baseline;
+    }
+
     .user {
         img {
             float: left;
@@ -167,7 +171,7 @@
             font-weight: 400;
             line-height: 1.5;
             min-width: 60ch;
-            max-width: 100ch;
+            max-width: 80ch;
             white-space: pre-line;
         }
 
@@ -186,11 +190,12 @@
     }
 
     >.row>.narrow {
-        width: min(100%, 80ch + 5rem);
+        width: min(100%, 60ch + 4rem);
+        align-items: first baseline;
     }
 
     .ranks {
-        width: min(100%, 40ch);
+        width: min(100%, 30ch);
 
         h4 {
             margin-bottom: 1rem;

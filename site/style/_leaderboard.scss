@@ -3,10 +3,10 @@
     font-size: 1.5rem;
 
     details {
-        z-index: 3;
-        width: 2rem;
-        margin: 2rem;
-        margin-right: 0;
+        width: fit-content;
+        max-width: 10ch;
+        margin-top: 2rem;
+        margin-left: 2rem;
         font-size: 1rem;
         font-weight: 600;
 
@@ -14,8 +14,12 @@
             display: block;
 
             span.icon {
-                width: 2rem;
                 height: 2rem;
+                padding: 0.5rem;
+                font-size: 0.7rem;
+                font-weight: 900;
+                color: var(--primary-100);
+                text-transform: uppercase;
                 border-radius: 4px;
                 background-color: var(--grey-700);
             }
@@ -27,10 +31,11 @@
             span.icon::before {
                 margin-top: 0;
                 margin-left: 0.8rem;
-                font-size: 2.5rem;
+                margin-right: 0.2rem;
+                color: var(--primary-300);
+                font-size: 2rem;
                 font-weight: 700;
                 line-height: 1;
-                color: var(--primary-300);
             }
         }
 
@@ -145,17 +150,16 @@
 
     @keyframes widen {
         to {
-            padding-left: 0;
+            margin-left: 0;
         }
     }
 
     #lb_header {
         top: 2.5rem;
-        margin-top: -4.7rem;
-        padding-left: 4rem;
-        z-index: 2;
+        margin-top: -2.3rem;
+        margin-left: 8rem;
         background-color: var(--grey-900);
-        animation: widen 200s linear infinite;
+        animation: widen 65s linear infinite;
         animation-play-state: paused;
         animation-delay: calc(var(--scroll) * -1s);
         animation-iteration-count: 1;

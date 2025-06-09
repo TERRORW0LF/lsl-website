@@ -23,7 +23,7 @@ pub fn Section(
         <details>
             <summary>
                 <span role="term" aria-details="filters" class="icon">
-                    ""
+                    "Filters"
                 </span>
             </summary>
         </details>
