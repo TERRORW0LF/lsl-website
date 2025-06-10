@@ -283,6 +283,31 @@ header {
 	}
 }
 
+.tooltip-box {
+	position: relative;
+	cursor: help;
+
+	&:hover,
+	&:focus {
+		.tooltip {
+			display: unset;
+		}
+	}
+
+	.tooltip {
+		display: none;
+		position: absolute;
+		top: 2rem;
+		left: 0;
+		width: max-content;
+		max-width: 80ch;
+		padding: 0.3rem 0.5rem;
+		background-color: var(--grey-900);
+		border: 2px solid var(--grey-500);
+		border-radius: 5px;
+	}
+}
+
 nav.split-row-nav {
 	display: flex;
 	flex-direction: row;

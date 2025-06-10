@@ -1,6 +1,7 @@
 use leptos::prelude::*;
 use leptos_router::components::A;
 use server::api::get_rankings;
+use types::api::Title;
 
 #[component]
 pub fn RankingHeader(#[prop(into)] links: Signal<Vec<(String, String)>>) -> impl IntoView {
@@ -28,6 +29,33 @@ pub fn RankingHeader(#[prop(into)] links: Signal<Vec<(String, String)>>) -> impl
 }
 
 #[component]
+pub fn RankingLegend(#[prop(into)] titles: Vec<(Title, Signal<String>)>) -> impl IntoView {
+    view! {
+        <div class="legend row narrow">
+            {titles
+                .into_iter()
+                .enumerate()
+                .map(|(i, (t, s))| {
+                    view! {
+                        <div class="tooltip-box">
+                            <span
+                                class=format!("{} bg title", t.to_string())
+                                aria-describedby=format!("tooltip-{i}")
+                            >
+                                {t.to_string()}
+                            </span>
+                            <span role="tooltip" id=format!("tooltip-{i}") class="tooltip">
+                                {s}
+                            </span>
+                        </div>
+                    }
+                })
+                .collect_view()}
+        </div>
+    }
+}
+
+#[component]
 pub fn ComboRanking(
     #[prop(into)] patch: Signal<String>,
     #[prop(into)] layout: Signal<Option<String>>,
@@ -43,6 +71,54 @@ pub fn ComboRanking(
             )
         })
     });
+    let titles = vec![
+        (
+            Title::Surfer,
+            Signal::<String>::derive(move || match patch.get().as_str() {
+                "1.00" | "1.41" | "1.50" => "300 or more rating points".into(),
+                "2.00" => "150 or more rating points".into(),
+                "2.13" => "1000 or more rating points".into(),
+                _ => "Unknown patch selected".into(),
+            }),
+        ),
+        (
+            Title::SuperSurfer,
+            Signal::<String>::derive(move || match patch.get().as_str() {
+                "1.00" | "1.41" | "1.50" => "1000 or more rating points".into(),
+                "2.00" => "500 or more rating points".into(),
+                "2.13" => "2500 or more rating points".into(),
+                _ => "Unknown patch selected".into(),
+            }),
+        ),
+        (
+            Title::EpicSurfer,
+            Signal::<String>::derive(move || match patch.get().as_str() {
+                "1.00" | "1.41" | "1.50" => "2000 or more rating points".into(),
+                "2.00" => "1000 or more rating points".into(),
+                "2.13" => "5000 or more rating points".into(),
+                _ => "Unknown patch selected".into(),
+            }),
+        ),
+        (
+            Title::LegendarySurfer,
+            Signal::<String>::derive(move || match patch.get().as_str() {
+                "1.00" | "1.41" | "1.50" => "4000 or more rating points".into(),
+                "2.00" => "2000 or more rating points".into(),
+                "2.13" => "7500 or more rating points".into(),
+                _ => "Unknown patch selected".into(),
+            }),
+        ),
+        (
+            Title::MythicSurfer,
+            Signal::<String>::derive(move || match patch.get().as_str() {
+                "1.00" | "1.41" | "1.50" => "5500 or more rating points".into(),
+                "2.00" => "2750 or more rating points".into(),
+                "2.13" => "9000 or more rating points".into(),
+                _ => "Unknown patch selected".into(),
+            }),
+        ),
+        (Title::TopOne, "Most points in the ranking".into()),
+    ];
     view! {
         <section class="ranking">
             {move || {
@@ -56,6 +132,7 @@ pub fn ComboRanking(
                                 <h3 class="category">
                                     {move || categories.get()[c - 1].1.clone()}
                                 </h3>
+                                <RankingLegend titles=titles.clone() />
                                 <Suspense fallback=move || { "Loading..." }>
                                     <ErrorBoundary fallback=move |_| { "Error fetching data." }>
                                         <div role="definition" id="more" class="content">

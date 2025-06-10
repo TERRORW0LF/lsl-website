@@ -10,14 +10,15 @@ pub fn FAQ() -> impl IntoView {
 
     view! {
         <Title text="FAQ" />
-        <h1>"FAQ"</h1>
         <section id="faq">
+            <h1>"FAQ"</h1>
+            <hr />
             <section id="codes">
                 <details open=move || (hash.get() == "#codes").then_some("")>
                     <summary>
-                        <h2 role="term" aria-details="filters" class="icon">
-                            "Workshop Codes"
-                        </h2>
+                        <span role="term" aria-details="filters" class="icon">
+                            "What is the Workshop Code?"
+                        </span>
                     </summary>
                 </details>
                 <div role="definition" id="filters" class="content">
@@ -49,6 +50,7 @@ pub fn FAQ() -> impl IntoView {
                     </div>
                 </div>
             </section>
+            <hr />
         </section>
     }
 }
