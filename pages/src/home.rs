@@ -35,7 +35,7 @@ pub fn HomePage() -> impl IntoView {
                     <a href="https://learn.lucio.surf/" class="button magic">
                         "Academy"
                     </a>
-                    <A href="/faq#codes" attr:class="button magic">
+                    <A href="/faq#play" attr:class="button magic">
                         "Play"
                     </A>
                 </div>

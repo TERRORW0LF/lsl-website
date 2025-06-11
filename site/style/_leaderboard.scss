@@ -11,8 +11,6 @@
         font-weight: 600;
 
         summary {
-            display: block;
-
             span.icon {
                 height: 2rem;
                 padding: 0.5rem;
@@ -24,10 +22,6 @@
                 background-color: var(--grey-700);
             }
 
-            span.icon:hover {
-                cursor: pointer;
-            }
-
             span.icon::before {
                 margin-top: 0;
                 margin-left: 0.8rem;
@@ -37,11 +31,6 @@
                 font-weight: 700;
                 line-height: 1;
             }
-        }
-
-        summary::-webkit-details-marker,
-        summary::marker {
-            display: none;
         }
     }
 
@@ -143,6 +132,7 @@
             .external {
                 font-size: 1rem;
                 font-weight: 500;
+                color: inherit;
             }
         }
     }
@@ -240,6 +230,10 @@
                     scrollbar-width: thin;
                     scrollbar-color: var(--grey-500);
 
+                    a {
+                        color: inherit;
+                    }
+
                     .no-data {
                         display: block;
                         width: 100%;
@@ -322,6 +316,7 @@
 
             details {
                 width: 100%;
+                max-width: 100%;
                 margin: 0;
                 z-index: 0;
             }
@@ -402,7 +397,6 @@
 
             details[open]~.content {
                 margin: 0 0 1rem;
-                max-height: calc(0.6 * 100dvw * 9/16);
             }
 
             details[open] span.icon::before {

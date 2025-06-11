@@ -15,12 +15,21 @@
 
 a {
 	text-decoration: none;
-	color: inherit;
+	color: var(--primary-600);
 	cursor: pointer;
 }
 
-b {
-	font-weight: 800;
+b,
+strong {
+	font-weight: 700;
+}
+
+li {
+	list-style-position: inside;
+
+	&::marker {
+		color: var(--primary-600);
+	}
 }
 
 :root.dark {
@@ -321,6 +330,10 @@ nav.split-row-nav {
 	color: var(--grey-1000);
 	background-color: var(--primary-200);
 
+	a {
+		color: inherit;
+	}
+
 	ul {
 		list-style: none;
 		display: grid;
@@ -436,15 +449,12 @@ details {
 
 	summary {
 		display: block;
+		cursor: pointer;
 
 		span.icon {
 			position: relative;
 			display: flex;
 			align-items: center;
-		}
-
-		span.icon:hover {
-			cursor: pointer;
 		}
 
 		span.icon::before {
