@@ -286,6 +286,7 @@ header {
 	&.magic {
 		min-width: 22ch;
 		padding: 1rem 2rem;
+		color: var(--grey-0);
 		background: linear-gradient(135deg, var(--primary-400) 0%, var(--primary-800) 100%);
 		border: none;
 		box-shadow: 0 0.2rem 0.5rem color-mix(in srgb, var(--primary-700) 30%, transparent);
