@@ -403,7 +403,7 @@ nav.split-row-nav {
 	.dropdown-menu {
 		position: absolute;
 		min-width: 18ch;
-		top: calc(100% - 0.25rem);
+		top: calc(100% + 0.125rem);
 		right: 0;
 		padding: 0.75rem 0;
 		color: var(--grey-100);
@@ -432,6 +432,7 @@ nav.split-row-nav {
 	&:hover,
 	&:focus-within {
 		.dropdown-menu {
+			z-index: 999;
 			opacity: 1;
 			transform: rotateX(0) translateX(-1rem);
 			visibility: visible;
