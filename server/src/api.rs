@@ -1,79 +1,6 @@
-use chrono::{DateTime, Local};
 use http::{HeaderValue, header::CACHE_CONTROL};
 use leptos::prelude::{expect_context, server, server_fn::codec::GetUrl};
 use types::api::*;
-
-#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
-struct Rank {
-    user_id: String,
-    title: Title,
-    rank: i32,
-    rating: String,
-    created_at: DateTime<Local>,
-    updated_at: DateTime<Local>,
-}
-
-#[server(InsertRanks, prefix="/api", endpoint="rank/insert", input=GetUrl)]
-pub async fn insert_ranks(patch: String) -> Result<(), ApiError> {
-    use std::collections::HashMap;
-    let pool = crate::auth::ssr::pool()?;
-
-    let ranks = sqlx::query_as::<_, Rank>(
-        r#"SELECT user_id, title, rank, rating, created_at, updated_at
-        FROM rank
-        WHERE patch = $1 AND category IS NOT NULL;"#,
-    )
-    .bind(&patch)
-    .fetch_all(&pool)
-    .await
-    .or(Err(ApiError::NotFound))?;
-
-    let mut rank_map = HashMap::new();
-    for rank in ranks {
-        rank_map
-            .entry(rank.user_id.clone())
-            .and_modify(|v: &mut Rank| {
-                if v.rating < rank.rating {
-                    v.rating = rank.rating.clone();
-                    v.title = rank.title.clone();
-                    if v.title == Title::TopOne {
-                        v.title = Title::MythicSurfer
-                    }
-                }
-                if v.created_at > rank.created_at {
-                    v.created_at = rank.created_at;
-                }
-                if v.updated_at < rank.updated_at {
-                    v.updated_at = rank.updated_at;
-                }
-            })
-            .or_insert(rank);
-    }
-    let mut ranks = rank_map.iter_mut().collect::<Vec<_>>();
-    ranks.sort_by(|a, b| b.1.rating.cmp(&a.1.rating));
-    for (i, (_, rank)) in ranks.iter_mut().enumerate() {
-        rank.rank = i as i32 + 1;
-        if rank.rank == 1 {
-            rank.title = Title::TopOne;
-        }
-
-        let _ = sqlx::query(
-            r#"INSERT INTO rank (user_id, patch, layout, category, title, rank, rating, created_at, updated_at, percentage)
-            VALUES ($1, $2, NULL, NULL, $3, $4, $5, $6, $7, 0;"#
-        )
-        .bind(rank.user_id.clone())
-        .bind(&patch)
-        .bind(rank.title.clone())
-        .bind(rank.rank)
-        .bind(rank.rating.clone())
-        .bind(rank.created_at)
-        .bind(rank.updated_at)
-        .execute(&pool)
-        .await;
-    }
-
-    Ok(())
-}
 
 #[server(GetRunsId, prefix="/api", endpoint="runs/id", input=GetUrl)]
 pub async fn get_runs_id(id: i32) -> Result<SectionRuns, ApiError> {
@@ -101,11 +28,7 @@ pub async fn get_runs_id(id: i32) -> Result<SectionRuns, ApiError> {
 }
 
 #[server(GetRunsCategory, prefix="/api", endpoint="runs/category", input=GetUrl)]
-pub async fn get_runs_category(
-    patch: String,
-    layout: String,
-    category: String,
-) -> Result<Vec<SectionRuns>, ApiError> {
+pub async fn get_runs_category(patch: String, layout: String, category: String) -> Result<Vec<SectionRuns>, ApiError> {
     let pool = crate::auth::ssr::pool()?;
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let runs = sqlx::query_as::<_, SectionRuns>(
@@ -189,9 +112,7 @@ pub async fn get_runs(filter: RunFilters, offset: i32) -> Result<Vec<Run>, ApiEr
         .build_query_as::<Run>()
         .fetch_all(&pool)
         .await
-        .or(Err(ApiError::ServerError(
-            "Database lookup failed".to_string(),
-        )))
+        .or(Err(ApiError::ServerError("Database lookup failed".to_string())))
 }
 
 #[server(GetMaps, prefix="/api", endpoint="maps", input=GetUrl)]
@@ -205,9 +126,7 @@ pub async fn get_maps() -> Result<Vec<Map>, ApiError> {
     )
     .fetch_all(&pool)
     .await
-    .or(Err(ApiError::ServerError(
-        "Database lookup failed".to_string(),
-    )))?;
+    .or(Err(ApiError::ServerError("Database lookup failed".to_string())))?;
 
     res_opts.append_header(CACHE_CONTROL, HeaderValue::from_static("max-age=604800"));
     Ok(maps)
@@ -348,7 +267,5 @@ pub async fn get_activity(filter: ActivityFilters, offset: i32) -> Result<Vec<Ac
         .build_query_as::<Activity>()
         .fetch_all(&pool)
         .await
-        .or(Err(ApiError::ServerError(
-            "Database lookup failed".to_string(),
-        )))
+        .or(Err(ApiError::ServerError("Database lookup failed".to_string())))
 }

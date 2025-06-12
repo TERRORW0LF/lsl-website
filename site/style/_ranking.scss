@@ -66,7 +66,7 @@
                 .grid-row {
                     display: grid;
                     height: 2rem;
-                    grid-template-columns: 2rem 1fr 8ch;
+                    grid-template-columns: 2rem minmax(0, 1fr) 8ch;
                     column-gap: 0.5rem;
                     font-size: 1.2rem;
                     break-inside: avoid;
