@@ -65,9 +65,7 @@ pub fn ComboRanking(
         categories.get().into_iter().map(move |category| {
             Resource::new(
                 move || (patch.get(), layout.get(), category.clone()),
-                async move |combos| {
-                    get_rankings(combos.0.clone(), combos.1.clone(), combos.2.0).await
-                },
+                async move |combos| get_rankings(combos.0.clone(), combos.1.clone(), combos.2.0).await,
             )
         })
     });
@@ -77,7 +75,7 @@ pub fn ComboRanking(
             Signal::<String>::derive(move || match patch.get().as_str() {
                 "1.00" | "1.41" | "1.50" => "300 or more rating points".into(),
                 "2.00" => "150 or more rating points".into(),
-                "2.13" => "1000 or more rating points".into(),
+                "2.13" => "1500 or more rating points".into(),
                 _ => "Unknown patch selected".into(),
             }),
         ),
@@ -86,7 +84,7 @@ pub fn ComboRanking(
             Signal::<String>::derive(move || match patch.get().as_str() {
                 "1.00" | "1.41" | "1.50" => "1000 or more rating points".into(),
                 "2.00" => "500 or more rating points".into(),
-                "2.13" => "2500 or more rating points".into(),
+                "2.13" => "3000 or more rating points".into(),
                 _ => "Unknown patch selected".into(),
             }),
         ),
