@@ -291,11 +291,11 @@ async fn send_title(activity: &Activity, client: &Client) {
         "embeds": [{
             "color": if new > old { 7798548 } else { 12064000 },
             "title": "Title update",
-            "description": format!("User: *{}*\nCombo: *Layout {} - {}*", 
-                activity.username, 
-                activity.layout.as_ref().unwrap(), 
-                activity.category.as_ref().unwrap(),
-            ),
+            "description": match (activity.layout.as_ref(), activity.category.as_ref()) {
+                (Some(l), Some(c)) => format!("User: *{}*\nCombo: *Layout {} - {}*", 
+                    activity.username, l, c),
+                _ => format!("User: *{}*\nCombo: *Combined*", activity.username),
+            },
             "fields": [{
                 "name": old.to_string(),
                 "value": "",
