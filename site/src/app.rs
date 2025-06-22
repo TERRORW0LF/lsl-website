@@ -95,7 +95,6 @@ pub fn App() -> impl IntoView {
     });
 
     view! {
-        <Stylesheet id="leptos" href="/pkg/lsl-website.css" />
         // sets the document title
         <Title text="Lucio Surf League" />
         // content for this welcome page
