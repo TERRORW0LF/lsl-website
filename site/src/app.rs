@@ -1,19 +1,15 @@
 use leptos::{either::*, prelude::*};
-use leptos_meta::MetaTags;
 use leptos_meta::*;
 use leptos_router::{
     MatchNestedRoutes, NavigateOptions,
     any_nested_route::IntoAnyNestedRoute,
-    components::{
-        A, Outlet, ParentRoute, ProtectedParentRoute, ProtectedRoute, Redirect, Route, Router,
-        Routes,
-    },
+    components::{A, Outlet, ParentRoute, ProtectedParentRoute, ProtectedRoute, Redirect, Route, Router, Routes},
     hooks::use_params_map,
     path,
 };
 use pages::{
-    Activity, ComboRanking, Dashboard, ErrorTemplate, FAQ, HomePage, Leaderboard, Login,
-    ManageRuns, Map, Profile, Register, Submit, Submits, UserRanking,
+    Activity, ComboRanking, Dashboard, ErrorTemplate, FAQ, HomePage, Leaderboard, Login, ManageRuns, Map, Profile,
+    Register, Submit, Submits, UserRanking,
     dash::{Avatar, Bio, DiscordList, Password, Username},
     error_template::AppError,
     leaderboard::Section,
@@ -30,6 +26,7 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
         <!DOCTYPE html>
         <html lang="en" dir="ltr">
             <head>
+                <HashedStylesheet options=options.clone() />
                 <Link rel="preconnect" href="https://fonts.googleapis.com" />
                 <Link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
                 <Link
@@ -83,12 +80,7 @@ pub fn App() -> impl IntoView {
     provide_context(update_bio);
     provide_context(update_pfp);
 
-    Effect::new(|_| {
-        document()
-            .document_element()
-            .unwrap()
-            .set_class_name("dark")
-    });
+    Effect::new(|_| document().document_element().unwrap().set_class_name("dark"));
 
     Effect::new(|_| {
         let a = Closure::<dyn FnMut()>::new(|| {
@@ -98,11 +90,7 @@ pub fn App() -> impl IntoView {
                 .style()
                 .set_property("--scroll", &(window().page_y_offset().unwrap()).to_string());
         });
-        let _ = window().add_event_listener_with_callback_and_bool(
-            "scroll",
-            a.as_ref().unchecked_ref(),
-            false,
-        );
+        let _ = window().add_event_listener_with_callback_and_bool("scroll", a.as_ref().unchecked_ref(), false);
         a.forget();
     });
 

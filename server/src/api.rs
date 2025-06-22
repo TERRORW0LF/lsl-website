@@ -153,8 +153,8 @@ pub async fn get_rankings(
             u.name, r.title, r.rank, r.rating, r.created_at, r.updated_at
         FROM rank r
         JOIN "user" u ON user_id = u.id
-        WHERE patch = $1 AND layout IS NOT DISTINCT FROM $2 AND category IS NOT DISTINCT FROM $3
-        ORDER BY rank ASC;"#,
+        WHERE r.patch = $1 AND r.layout IS NOT DISTINCT FROM $2 AND r.category IS NOT DISTINCT FROM $3
+        ORDER BY r.rating DESC, r.updated_at ASC;"#,
     )
     .bind(patch)
     .bind(layout)

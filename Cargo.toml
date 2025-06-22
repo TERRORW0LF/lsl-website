@@ -1,10 +1,3 @@
-[patch.crates-io]
-leptos_router = { path = "../leptos-aria-current/router" }
-leptos = { path = "../leptos-aria-current/leptos" }
-leptos_meta = { path = "../leptos-aria-current/meta" }
-server_fn = { path = "../leptos-aria-current/server_fn" }
-leptos_axum = { path = "../leptos-aria-current/integrations/axum" }
-
 [workspace]
 members = ["site", "pages", "components", "server", "discord_bridge"]
 exclude = ["tutorial"]
@@ -20,16 +13,16 @@ console_error_panic_hook = "0.1"
 console_log = "1"
 futures = { version = "0.3.31" }
 http = "1.1.0"
-leptos = { version = "0.8.3", features = ["nightly"] }
-leptos_meta = "0.8.3"
-leptos_router = "0.8.3"
+leptos = { git = "https://github.com/leptos-rs/leptos.git", features = ["nightly"] }
+leptos_meta = { git = "https://github.com/leptos-rs/leptos.git" }
+leptos_router = { git = "https://github.com/leptos-rs/leptos.git" }
 rust_decimal = "1.36.0"
-serde = { version = "1.0.188", features = ["derive"] }
+serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
 thiserror = "1.0.38"
 urlencoding = "2.1.3"
 log = "0.4"
-server_fn = { version = "0.8.2", features = ["multipart"] }
+server_fn = { git = "https://github.com/leptos-rs/leptos.git", features = ["multipart"] }
 simple_logger = "5"
 strum = { version = "0.26", features = ["derive"] }
 wasm-bindgen = "=0.2.100"
@@ -40,7 +33,7 @@ axum = { version = "0.8", features = ["macros"] }
 axum_session = "0.16"
 axum_session_auth = "0.16"
 axum_session_sqlx = { version = "0.5", features = ["postgres", "tls-rustls"] }
-leptos_axum = "0.8.3"
+leptos_axum = { git = "https://github.com/leptos-rs/leptos.git" }
 oauth2 = "4.4.2"
 rand = "0.8.5"
 reqwest = { version = "0.12.9", features = ["json"] }
