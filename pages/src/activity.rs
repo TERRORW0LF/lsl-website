@@ -1,4 +1,5 @@
 use chrono::{Local, NaiveDateTime, TimeZone};
+use components::Accordion;
 use leptos::prelude::*;
 use leptos_router::{
     components::{A, Form},
@@ -33,14 +34,8 @@ pub fn Activity() -> impl IntoView {
                     Local.from_local_datetime(&ndt).earliest()
                 })
                 .flatten(),
-            sort: p
-                .get("sort")
-                .filter(|v| !v.is_empty())
-                .unwrap_or("date".into()),
-            ascending: !p
-                .get("order")
-                .filter(|v| !v.is_empty())
-                .is_none_or(|s| s == "desc"),
+            sort: p.get("sort").filter(|v| !v.is_empty()).unwrap_or("date".into()),
+            ascending: !p.get("order").filter(|v| !v.is_empty()).is_none_or(|s| s == "desc"),
         })
     });
     let offset = Signal::derive(move || {
@@ -67,124 +62,105 @@ pub fn Activity() -> impl IntoView {
 
     view! {
         <section id="filter-list" class="activity">
-            <details>
-                <summary>
-                    <span role="term" aria-details="filters" class="icon">
-                        "Show Filters"
-                    </span>
-                </summary>
-            </details>
-            <div role="definition" id="filters" class="content">
-                <div>
-                    <Form method="GET" action="" attr:class="inner">
-                        <div class="row">
-                            <div class="input-box">
-                                <label for="sort" class="indicator">
-                                    "Sort By"
-                                </label>
-                                <select class="select" name="sort" id="sort">
-                                    <option value="date">"Date"</option>
-                                    <option value="section">"Section"</option>
-                                </select>
-                            </div>
-                            <div class="input-box">
-                                <label for="order" class="indicator">
-                                    "Order By"
-                                </label>
-                                <select class="select" name="order" id="order">
-                                    <option value="asc">"Ascending"</option>
-                                    <option selected value="desc">
-                                        "Descending"
-                                    </option>
-                                </select>
-                            </div>
-                            <div class="input-box">
-                                <label for="before" class="indicator">
-                                    "Before"
-                                </label>
-                                <input
-                                    class="select"
-                                    type="datetime-local"
-                                    name="before"
-                                    id="before"
-                                />
-                            </div>
-                            <div class="input-box">
-                                <label for="after" class="indicator">
-                                    "After"
-                                </label>
-                                <input
-                                    class="select"
-                                    type="datetime-local"
-                                    name="after"
-                                    id="after"
-                                />
-                            </div>
-                            <div class="input-box">
-                                <label for="event" class="indicator">
-                                    "Event"
-                                </label>
-                                <select class="select" name="event" id="event">
-                                    <option value="">"All"</option>
-                                    <option value="join">"User Joined"</option>
-                                    <option value="rank">"Rank changed"</option>
-                                    <option value="title">"Title changed"</option>
-                                </select>
-                            </div>
-                            <div class="input-box">
-                                <label for="user" class="indicator">
-                                    "User ID"
-                                </label>
-                                <input
-                                    class="select"
-                                    type="number"
-                                    name="user"
-                                    id="user"
-                                    min="1"
-                                    step="1"
-                                />
-                            </div>
-                            <div class="input-box">
-                                <label for="patch" class="indicator">
-                                    "Patch"
-                                </label>
-                                <select class="select" name="patch" id="patch">
-                                    <option value="">"All"</option>
-                                    <option value="1.00">"1.00"</option>
-                                    <option value="1.41">"1.41"</option>
-                                    <option value="1.50">"1.50"</option>
-                                    <option value="2.00">"2.00"</option>
-                                    <option value="2.13">"Current"</option>
-                                </select>
-                            </div>
-                            <div class="input-box">
-                                <label for="layout" class="indicator">
-                                    "Layout"
-                                </label>
-                                <select class="select" name="layout" id="layout">
-                                    <option value="">"All"</option>
-                                    <option value="1">"Layout 1"</option>
-                                    <option value="2">"Layout 2"</option>
-                                    <option value="3">"Layout 3"</option>
-                                    <option value="4">"Layout 4"</option>
-                                    <option value="5">"Layout 5"</option>
-                                </select>
-                            </div>
-                            <div class="input-box">
-                                <label for="category" class="indicator">
-                                    "Category"
-                                </label>
-                                <select class="select" name="category" id="category">
-                                    <option value="">"All"</option>
-                                    <option value="Standard">"Standard"</option>
-                                    <option value="Gravspeed">"Gravspeed"</option>
-                                </select>
-                            </div>
+            <Accordion id="filter" header=|| "Show Filters">
+                <Form method="GET" action="">
+                    <div class="row">
+                        <div class="input-box">
+                            <label for="sort" class="indicator">
+                                "Sort By"
+                            </label>
+                            <select class="select" name="sort" id="sort">
+                                <option value="date">"Date"</option>
+                                <option value="section">"Section"</option>
+                            </select>
                         </div>
-                        <input type="submit" class="button" value="Apply" />
-                    </Form>
-                </div>
-            </div>
+                        <div class="input-box">
+                            <label for="order" class="indicator">
+                                "Order By"
+                            </label>
+                            <select class="select" name="order" id="order">
+                                <option value="asc">"Ascending"</option>
+                                <option selected value="desc">
+                                    "Descending"
+                                </option>
+                            </select>
+                        </div>
+                        <div class="input-box">
+                            <label for="before" class="indicator">
+                                "Before"
+                            </label>
+                            <input class="select" type="datetime-local" name="before" id="before" />
+                        </div>
+                        <div class="input-box">
+                            <label for="after" class="indicator">
+                                "After"
+                            </label>
+                            <input class="select" type="datetime-local" name="after" id="after" />
+                        </div>
+                        <div class="input-box">
+                            <label for="event" class="indicator">
+                                "Event"
+                            </label>
+                            <select class="select" name="event" id="event">
+                                <option value="">"All"</option>
+                                <option value="join">"User Joined"</option>
+                                <option value="rank">"Rank changed"</option>
+                                <option value="title">"Title changed"</option>
+                            </select>
+                        </div>
+                        <div class="input-box">
+                            <label for="user" class="indicator">
+                                "User ID"
+                            </label>
+                            <input
+                                class="select"
+                                type="number"
+                                name="user"
+                                id="user"
+                                min="1"
+                                step="1"
+                            />
+                        </div>
+                        <div class="input-box">
+                            <label for="patch" class="indicator">
+                                "Patch"
+                            </label>
+                            <select class="select" name="patch" id="patch">
+                                <option value="">"All"</option>
+                                <option value="1.00">"1.00"</option>
+                                <option value="1.41">"1.41"</option>
+                                <option value="1.50">"1.50"</option>
+                                <option value="2.00">"2.00"</option>
+                                <option value="2.13">"Current"</option>
+                            </select>
+                        </div>
+                        <div class="input-box">
+                            <label for="layout" class="indicator">
+                                "Layout"
+                            </label>
+                            <select class="select" name="layout" id="layout">
+                                <option value="">"All"</option>
+                                <option value="1">"Layout 1"</option>
+                                <option value="2">"Layout 2"</option>
+                                <option value="3">"Layout 3"</option>
+                                <option value="4">"Layout 4"</option>
+                                <option value="5">"Layout 5"</option>
+                            </select>
+                        </div>
+                        <div class="input-box">
+                            <label for="category" class="indicator">
+                                "Category"
+                            </label>
+                            <select class="select" name="category" id="category">
+                                <option value="">"All"</option>
+                                <option value="Standard">"Standard"</option>
+                                <option value="Gravspeed">"Gravspeed"</option>
+                            </select>
+                        </div>
+                    </div>
+                    <input type="submit" class="button" value="Apply" />
+                </Form>
+            </Accordion>
             <div class="grid">
                 <span class="heading">"date"</span>
                 <span class="heading">"user"</span>

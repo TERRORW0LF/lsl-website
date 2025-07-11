@@ -82,7 +82,6 @@
             mdbook-embedify
             binaryen
             dart-sass
-            rust-analyzer
             leptosfmt
             gcc
           ];

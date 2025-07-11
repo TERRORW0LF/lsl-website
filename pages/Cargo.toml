@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 server = {path = "../server", default-features = false }
 types = {path = "../types", default-features = false }
+components = { path = "../components", default-features = false }
 
 cfg-if.workspace = true
 charming.workspace = true

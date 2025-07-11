@@ -594,6 +594,16 @@ dependencies = [
 [[package]]
 name = "components"
 version = "0.1.0"
+dependencies = [
+ "charming",
+ "chrono",
+ "leptos",
+ "leptos_router",
+ "rust_decimal",
+ "types",
+ "wasm-bindgen",
+ "web-sys",
+]
 
 [[package]]
 name = "concurrent-queue"
@@ -2506,6 +2516,7 @@ dependencies = [
  "cfg-if",
  "charming",
  "chrono",
+ "components",
  "futures",
  "http 1.3.1",
  "leptos",

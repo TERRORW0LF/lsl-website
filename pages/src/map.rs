@@ -1,15 +1,14 @@
 use std::collections::HashMap;
 
 use charming::{
-    Chart, Echarts, WasmRenderer,
     component::{Axis, DataZoom, FilterMode, Grid, Legend},
     datatype::CompositeValue,
     element::{AxisLabel, AxisType, JsFunction, Step, Tooltip, Trigger},
     series::Line,
-    theme::Theme,
 };
 use chrono::Local;
-use leptos::{either::Either, html::Div, prelude::*};
+use components::{Chart, accordion::Accordion, player::Player};
+use leptos::{either::Either, prelude::*};
 use leptos_router::{
     components::A,
     hooks::{use_params_map, use_query_map},
@@ -18,12 +17,10 @@ use rust_decimal::{
     Decimal,
     prelude::{FromPrimitive, ToPrimitive},
 };
-use wasm_bindgen::{JsCast, JsValue, prelude::Closure};
-use web_sys::js_sys;
 
-use crate::leaderboard::{Player, Proof, filter, sort};
+use crate::leaderboard::{filter, sort};
 use server::api::get_runs_id;
-use types::api::PartialRun;
+use types::{api::PartialRun, internal::Proof};
 
 #[component]
 pub fn Map(id: Signal<i32>) -> impl IntoView {
@@ -44,7 +41,7 @@ pub fn Map(id: Signal<i32>) -> impl IntoView {
                                     view! {
                                         <div>
                                             <h1>{runs.map.clone()}</h1>
-                                            <Chart runs=runs.runs.clone() />
+                                            <PbChart runs=runs.runs.clone() />
                                             <MapRunList map=runs.map runs=runs.runs />
                                         </div>
                                     }
@@ -58,21 +55,15 @@ pub fn Map(id: Signal<i32>) -> impl IntoView {
 }
 
 #[component]
-fn Chart(mut runs: Vec<PartialRun>) -> impl IntoView {
+fn PbChart(mut runs: Vec<PartialRun>) -> impl IntoView {
     let user = Memo::new(|_| use_params_map().read().get("id"));
     let mut old_times = HashMap::<i64, Decimal>::new();
     runs.sort_by_key(|r| r.created_at);
     runs = runs
         .into_iter()
+        .filter(|r| user.get().is_none() || r.user_id == user.get().unwrap().parse::<i64>().unwrap_or(-1))
         .filter(|r| {
-            user.get().is_none() || r.user_id == user.get().unwrap().parse::<i64>().unwrap_or(-1)
-        })
-        .filter(|r| {
-            if &r.time
-                < old_times
-                    .get(&r.user_id)
-                    .unwrap_or(&Decimal::new(999999, 3))
-            {
+            if &r.time < old_times.get(&r.user_id).unwrap_or(&Decimal::new(999999, 3)) {
                 old_times.insert(r.user_id, r.time);
                 true
             } else {
@@ -93,18 +84,14 @@ fn Chart(mut runs: Vec<PartialRun>) -> impl IntoView {
         if let Some(user) = users.get_mut(&run.name) {
             user.push(CompositeValue::Array(vec![
                 CompositeValue::String(run.created_at.to_rfc3339()),
-                CompositeValue::Number(charming::datatype::NumericValue::Float(
-                    run.time.to_f64().unwrap(),
-                )),
+                CompositeValue::Number(charming::datatype::NumericValue::Float(run.time.to_f64().unwrap())),
             ]));
         } else {
             users.insert(
                 run.name.clone(),
                 vec![CompositeValue::Array(vec![
                     CompositeValue::String(run.created_at.to_rfc3339()),
-                    CompositeValue::Number(charming::datatype::NumericValue::Float(
-                        run.time.to_f64().unwrap(),
-                    )),
+                    CompositeValue::Number(charming::datatype::NumericValue::Float(run.time.to_f64().unwrap())),
                 ])],
             );
         }
@@ -118,7 +105,7 @@ fn Chart(mut runs: Vec<PartialRun>) -> impl IntoView {
         }
     }
     let mut chart =
-        Chart::new()
+        charming::Chart::new()
             .legend(Legend::new())
             .grid(Grid::new().contain_label(true).left(25).right(50))
             .tooltip(Tooltip::new().trigger(Trigger::Item).formatter(
@@ -180,56 +167,7 @@ fn Chart(mut runs: Vec<PartialRun>) -> impl IntoView {
     for user in users {
         chart = chart.series(Line::new().name(user.0).data(user.1).step(Step::End));
     }
-    let chart_elem: NodeRef<Div> = NodeRef::new();
-    let (width, set_width) = signal::<i32>(0);
-    let mut echart: Option<Echarts> = None;
-
-    Effect::watch(
-        move || width.get(),
-        move |_, _, _| {
-            if echart.is_none() {
-                if let Some(ch) = WasmRenderer::new_opt(None, None)
-                    .theme(Theme::Walden)
-                    .render("chart", &chart)
-                    .ok()
-                {
-                    echart = Some(ch);
-                }
-            }
-            if let Some(echart) = echart.as_ref() {
-                echart.resize(JsValue::UNDEFINED);
-            }
-        },
-        true,
-    );
-    let mut obs: Option<web_sys::ResizeObserver> = None;
-    let mut has_obs = false;
-    Effect::new(move |_| {
-        if obs.is_none() {
-            let a = Closure::<dyn FnMut(js_sys::Array, web_sys::ResizeObserver)>::new(
-                move |entries: js_sys::Array, _| {
-                    set_width(
-                        entries.to_vec()[0]
-                            .clone()
-                            .unchecked_into::<web_sys::ResizeObserverEntry>()
-                            .content_rect()
-                            .width() as i32,
-                    );
-                },
-            );
-            obs = web_sys::ResizeObserver::new(a.as_ref().unchecked_ref()).ok();
-            a.forget();
-        }
-        if let Some(observer) = obs.as_mut() {
-            if let Some(elem) = chart_elem.get() {
-                if !has_obs {
-                    observer.observe(&elem.into());
-                    has_obs = true;
-                }
-            }
-        }
-    });
-    view! { <div id="chart" node_ref=chart_elem></div> }
+    view! { <Chart chart /> }
 }
 
 #[component]
@@ -243,16 +181,11 @@ fn MapRunList(map: String, runs: Vec<PartialRun>) -> impl IntoView {
         let r = runs.clone();
         let mut runs: Vec<PartialRun> = r
             .into_iter()
-            .filter(|r| {
-                user.get().is_none()
-                    || r.user_id == user.get().unwrap().parse::<i64>().unwrap_or(-1)
-            })
+            .filter(|r| user.get().is_none() || r.user_id == user.get().unwrap().parse::<i64>().unwrap_or(-1))
             .filter(|r| filter(r, filter_key.get(), &mut old_time, &mut old_times))
             .collect();
         runs.sort_unstable_by(sort(sort_key.get()));
-        runs.into_iter()
-            .enumerate()
-            .collect::<Vec<(usize, PartialRun)>>()
+        runs.into_iter().enumerate().collect::<Vec<(usize, PartialRun)>>()
     });
 
     view! {
@@ -266,17 +199,14 @@ fn MapRunList(map: String, runs: Vec<PartialRun>) -> impl IntoView {
                         key=|r| r.1.id
                         children=move |(i, r)| {
                             let username = r.name.clone();
+                            let map2 = map.clone();
                             view! {
                                 <div class="map-entry">
-                                    <details>
-                                        <summary>
-                                            <div
-                                                class="row"
-                                                role="term"
-                                                aria-details=format!("run_{}", r.id)
-                                            >
-                                                <div class="row narrow">
-                                                    <span class="icon">""</span>
+                                    <Accordion
+                                        id=format!("run_{}", r.id)
+                                        header=move || {
+                                            view! {
+                                                <div class="row">
                                                     <span class="rank">
                                                         {move || match sort_key() {
                                                             Some(k) => {
@@ -289,85 +219,78 @@ fn MapRunList(map: String, runs: Vec<PartialRun>) -> impl IntoView {
                                                             None => "#".to_string() + &(i + 1).to_string(),
                                                         }}
                                                     </span>
+                                                    <span class="name">
+                                                        <A href=format!(
+                                                            "/user/{}/leaderboard",
+                                                            r.user_id,
+                                                        )>{username}</A>
+                                                    </span>
+                                                    <span class="time">{r.time.to_string()} " s"</span>
                                                 </div>
-                                                <span class="name">
-                                                    <A href=format!(
-                                                        "/user/{}/leaderboard",
-                                                        r.user_id,
-                                                    )>{username}</A>
-                                                </span>
-                                                <span class="time">{r.time.to_string()} " s"</span>
-                                            </div>
-                                        </summary>
-                                    </details>
-                                    <div
-                                        role="definition"
-                                        id=format!("run_{}", r.id)
-                                        class="content"
+                                            }
+                                        }
                                     >
-                                        <div>
-                                            <div class="inner row">
-                                                <Player
-                                                    proof=Proof {
-                                                        yt_id: r.yt_id,
-                                                        url: r.proof.clone(),
-                                                    }
-                                                        .into()
-                                                    cover=map.clone()
-                                                />
-                                                <div class="run-data">
-                                                    <div class="grid">
-                                                        <div class="entry">
-                                                            <h3>"RANK"</h3>
-                                                            <p>"#"{i + 1}</p>
-                                                        </div>
-                                                        <div class="entry">
-                                                            <h3>"DATE"</h3>
-                                                            <p>
-                                                                {r.created_at.format("%a %d %b %Y %k:%M:%S").to_string()}
-                                                            </p>
-                                                        </div>
-                                                        <div class="entry">
-                                                            <h3>"USER"</h3>
-                                                            <p>
-                                                                <A href=format!(
-                                                                    "/user/{}/leaderboard",
-                                                                    r.user_id,
-                                                                )>{r.name}</A>
-                                                            </p>
-                                                        </div>
-                                                        <div class="entry">
-                                                            <h3>"TIME"</h3>
-                                                            <p>{r.time.to_string()} " sec"</p>
-                                                        </div>
-                                                        <div class="entry">
-                                                            <h3>"STATUS"</h3>
-                                                            <p>
-                                                                {if r.is_wr {
-                                                                    "World Record"
-                                                                } else if r.is_pb {
-                                                                    "Personal Best"
-                                                                } else if r.verified {
-                                                                    "Verified"
-                                                                } else {
-                                                                    "Unverified"
-                                                                }}
-                                                            </p>
-                                                        </div>
-                                                        <div class="entry">
-                                                            <h3>"PROOF"</h3>
-                                                            <p>
-                                                                <a class="extern".to_string() href=r.proof target="_blank">
-                                                                    "link"
-                                                                </a>
-                                                            </p>
-                                                        </div>
+                                        <div class="row">
+                                            <Player
+                                                proof=Proof {
+                                                    yt_id: r.yt_id,
+                                                    url: r.proof.clone(),
+                                                }
+                                                    .into()
+                                                cover=map2
+                                            />
+                                            <div class="run-data">
+                                                <div class="grid">
+                                                    <div class="entry">
+                                                        <h3>"RANK"</h3>
+                                                        <p>"#"{i + 1}</p>
                                                     </div>
-                                                    <div class="id">{r.id}</div>
+                                                    <div class="entry">
+                                                        <h3>"DATE"</h3>
+                                                        <p>
+                                                            {r.created_at.format("%a %d %b %Y %k:%M:%S").to_string()}
+                                                        </p>
+                                                    </div>
+                                                    <div class="entry">
+                                                        <h3>"USER"</h3>
+                                                        <p>
+                                                            <A href=format!(
+                                                                "/user/{}/leaderboard",
+                                                                r.user_id,
+                                                            )>{r.name}</A>
+                                                        </p>
+                                                    </div>
+                                                    <div class="entry">
+                                                        <h3>"TIME"</h3>
+                                                        <p>{r.time.to_string()} " sec"</p>
+                                                    </div>
+                                                    <div class="entry">
+                                                        <h3>"STATUS"</h3>
+                                                        <p>
+                                                            {if r.is_wr {
+                                                                "World Record"
+                                                            } else if r.is_pb {
+                                                                "Personal Best"
+                                                            } else if r.verified {
+                                                                "Verified"
+                                                            } else {
+                                                                "Unverified"
+                                                            }}
+                                                        </p>
+                                                    </div>
+                                                    <div class="entry">
+                                                        <h3>"PROOF"</h3>
+                                                        <p>
+                                                            <a class="extern".to_string() href=r.proof target="_blank">
+                                                                "link"
+                                                            </a>
+                                                        </p>
+                                                    </div>
                                                 </div>
+                                                <div class="id">{r.id}</div>
                                             </div>
                                         </div>
-                                    </div>
+                                    </Accordion>
                                 </div>
                             }
                         }

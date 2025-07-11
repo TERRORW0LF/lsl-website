@@ -1,3 +1,4 @@
+use components::{Accordion, Header, Player};
 use leptos::{either::*, prelude::*};
 use leptos_meta::Title;
 use leptos_router::{
@@ -8,7 +9,10 @@ use rust_decimal::Decimal;
 use std::{cmp::Ordering, collections::HashMap};
 
 use server::api::get_runs_category;
-use types::api::{PartialRun, SectionRuns};
+use types::{
+    api::{PartialRun, SectionRuns},
+    internal::Proof,
+};
 
 #[component]
 pub fn Section(
@@ -20,117 +24,92 @@ pub fn Section(
 
     view! {
         <Title text="Leaderboard" />
-        <details>
-            <summary>
-                <span role="term" aria-details="filters" class="icon">
-                    "Filters"
-                </span>
-            </summary>
-        </details>
-        <header id="lb_header">
-            <nav class="split-row-nav">
-                <ul class="left-row-nav">
-                    <For
-                        each=layouts
-                        key=|l| l.0.to_owned()
-                        children=move |l| {
-                            view! {
-                                <li>
-                                    <A
-                                        href=move || {
-                                            format!(
-                                                "../../{}/{}{}",
-                                                l.0,
-                                                category.get(),
-                                                query.get().to_query_string(),
-                                            )
-                                        }
-                                        scroll=false
-                                    >
-                                        <span class="text">{l.1}</span>
-                                    </A>
-                                </li>
-                            }
+        <Header right=move || {
+            categories
+                .get()
+                .iter()
+                .map(|c| {
+                    view! {
+                        <A
+                            href=move || format!("../{}{}", c.0, query.get().to_query_string())
+                            scroll=false
+                        >
+                            <span class="text">{c.1.clone()}</span>
+                        </A>
+                    }
+                })
+        }>
+            {move || {
+                layouts
+                    .get()
+                    .iter()
+                    .map(|l| {
+                        view! {
+                            <A
+                                href=move || {
+                                    format!(
+                                        "../../{}/{}{}",
+                                        l.0,
+                                        category.get(),
+                                        query.get().to_query_string(),
+                                    )
+                                }
+                                scroll=false
+                            >
+                                <span class="text">{l.1.clone()}</span>
+                            </A>
                         }
-                    />
-                </ul>
-                <ul class="right-row-nav">
-                    <For
-                        each=categories
-                        key=|c| c.0.to_owned()
-                        children=move |c| {
-                            view! {
-                                <li>
-                                    <A
-                                        href=move || {
-                                            format!("../{}{}", c.0, query.get().to_query_string())
-                                        }
-                                        scroll=false
-                                    >
-                                        <span class="text">{c.1}</span>
-                                    </A>
-                                </li>
-                            }
-                        }
-                    />
-                </ul>
-            </nav>
-        </header>
-        <div role="definition" id="filters" class="content">
-            <div>
-                <div class="inner">
-                    <Form method="GET" action="">
-                        <div class="group">
-                            <h6>"Patch"</h6>
-                            <div class="options">
-                                <A href="../../../1.00/1/standard">"1.00"</A>
-                                <A href="../../../1.41/1/standard">"1.41"</A>
-                                <A href="../../../1.50/1/standard">"1.50"</A>
-                                <A href="../../../2.00/1/standard">"2.00"</A>
-                                <A href="../../../2.13/1/standard">"Current"</A>
-                            </div>
-                        </div>
-                        <div class="group">
-                            <h6>"Sort by"</h6>
-                            <div class="options">
-                                <input type="radio" name="sort" value="time" id="time" />
-                                <label for="time">"Time"</label>
-
-                                <input type="radio" name="sort" value="date" id="date" />
-                                <label for="date">"Date"</label>
-                            </div>
-                        </div>
-                        <div class="group">
-                            <h6>"Filter"</h6>
-                            <div class="options">
-                                <input type="radio" name="filter" value="none" id="none" />
-                                <label for="none">"None"</label>
-                                <input type="radio" name="filter" value="is_pb" id="is_pb" />
-                                <label for="is_pb">"Is PB"</label>
-                                <input type="radio" name="filter" value="is_wr" id="is_wr" />
-                                <label for="is_wr">"Is WR"</label>
-                                <input type="radio" name="filter" value="was_pb" id="was_pb" />
-                                <label for="was_pb">"Was PB"</label>
-                                <input type="radio" name="filter" value="was_wr" id="was_wr" />
-                                <label for="was_wr">"Was WR"</label>
-                                <input type="radio" name="filter" value="verified" id="verified" />
-                                <label for="verified">"Verified"</label>
-                            </div>
-                        </div>
-                        <input type="submit" class="button" value="Apply" />
-                    </Form>
+                    })
+                    .collect_view()
+            }}
+        </Header>
+        <Accordion id="filter" header=|| "Filters">
+            <Form method="GET" action="">
+                <div class="group">
+                    <h6>"Patch"</h6>
+                    <div class="options">
+                        <A href="../../../1.00/1/standard">"1.00"</A>
+                        <A href="../../../1.41/1/standard">"1.41"</A>
+                        <A href="../../../1.50/1/standard">"1.50"</A>
+                        <A href="../../../2.00/1/standard">"2.00"</A>
+                        <A href="../../../2.13/1/standard">"Current"</A>
+                    </div>
                 </div>
-            </div>
-        </div>
+                <div class="group">
+                    <h6>"Sort by"</h6>
+                    <div class="options">
+                        <input type="radio" name="sort" value="time" id="time" />
+                        <label for="time">"Time"</label>
+
+                        <input type="radio" name="sort" value="date" id="date" />
+                        <label for="date">"Date"</label>
+                    </div>
+                </div>
+                <div class="group">
+                    <h6>"Filter"</h6>
+                    <div class="options">
+                        <input type="radio" name="filter" value="none" id="none" />
+                        <label for="none">"None"</label>
+                        <input type="radio" name="filter" value="is_pb" id="is_pb" />
+                        <label for="is_pb">"Is PB"</label>
+                        <input type="radio" name="filter" value="is_wr" id="is_wr" />
+                        <label for="is_wr">"Is WR"</label>
+                        <input type="radio" name="filter" value="was_pb" id="was_pb" />
+                        <label for="was_pb">"Was PB"</label>
+                        <input type="radio" name="filter" value="was_wr" id="was_wr" />
+                        <label for="was_wr">"Was WR"</label>
+                        <input type="radio" name="filter" value="verified" id="verified" />
+                        <label for="verified">"Verified"</label>
+                    </div>
+                </div>
+                <input type="submit" class="button" value="Apply" />
+            </Form>
+        </Accordion>
     }
 }
 
 #[component]
-pub fn Leaderboard(
-    patch: Signal<String>,
-    layout: Signal<String>,
-    category: Signal<String>,
-) -> impl IntoView {
+pub fn Leaderboard(patch: Signal<String>, layout: Signal<String>, category: Signal<String>) -> impl IntoView {
     let selection = Signal::derive(move || (patch.get(), layout.get(), category.get()));
     let maps = Resource::new(selection, |mut s| {
         get_runs_category(s.0, s.1, format!("{}{}", s.2.remove(0).to_uppercase(), s.2))
@@ -141,24 +120,23 @@ pub fn Leaderboard(
             view! { <p>"Loading..."</p> }
         }>
             {move || {
-                maps.get()
-                    .map(|data| match data {
-                        Err(e) => Either::Right(view! { <p>{e.to_string()}</p> }),
-                        Ok(maps) => {
-                            Either::Left(
-                                view! {
-                                    <div id="lb">
-                                        {maps
-                                            .into_iter()
-                                            .map(|map| {
-                                                view! { <LeaderboardEntry map=map /> }
-                                            })
-                                            .collect_view()}
-                                    </div>
-                                },
-                            )
-                        }
-                    })
+                maps.map(|data| match data {
+                    Err(e) => Either::Right(view! { <p>{e.to_string()}</p> }),
+                    Ok(maps) => {
+                        Either::Left(
+                            view! {
+                                <div id="lb">
+                                    {maps
+                                        .into_iter()
+                                        .map(|map| {
+                                            view! { <LeaderboardEntry map=map.clone() /> }
+                                        })
+                                        .collect_view()}
+                                </div>
+                            },
+                        )
+                    }
+                })
             }}
         </Transition>
     }
@@ -169,23 +147,18 @@ pub fn LeaderboardEntry(map: SectionRuns) -> impl IntoView {
     let filter_key = Memo::new(|_| use_query_map().read().get("filter"));
     let sort_key = Memo::new(|_| use_query_map().read().get("sort"));
     let user = Memo::new(|_| use_params_map().read().get("id"));
-    let runs = move || {
+    let runs = Signal::derive(move || {
         let mut old_time = Decimal::new(999999, 3);
         let mut old_times = HashMap::<i64, Decimal>::new();
         let r = map.runs.clone();
         let mut runs: Vec<PartialRun> = r
             .into_iter()
-            .filter(|r| {
-                user().is_none() || r.user_id == user.get().unwrap().parse::<i64>().unwrap_or(-1)
-            })
+            .filter(|r| user().is_none() || r.user_id == user.get().unwrap().parse::<i64>().unwrap_or(-1))
             .filter(|r| filter(r, filter_key.get(), &mut old_time, &mut old_times))
             .collect();
         runs.sort_unstable_by(sort(sort_key.get()));
-        runs.into_iter()
-            .enumerate()
-            .collect::<Vec<(usize, PartialRun)>>()
-    };
-    let runs2 = runs.clone();
+        runs.into_iter().enumerate().collect::<Vec<(usize, PartialRun)>>()
+    });
     let map_name = map.map.clone();
     let (top_run, set_top_run) = signal::<Option<PartialRun>>(None);
     let (sel_run, set_sel_run) = signal::<Option<PartialRun>>(None);
@@ -226,7 +199,7 @@ pub fn LeaderboardEntry(map: SectionRuns) -> impl IntoView {
                         fallback=|| view! { <span class="no-data">"No Runs Found"</span> }
                     >
                         <For
-                            each=runs2.clone()
+                            each=runs
                             key=|r| r.1.id
                             children=move |(i, r)| {
                                 let selected = move || sel_run().is_some_and(|s| s.id == r.id);
@@ -269,88 +242,7 @@ pub fn LeaderboardEntry(map: SectionRuns) -> impl IntoView {
     }
 }
 
-#[derive(Clone, PartialEq, Eq)]
-pub struct Proof {
-    pub yt_id: Option<String>,
-    pub url: String,
-}
-
-#[component]
-pub fn Player(proof: Signal<Option<Proof>>, cover: String) -> impl IntoView {
-    let (play, set_play) = signal(false);
-    Effect::new(move |old: Option<Option<String>>| {
-        let url = proof.get().map(|p| p.url);
-        if old.flatten() != url {
-            set_play(false);
-        }
-        url
-    });
-    view! {
-        <div class="video">
-            <Show
-                when=move || *play.read()
-                fallback=move || {
-                    view! {
-                        <Show when=move || proof.read().is_some()>
-                            <div class="buttons">
-                                <Show
-                                    when=move || proof.get().unwrap().yt_id.is_some()
-                                    fallback=move || {
-                                        view! {
-                                            <a
-                                                href=move || proof.get().unwrap().url
-                                                class="play-wrapper"
-                                                target="_blank"
-                                            >
-                                                <div></div>
-                                            </a>
-                                        }
-                                    }
-                                >
-                                    <button
-                                        class="play-wrapper"
-                                        on:click=move |_| { set_play(true) }
-                                    >
-                                        <div></div>
-                                    </button>
-                                </Show>
-                                <br />
-                                <a
-                                    class="external"
-                                    href=move || proof.get().unwrap().url
-                                    target="_blank"
-                                >
-                                    "Open in new Tab"
-                                </a>
-                            </div>
-                        </Show>
-                        <div class="no-vid">
-                            <img
-                                src=format!("/cdn/maps/{}.jpg", cover)
-                                alt=format!("Picture of {}", cover)
-                            />
-                        </div>
-                    }
-                }
-            >
-                <iframe
-                    src=format!(
-                        "https://www.youtube-nocookie.com/embed/{}?autoplay=1&rel=0&modestbranding=1&showinfo=0",
-                        proof.get().unwrap().yt_id.unwrap(),
-                    )
-                    allowfullscreen
-                ></iframe>
-            </Show>
-        </div>
-    }
-}
-
-pub fn filter<'a>(
-    r: &'a PartialRun,
-    f: Option<String>,
-    t: &'a mut Decimal,
-    ts: &'a mut HashMap<i64, Decimal>,
-) -> bool {
+pub fn filter<'a>(r: &'a PartialRun, f: Option<String>, t: &'a mut Decimal, ts: &'a mut HashMap<i64, Decimal>) -> bool {
     match f {
         Some(f) => match f.as_str() {
             "verified" => r.verified,

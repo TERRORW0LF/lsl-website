@@ -17,10 +17,7 @@ pub trait GetUser {
     where
         Self: Sized;
     #[allow(async_fn_in_trait)]
-    async fn get_from_username_with_passhash(
-        name: String,
-        pool: &PgPool,
-    ) -> Option<(Self, UserPasshash)>
+    async fn get_from_username_with_passhash(name: String, pool: &PgPool) -> Option<(Self, UserPasshash)>
     where
         Self: Sized;
     #[allow(async_fn_in_trait)]
@@ -39,38 +36,31 @@ impl GetUser for User {
             .ok()?;
 
         //lets just get all the tokens the user can use, we will only use the full permissions if modifying them.
-        let pg_user_perms = sqlx::query_as::<_, PgPermissionToken>(
-            "SELECT token FROM permission WHERE user_id = $1;",
+        let pg_user_perms = sqlx::query_as::<_, PgPermissionToken>("SELECT token FROM permission WHERE user_id = $1;")
+            .bind(id)
+            .fetch_all(pool)
+            .await
+            .ok()?;
+
+        let pg_user_ranks = sqlx::query_as::<_, Rank>(
+            r#"SELECT patch, layout, category, title, rank, rating, percentage, created_at, updated_at
+                    FROM rank
+                    WHERE user_id = $1;
+                "#,
         )
         .bind(id)
         .fetch_all(pool)
         .await
         .ok()?;
 
-        let pg_user_ranks = sqlx::query_as::<_, Rank>(
-                r#"SELECT patch, layout, category, title, rank, rating, percentage, created_at, updated_at
-                    FROM rank
-                    WHERE user_id = $1;
-                "#,
-            )
-            .bind(id)
-            .fetch_all(pool)
-            .await
-            .ok()?;
-
         Some(pg_user.into_user(Some(pg_user_perms), Some(pg_user_ranks)))
     }
 
     async fn get(id: i64, pool: &PgPool) -> Option<Self> {
-        User::get_with_passhash(id, pool)
-            .await
-            .map(|(user, _)| user)
+        User::get_with_passhash(id, pool).await.map(|(user, _)| user)
     }
 
-    async fn get_from_username_with_passhash(
-        name: String,
-        pool: &PgPool,
-    ) -> Option<(Self, UserPasshash)> {
+    async fn get_from_username_with_passhash(name: String, pool: &PgPool) -> Option<(Self, UserPasshash)> {
         let pg_user = sqlx::query_as::<_, PgUser>("SELECT * FROM \"user\" WHERE \"name\" = $1;")
             .bind(name)
             .fetch_one(pool)
@@ -78,24 +68,22 @@ impl GetUser for User {
             .ok()?;
 
         //lets just get all the tokens the user can use, we will only use the full permissions if modifying them.
-        let pg_user_perms = sqlx::query_as::<_, PgPermissionToken>(
-            "SELECT token FROM permission WHERE user_id = $1;",
+        let pg_user_perms = sqlx::query_as::<_, PgPermissionToken>("SELECT token FROM permission WHERE user_id = $1;")
+            .bind(pg_user.id)
+            .fetch_all(pool)
+            .await
+            .ok()?;
+
+        let pg_user_ranks = sqlx::query_as::<_, Rank>(
+            r#"SELECT patch, layout, category, title, rank, rating, percentage, created_at, updated_at
+                    FROM rank
+                    WHERE user_id = $1;
+                "#,
         )
         .bind(pg_user.id)
         .fetch_all(pool)
         .await
         .ok()?;
-
-        let pg_user_ranks = sqlx::query_as::<_, Rank>(
-                r#"SELECT patch, layout, category, title, rank, rating, percentage, created_at, updated_at
-                    FROM rank
-                    WHERE user_id = $1;
-                "#,
-            )
-            .bind(pg_user.id)
-            .fetch_all(pool)
-            .await
-            .ok()?;
 
         Some(pg_user.into_user(Some(pg_user_perms), Some(pg_user_ranks)))
     }
@@ -211,4 +199,10 @@ pub struct AuthRes {
     pub expires_in: i64,
     pub refresh_token: String,
     pub scope: String,
+}
+
+#[derive(Clone, PartialEq, Eq)]
+pub struct Proof {
+    pub yt_id: Option<String>,
+    pub url: String,
 }
