@@ -1,4 +1,4 @@
-use components::{Accordion, Header, Player};
+use components::{Collapsible, Header, Player};
 use leptos::{either::*, prelude::*};
 use leptos_meta::Title;
 use leptos_router::{
@@ -38,6 +38,7 @@ pub fn Section(
                         </A>
                     }
                 })
+                .collect_view()
         }>
             {move || {
                 layouts
@@ -63,7 +64,7 @@ pub fn Section(
                     .collect_view()
             }}
         </Header>
-        <Accordion id="filter" header=|| "Filters">
+        <Collapsible id="filter" header=|| "Filters">
             <Form method="GET" action="">
                 <div class="group">
                     <h6>"Patch"</h6>

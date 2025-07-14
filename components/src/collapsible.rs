@@ -1,7 +1,7 @@
 use leptos::prelude::*;
 
 #[component]
-pub fn Accordion<C>(
+pub fn Collapsible<C>(
     #[prop(into)] id: String,
     #[prop(optional, into)] header: ViewFnOnce,
     children: TypedChildren<C>,

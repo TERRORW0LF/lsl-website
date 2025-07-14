@@ -1,5 +1,5 @@
 use chrono::{Local, NaiveDateTime, TimeZone};
-use components::Accordion;
+use components::Collapsible;
 use leptos::{either::Either, prelude::*};
 use leptos_router::{
     components::{A, Form},
@@ -62,7 +62,7 @@ pub fn Submits() -> impl IntoView {
 
     view! {
         <section id="filter-list" class="runs">
-            <Accordion id="filter" header=|| "Show Filters">
+            <Collapsible id="filter" header=|| "Show Filters">
                 <Form method="GET" action="">
                     <div class="row">
                         <div class="input-box">
@@ -201,7 +201,7 @@ pub fn Submits() -> impl IntoView {
                     </div>
                     <input type="submit" class="button" value="Apply" />
                 </Form>
-            </Accordion>
+            </Collapsible>
             <div class="grid">
                 <span class="heading">"date"</span>
                 <span class="heading">"user"</span>

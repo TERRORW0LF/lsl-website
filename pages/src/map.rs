@@ -7,7 +7,7 @@ use charming::{
     series::Line,
 };
 use chrono::Local;
-use components::{Chart, accordion::Accordion, player::Player};
+use components::{Chart, Collapsible, Player};
 use leptos::{either::Either, prelude::*};
 use leptos_router::{
     components::A,
@@ -202,7 +202,7 @@ fn MapRunList(map: String, runs: Vec<PartialRun>) -> impl IntoView {
                             let map2 = map.clone();
                             view! {
                                 <div class="map-entry">
-                                    <Accordion
+                                    <Collapsible
                                         id=format!("run_{}", r.id)
                                         header=move || {
                                             view! {
@@ -290,7 +290,7 @@ fn MapRunList(map: String, runs: Vec<PartialRun>) -> impl IntoView {
                                                 <div class="id">{r.id}</div>
                                             </div>
                                         </div>
-                                    </Accordion>
+                                    </Collapsible>
                                 </div>
                             }
                         }

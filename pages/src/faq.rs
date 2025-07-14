@@ -1,4 +1,4 @@
-use components::Accordion;
+use components::Collapsible;
 use leptos::prelude::*;
 use leptos_meta::Title;
 use leptos_router::{components::A, hooks::use_location};
@@ -15,7 +15,7 @@ pub fn FAQ() -> impl IntoView {
             <h1>"FAQ"</h1>
             <hr />
             <section id="codes">
-                <Accordion
+                <Collapsible
                     id="play"
                     header=|| "How can I join or host a Lucio Surf lobby?"
                     attr:open=move || (hash.get() == "#play").then_some("")
@@ -70,11 +70,11 @@ pub fn FAQ() -> impl IntoView {
                         </A>". Submits of runs achieved on the beta code "
                         "will not be accepted to the leaderboards."
                     </p>
-                </Accordion>
+                </Collapsible>
             </section>
             <hr />
             <section id="codes">
-                <Accordion
+                <Collapsible
                     id="submit"
                     header=|| "How do I submit a run?"
                     attr:open=move || (hash.get() == "#submit").then_some("")
@@ -106,7 +106,7 @@ pub fn FAQ() -> impl IntoView {
                         <li>"trimmed to only include one attempt (that being the run itself)"</li>
                         <li>"played on the newest update of the official code"</li>
                     </ul>
-                </Accordion>
+                </Collapsible>
             </section>
             <hr />
         </section>
