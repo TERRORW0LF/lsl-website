@@ -1,3 +1,4 @@
+use components::Header;
 use leptos::prelude::*;
 use leptos_router::components::A;
 use server::api::get_rankings;
@@ -5,26 +6,22 @@ use types::api::Title;
 
 #[component]
 pub fn RankingHeader(#[prop(into)] links: Signal<Vec<(String, String)>>) -> impl IntoView {
-    view! {
-        <header id="ranking-header">
-            <nav class="split-row-nav">
-                <ul class="left-row-nav">
-                    <For
-                        each=links
-                        key=|l| l.0.to_owned()
-                        children=move |l| {
-                            view! {
-                                <li>
-                                    <A href=l.0 scroll=false>
-                                        <span class="text">{l.1}</span>
-                                    </A>
-                                </li>
-                            }
+    move || {
+        let links = links.get();
+        view! {
+            <Header>
+                {links
+                    .into_iter()
+                    .map(|l| {
+                        view! {
+                            <A href=l.0 scroll=false>
+                                <span class="text">{l.1}</span>
+                            </A>
                         }
-                    />
-                </ul>
-            </nav>
-        </header>
+                    })
+                    .collect_view()}
+            </Header>
+        }
     }
 }
 

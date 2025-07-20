@@ -8,7 +8,7 @@ use serde_json::json;
 use sqlx::postgres::{PgConnectOptions, PgListener};
 use sqlx::prelude::FromRow;
 use sqlx::{query, query_as, PgPool};
-use types::{api::*, internal::AuthRes};
+use types::{api::*, internal::ssr::AuthRes};
 use urlencoding::encode;
 
 #[derive(Clone, FromRow)]

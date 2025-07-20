@@ -24,46 +24,50 @@ pub fn Section(
 
     view! {
         <Title text="Leaderboard" />
-        <Header right=move || {
-            categories
-                .get()
-                .iter()
-                .map(|c| {
-                    view! {
-                        <A
-                            href=move || format!("../{}{}", c.0, query.get().to_query_string())
-                            scroll=false
-                        >
-                            <span class="text">{c.1.clone()}</span>
-                        </A>
-                    }
-                })
-                .collect_view()
-        }>
-            {move || {
-                layouts
-                    .get()
-                    .iter()
-                    .map(|l| {
-                        view! {
-                            <A
-                                href=move || {
-                                    format!(
-                                        "../../{}/{}{}",
-                                        l.0,
-                                        category.get(),
-                                        query.get().to_query_string(),
-                                    )
-                                }
-                                scroll=false
-                            >
-                                <span class="text">{l.1.clone()}</span>
-                            </A>
-                        }
-                    })
-                    .collect_view()
-            }}
-        </Header>
+        {move || {
+            let layouts = layouts.get();
+            view! {
+                <Header right=move || {
+                    categories
+                        .get()
+                        .into_iter()
+                        .map(|c| {
+                            view! {
+                                <A
+                                    href=move || {
+                                        format!("../{}{}", c.0, query.get().to_query_string())
+                                    }
+                                    scroll=false
+                                >
+                                    <span class="text">{c.1.clone()}</span>
+                                </A>
+                            }
+                        })
+                        .collect_view()
+                }>
+                    {layouts
+                        .into_iter()
+                        .map(|l| {
+                            view! {
+                                <A
+                                    href=move || {
+                                        format!(
+                                            "../../{}/{}{}",
+                                            l.0,
+                                            category.get(),
+                                            query.get().to_query_string(),
+                                        )
+                                    }
+                                    scroll=false
+                                >
+                                    <span class="text">{l.1.clone()}</span>
+                                </A>
+                            }
+                        })
+                        .collect_view()}
+                </Header>
+            }
+        }}
         <Collapsible id="filter" header=|| "Filters">
             <Form method="GET" action="">
                 <div class="group">
@@ -105,7 +109,7 @@ pub fn Section(
                 </div>
                 <input type="submit" class="button" value="Apply" />
             </Form>
-        </Accordion>
+        </Collapsible>
     }
 }
 

@@ -187,11 +187,6 @@ pub async fn get_rankings_user(id: i64) -> Result<Vec<Ranking>, ApiError> {
     .map_err(|_| ApiError::ServerError("Database lookup failed".into()))
 }
 
-#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
-struct UserId {
-    id: i64,
-}
-
 #[server(GetRandUser, prefix="/api", endpoint="user/get/random", input=GetUrl)]
 pub async fn get_rand_user() -> Result<User, ApiError> {
     use crate::auth::ssr::*;

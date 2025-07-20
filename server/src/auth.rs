@@ -20,7 +20,7 @@ pub mod ssr {
         postgres::{PgConnectOptions, PgPoolOptions},
     };
     pub use std::env;
-    pub use types::{api::*, internal::*, leptos::AuthSession};
+    pub use types::{api::*, internal::ssr::*, leptos::AuthSession};
 
     pub async fn connect_to_database() -> PgPool {
         let connect_opts = PgConnectOptions::new()
@@ -54,9 +54,7 @@ pub mod ssr {
         let argon2 = Argon2::default();
         match argon2.hash_password(password.as_bytes(), &salt) {
             Ok(v) => Ok(v.to_string()),
-            Err(_) => Err(ApiError::ServerError(
-                "Signup failed: Failed to hash password".into(),
-            )),
+            Err(_) => Err(ApiError::ServerError("Signup failed: Failed to hash password".into())),
         }
     }
 
@@ -152,10 +150,9 @@ pub async fn login(
     let pool = pool()?;
     let auth = auth()?;
 
-    let (user, UserPasshash(expected_passhash)) =
-        User::get_from_username_with_passhash(username, &pool)
-            .await
-            .ok_or(ApiError::InvalidCredentials)?;
+    let (user, UserPasshash(expected_passhash)) = User::get_from_username_with_passhash(username, &pool)
+        .await
+        .ok_or(ApiError::InvalidCredentials)?;
     verify_password(&expected_passhash, &password)?;
 
     auth.login_user(user.id);
@@ -304,11 +301,7 @@ pub async fn update_pfp(data: MultipartData) -> Result<(), ApiError> {
                     count += len;
                     if !jpg {
                         jpg = true;
-                        if !(chunk.len() > 2
-                            && chunk[0] == 0xFF
-                            && chunk[1] == 0xD8
-                            && chunk[2] == 0xFF)
-                        {
+                        if !(chunk.len() > 2 && chunk[0] == 0xFF && chunk[1] == 0xD8 && chunk[2] == 0xFF) {
                             return Err(ApiError::InvalidInput);
                         }
                     }
