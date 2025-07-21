@@ -1,3 +1,4 @@
+use components::{Header, ListElements};
 use leptos::{either::*, prelude::*};
 use leptos_meta::*;
 use leptos_router::{
@@ -99,98 +100,78 @@ pub fn App() -> impl IntoView {
         <Title text="Lucio Surf League" />
         // content for this welcome page
         <Router>
-            <header>
-                <nav class="split-row-nav">
-                    <ul class="left-row-nav">
-                        <li>
-                            <A href="/home">"Home"</A>
-                        </li>
-                        <li>
-                            <A href="/leaderboard/2.13/1/standard">"Leaderboard"</A>
-                        </li>
-                        <li>
-                            <A href="/ranking/2.13/1">"Ranking"</A>
-                        </li>
-                        <li>
-                            <a href="https://discord.com/invite/G9QBCDY" rel="external">
-                                "Discord"
-                            </a>
-                        </li>
-                    </ul>
-                    <ul class="right-row-nav">
-                        <Transition fallback=move || {
-                            view! {
-                                <li>
-                                    <span>"Loading..."</span>
-                                </li>
-                            }
-                        }>
-                            {move || {
-                                user.get()
-                                    .map(|user| match user {
-                                        Err(_) => {
-                                            Either::Left(
-                                                view! {
-                                                    <li>
-                                                        <A href="/login">"Login"</A>
-                                                    </li>
-                                                },
-                                            )
-                                        }
-                                        Ok(user) => {
-                                            Either::Right(
-                                                view! {
-                                                    <li>
-                                                        <A href=format!("/user/{}/leaderboard", user.id)>
-                                                            <img src=format!("/cdn/users/{}.jpg", user.pfp) />
-                                                        </A>
-                                                    </li>
-                                                    <li class="dropdown">
-                                                        <button
-                                                            type="button"
-                                                            class="dropdown-title"
-                                                            aria-controls="user-dropdown"
-                                                        >
-                                                            "▼"
-                                                        </button>
-                                                        <ul class="dropdown-menu" id="user-dropdown">
-                                                            <li>
-                                                                <A href=format!(
-                                                                    "/user/{}/leaderboard",
-                                                                    user.id,
-                                                                )>"Profile"</A>
-                                                            </li>
-                                                            <li>
-                                                                <A href="/user/@me/submit">"Submit"</A>
-                                                            </li>
-                                                            <li>
-                                                                <A href="/user/@me/dashboard">"Dashboard"</A>
-                                                            </li>
-                                                            <li>
-                                                                <A href="/user/@me/manage">"Manage Runs"</A>
-                                                            </li>
-                                                            <li>
-                                                                <button
-                                                                    type="button"
-                                                                    class="dropdown-title"
-                                                                    on:click=move |_| {
-                                                                        let _ = logout.dispatch(Logout {});
-                                                                    }
-                                                                >
-                                                                    "Log Out"
-                                                                </button>
-                                                            </li>
-                                                        </ul>
-                                                    </li>
-                                                },
-                                            )
-                                        }
-                                    })
-                            }}
-                        </Transition>
-                    </ul>
-                </nav>
-            </header>
+            <Header attr:id="main-nav">
+                <ListElements>
+                    <A href="/home">"Home"</A>
+                    <A href="/leaderboard/2.13/1/standard">"Leaderboard"</A>
+                    <A href="/ranking/2.13/1">"Ranking"</A>
+                    <a href="https://discord.com/invite/G9QBCDY" rel="external">
+                        "Discord"
+                    </a>
+                </ListElements>
+                <Transition fallback=move || {
+                    view! {
+                        <ListElements>
+                            <span>"Loading..."</span>
+                        </ListElements>
+                    }
+                }>
+                    {move || {
+                        user.get()
+                            .map(|user| match user {
+                                Err(_) => {
+                                    Either::Left(
+                                        view! {
+                                            <ListElements>
+                                                <a href="/login">"Login"</a>
+                                            </ListElements>
+                                        },
+                                    )
+                                }
+                                Ok(user) => {
+                                    Either::Right(
+                                        view! {
+                                            <ListElements>
+                                                <A href=format!("/user/{}/leaderboard", user.id)>
+                                                    <img src=format!("/cdn/users/{}.jpg", user.pfp) />
+                                                </A>
+                                                <div class="dropdown">
+                                                    <button
+                                                        type="button"
+                                                        class="dropdown-title"
+                                                        aria-controls="user-dropdown"
+                                                    >
+                                                        "▼"
+                                                    </button>
+                                                    <ul class="dropdown-menu" id="user-dropdown">
+                                                        <ListElements>
+                                                            <A href=format!(
+                                                                "/user/{}/leaderboard",
+                                                                user.id,
+                                                            )>"Profile"</A>
+                                                            <A href="/user/@me/submit">"Submit"</A>
+                                                            <A href="/user/@me/dashboard">"Dashboard"</A>
+                                                            <A href="/user/@me/manage">"Manage Runs"</A>
+                                                            <button
+                                                                type="button"
+                                                                class="dropdown-title"
+                                                                on:click=move |_| {
+                                                                    let _ = logout.dispatch(Logout {});
+                                                                }
+                                                            >
+                                                                "Log Out"
+                                                            </button>
+                                                        </ListElements>
+                                                    </ul>
+                                                </div>
+                                            </ListElements>
+                                        },
+                                    )
+                                }
+                            })
+                    }}
+                </Transition>
+            </Header>
             <main>
                 <AppRouter />
             </main>
@@ -211,10 +192,7 @@ fn AppRouter() -> impl IntoView {
             <Route
                 path=path!("discord")
                 view=|| {
-                    Effect::new(|_| {
-                        window().location().set_href("https://discord.com/invite/G9QBCDY")
-                    });
-                    ""
+                    view! { <Redirect path="https://discord.com/invite/G9QBCDY" /> }
                 }
             />
             <Route path=path!("faq") view=FAQ />

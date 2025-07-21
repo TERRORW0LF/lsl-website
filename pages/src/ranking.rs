@@ -1,4 +1,4 @@
-use components::Header;
+use components::{Header, ListElements};
 use leptos::prelude::*;
 use leptos_router::components::A;
 use server::api::get_rankings;
@@ -9,17 +9,22 @@ pub fn RankingHeader(#[prop(into)] links: Signal<Vec<(String, String)>>) -> impl
     move || {
         let links = links.get();
         view! {
-            <Header>
-                {links
-                    .into_iter()
-                    .map(|l| {
-                        view! {
-                            <A href=l.0 scroll=false>
-                                <span class="text">{l.1}</span>
-                            </A>
-                        }
-                    })
-                    .collect_view()}
+            <Header attr:id="ranking-header">
+                <ListElements>
+                    {links
+                        .into_iter()
+                        .map(|l| {
+                            view! {
+                                <A href=l.0 scroll=false>
+                                    <span class="text">{l.1}</span>
+                                </A>
+                            }
+                        })
+                        .collect_view()}
+                </ListElements>
+                // Workaround for ChildrenFragment not accepting single
+                // components
+                <div></div>
             </Header>
         }
     }

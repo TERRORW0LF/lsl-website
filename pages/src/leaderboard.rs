@@ -1,4 +1,4 @@
-use components::{Collapsible, Header, Player};
+use components::{Collapsible, Header, ListElements, Player};
 use leptos::{either::*, prelude::*};
 use leptos_meta::Title;
 use leptos_router::{
@@ -24,50 +24,57 @@ pub fn Section(
 
     view! {
         <Title text="Leaderboard" />
-        {move || {
-            let layouts = layouts.get();
-            view! {
-                <Header right=move || {
-                    categories
-                        .get()
-                        .into_iter()
-                        .map(|c| {
-                            view! {
-                                <A
-                                    href=move || {
-                                        format!("../{}{}", c.0, query.get().to_query_string())
-                                    }
-                                    scroll=false
-                                >
-                                    <span class="text">{c.1.clone()}</span>
-                                </A>
-                            }
-                        })
-                        .collect_view()
-                }>
-                    {layouts
-                        .into_iter()
-                        .map(|l| {
-                            view! {
-                                <A
-                                    href=move || {
-                                        format!(
-                                            "../../{}/{}{}",
-                                            l.0,
-                                            category.get(),
-                                            query.get().to_query_string(),
-                                        )
-                                    }
-                                    scroll=false
-                                >
-                                    <span class="text">{l.1.clone()}</span>
-                                </A>
-                            }
-                        })
-                        .collect_view()}
-                </Header>
-            }
-        }}
+        <Header attr:id="lb_header">
+            {move || {
+                let layouts = layouts.get();
+                view! {
+                    <ListElements>
+                        {layouts
+                            .into_iter()
+                            .map(|l| {
+                                view! {
+                                    <A
+                                        href=move || {
+                                            format!(
+                                                "../../{}/{}{}",
+                                                l.0,
+                                                category.get(),
+                                                query.get().to_query_string(),
+                                            )
+                                        }
+                                        scroll=false
+                                    >
+                                        <span class="text">{l.1.clone()}</span>
+                                    </A>
+                                }
+                            })
+                            .collect_view()}
+                    </ListElements>
+                }
+            }}
+            {move || {
+                let categories = categories.get();
+                view! {
+                    <ListElements>
+                        {categories
+                            .into_iter()
+                            .map(|c| {
+                                view! {
+                                    <A
+                                        href=move || {
+                                            format!("../{}{}", c.0, query.get().to_query_string())
+                                        }
+                                        scroll=false
+                                    >
+                                        <span class="text">{c.1.clone()}</span>
+                                    </A>
+                                }
+                            })
+                            .collect_view()}
+                    </ListElements>
+                }
+            }}
+        </Header>
         <Collapsible id="filter" header=|| "Filters">
             <Form method="GET" action="">
                 <div class="group">

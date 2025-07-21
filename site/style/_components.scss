@@ -104,18 +104,24 @@
     }
 }
 
-nav.split-row-nav {
+header {
+    position: sticky;
+    top: 0;
+    z-index: 99;
+    min-height: 2.5rem;
+    font-size: 0.8rem;
+    font-weight: 450;
+    color: var(--grey-1000);
+    background-color: var(--primary-200);
+}
+
+.nav {
     display: flex;
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
     text-align: center;
     width: 100%;
-    min-height: 2.5rem;
-    font-size: 0.8rem;
-    font-weight: 450;
-    color: var(--grey-1000);
-    background-color: var(--primary-200);
 
     a {
         color: inherit;
@@ -124,6 +130,7 @@ nav.split-row-nav {
     ul {
         list-style: none;
         display: grid;
+        gap: 4rem;
     }
 
     >ul {
@@ -140,23 +147,22 @@ nav.split-row-nav {
         cursor: pointer;
     }
 
-    ul.left-row-nav,
-    ul.right-row-nav {
+    >ul {
         align-items: center;
 
-        >* {
-            margin: 0 2rem;
-
-            .text {
-                padding-bottom: 0.5rem;
-            }
+        .text {
+            padding-bottom: 0.5rem;
         }
 
         li:has(a>img) {
             display: inline-block;
             height: 2rem;
-            margin: 0.25rem -0.5rem 0.25rem 2rem;
+            margin: 0.25rem -1rem 0.25rem 2rem;
             line-height: 0;
+        }
+
+        li:has(.dropdown) {
+            margin: 0 1rem 0 -4.5rem;
         }
 
         img {
@@ -168,22 +174,25 @@ nav.split-row-nav {
         }
     }
 
-    .left-row-nav {
-        justify-content: flex-start;
+    .middle {
+        justify-content: center;
+
+        * {
+            text-align: center;
+        }
     }
 
-    .right-row-nav {
+    .right {
         justify-content: flex-end;
-    }
 
-    .right-row-nav * {
-        text-align: right;
+        * {
+            text-align: right;
+        }
     }
 }
 
 .dropdown {
     position: relative;
-    margin: 0 1rem 0rem 0 !important;
     padding: 0.5rem 1rem;
 
     .dropdown-menu {
@@ -192,6 +201,7 @@ nav.split-row-nav {
         top: calc(100% + 0.125rem);
         right: 0;
         padding: 0.75rem 0;
+        gap: 0.5rem;
         color: var(--grey-100);
         font-size: 0.8rem;
         font-weight: 500;

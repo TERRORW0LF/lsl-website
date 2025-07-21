@@ -41,14 +41,18 @@
         font-weight: 600;
 
         summary {
-            display: block;
+            padding-right: 0.5rem;
+            gap: 0;
+            color: var(--primary-100);
+            font-size: 0.7rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            border-radius: 4px;
+            background-color: var(--grey-700);
+
 
             span.icon {
-                width: fit-content;
                 height: 2rem;
-                padding-right: 0.5rem;
-                border-radius: 4px;
-                background-color: var(--grey-700);
             }
 
             span.icon:hover {
