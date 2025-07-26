@@ -1,4 +1,4 @@
-use components::{Header, ListElements};
+use components::{Collapsible, Header, ListElements, RankingLegend};
 use leptos::prelude::*;
 use leptos_router::components::A;
 use server::api::get_rankings;
@@ -27,33 +27,6 @@ pub fn RankingHeader(#[prop(into)] links: Signal<Vec<(String, String)>>) -> impl
                 <div></div>
             </Header>
         }
-    }
-}
-
-#[component]
-pub fn RankingLegend(#[prop(into)] titles: Vec<(Title, Signal<String>)>) -> impl IntoView {
-    view! {
-        <div class="legend row narrow">
-            {titles
-                .into_iter()
-                .enumerate()
-                .map(|(i, (t, s))| {
-                    view! {
-                        <div class="tooltip-box">
-                            <span
-                                class=format!("{} bg title", t.to_string())
-                                aria-describedby=format!("tooltip-{i}")
-                            >
-                                {t.to_string()}
-                            </span>
-                            <span role="tooltip" id=format!("tooltip-{i}") class="tooltip">
-                                {s}
-                            </span>
-                        </div>
-                    }
-                })
-                .collect_view()}
-        </div>
     }
 }
 
@@ -135,50 +108,39 @@ pub fn ComboRanking(
                                 <RankingLegend titles=titles.clone() />
                                 <Suspense fallback=move || { "Loading..." }>
                                     <ErrorBoundary fallback=move |_| { "Error fetching data." }>
-                                        <div role="definition" id="more" class="content">
-                                            <div>
-                                                <div class="columns inner">
-                                                    {move || {
-                                                        rs.and_then(|rs| {
-                                                            rs.clone()
-                                                                .into_iter()
-                                                                .map(|r| {
-                                                                    view! {
-                                                                        <div class="grid-row">
-                                                                            <div
-                                                                                class=format!("rank {} bg", r.title.to_string())
-                                                                                class=("rank-1", r.rank == 1)
-                                                                                class=("rank-2", r.rank == 2)
-                                                                                class=("rank-3", r.rank == 3)
-                                                                            >
-                                                                                <h5>{r.rank}</h5>
-                                                                            </div>
-                                                                            <A href=format!("/user/{}/ranking", r.user_id)>
-                                                                                <h4 class="name">{r.username}</h4>
-                                                                            </A>
-                                                                            <div class="rating row narrow">
-                                                                                <h4 class=format!(
-                                                                                    "{} color",
-                                                                                    r.title.to_string(),
-                                                                                )>{format!("{}", r.rating.round())}</h4>
-                                                                                <h6>"RP"</h6>
-                                                                            </div>
-                                                                        </div>
-                                                                    }
-                                                                })
-                                                                .collect_view()
+                                        <Collapsible id="more" swapped=true>
+                                            {move || {
+                                                rs.and_then(|rs| {
+                                                    rs.clone()
+                                                        .into_iter()
+                                                        .map(|r| {
+                                                            view! {
+                                                                <div class="grid-row">
+                                                                    <div
+                                                                        class=format!("rank {} bg", r.title.to_string())
+                                                                        class=("rank-1", r.rank == 1)
+                                                                        class=("rank-2", r.rank == 2)
+                                                                        class=("rank-3", r.rank == 3)
+                                                                    >
+                                                                        <h5>{r.rank}</h5>
+                                                                    </div>
+                                                                    <A href=format!("/user/{}/ranking", r.user_id)>
+                                                                        <h4 class="name">{r.username}</h4>
+                                                                    </A>
+                                                                    <div class="rating row narrow">
+                                                                        <h4 class=format!(
+                                                                            "{} color",
+                                                                            r.title.to_string(),
+                                                                        )>{format!("{}", r.rating.round())}</h4>
+                                                                        <h6>"RP"</h6>
+                                                                    </div>
+                                                                </div>
+                                                            }
                                                         })
-                                                    }}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <details>
-                                            <summary>
-                                                <span role="term" aria-details="more" class="icon">
-                                                    ""
-                                                </span>
-                                            </summary>
-                                        </details>
+                                                        .collect_view()
+                                                })
+                                            }}
+                                        </Collapsible>
                                     </ErrorBoundary>
                                 </Suspense>
                             </div>

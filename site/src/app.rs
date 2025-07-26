@@ -132,37 +132,39 @@ pub fn App() -> impl IntoView {
                                     Either::Right(
                                         view! {
                                             <ListElements>
-                                                <A href=format!("/user/{}/leaderboard", user.id)>
-                                                    <img src=format!("/cdn/users/{}.jpg", user.pfp) />
-                                                </A>
-                                                <div class="dropdown">
-                                                    <button
-                                                        type="button"
-                                                        class="dropdown-title"
-                                                        aria-controls="user-dropdown"
-                                                    >
-                                                        "▼"
-                                                    </button>
-                                                    <ul class="dropdown-menu" id="user-dropdown">
-                                                        <ListElements>
-                                                            <A href=format!(
-                                                                "/user/{}/leaderboard",
-                                                                user.id,
-                                                            )>"Profile"</A>
-                                                            <A href="/user/@me/submit">"Submit"</A>
-                                                            <A href="/user/@me/dashboard">"Dashboard"</A>
-                                                            <A href="/user/@me/manage">"Manage Runs"</A>
-                                                            <button
-                                                                type="button"
-                                                                class="dropdown-title"
-                                                                on:click=move |_| {
-                                                                    let _ = logout.dispatch(Logout {});
-                                                                }
-                                                            >
-                                                                "Log Out"
-                                                            </button>
-                                                        </ListElements>
-                                                    </ul>
+                                                <div class="row narrow">
+                                                    <A href=format!("/user/{}/leaderboard", user.id)>
+                                                        <img src=format!("/cdn/users/{}.jpg", user.pfp) />
+                                                    </A>
+                                                    <div class="dropdown">
+                                                        <button
+                                                            type="button"
+                                                            class="dropdown-title"
+                                                            aria-controls="user-dropdown"
+                                                        >
+                                                            "▼"
+                                                        </button>
+                                                        <ul class="dropdown-menu" id="user-dropdown">
+                                                            <ListElements>
+                                                                <A href=format!(
+                                                                    "/user/{}/leaderboard",
+                                                                    user.id,
+                                                                )>"Profile"</A>
+                                                                <A href="/user/@me/submit">"Submit"</A>
+                                                                <A href="/user/@me/dashboard">"Dashboard"</A>
+                                                                <A href="/user/@me/manage">"Manage Runs"</A>
+                                                                <button
+                                                                    type="button"
+                                                                    class="dropdown-title"
+                                                                    on:click=move |_| {
+                                                                        let _ = logout.dispatch(Logout {});
+                                                                    }
+                                                                >
+                                                                    "Log Out"
+                                                                </button>
+                                                            </ListElements>
+                                                        </ul>
+                                                    </div>
                                                 </div>
                                             </ListElements>
                                         },

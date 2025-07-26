@@ -109,6 +109,7 @@ header {
     top: 0;
     z-index: 99;
     min-height: 2.5rem;
+    height: 2.5rem;
     font-size: 0.8rem;
     font-weight: 450;
     color: var(--grey-1000);
@@ -116,12 +117,9 @@ header {
 }
 
 .nav {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
+    height: 100%;
     text-align: center;
-    width: 100%;
+    align-items: stretch;
 
     a {
         color: inherit;
@@ -152,17 +150,6 @@ header {
 
         .text {
             padding-bottom: 0.5rem;
-        }
-
-        li:has(a>img) {
-            display: inline-block;
-            height: 2rem;
-            margin: 0.25rem -1rem 0.25rem 2rem;
-            line-height: 0;
-        }
-
-        li:has(.dropdown) {
-            margin: 0 1rem 0 -4.5rem;
         }
 
         img {

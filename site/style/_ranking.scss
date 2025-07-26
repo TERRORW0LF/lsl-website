@@ -55,7 +55,7 @@
                 max-height: 10rem;
             }
 
-            .columns {
+            .inner {
                 columns: calc(2rem + 35ch) auto;
                 column-gap: 3rem;
 
@@ -141,6 +141,7 @@
 
                 summary {
                     display: block;
+                    width: 100%;
 
                     span.icon {
                         width: 100%;

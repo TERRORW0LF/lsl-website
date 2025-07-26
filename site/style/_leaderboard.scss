@@ -161,12 +161,8 @@
         animation-iteration-count: 1;
         animation-fill-mode: both;
 
-        .nav {
-            min-height: 2.5rem;
-
-            [aria-current="page"]>span {
-                border-bottom: 3px solid var(--primary-200);
-            }
+        .nav [aria-current="page"]>span {
+            border-bottom: 3px solid var(--primary-200);
         }
     }
 
@@ -327,10 +323,11 @@
 
             summary {
                 padding: 0.5rem 0;
-
-                span.icon {
-                    background-color: inherit;
-                }
+                width: 100%;
+                flex-wrap: nowrap;
+                gap: 1rem;
+                background-color: inherit;
+                font-size: inherit;
 
                 span.icon::before {
                     margin-top: -0.2rem;

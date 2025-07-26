@@ -178,10 +178,11 @@ fn MapRunList(map: String, runs: Vec<PartialRun>) -> impl IntoView {
     let runs_disp = Signal::derive(move || {
         let mut old_time = Decimal::new(999999, 3);
         let mut old_times = HashMap::<i64, Decimal>::new();
-        let r = runs.clone();
-        let mut runs: Vec<PartialRun> = r
+        let user_id = user.get().map(|u| u.parse::<i64>().ok().unwrap_or(-1));
+        let mut runs: Vec<PartialRun> = runs
+            .clone()
             .into_iter()
-            .filter(|r| user.get().is_none() || r.user_id == user.get().unwrap().parse::<i64>().unwrap_or(-1))
+            .filter(|r| user_id.map(|u| u == r.user_id).is_none_or(|b| b))
             .filter(|r| filter(r, filter_key.get(), &mut old_time, &mut old_times))
             .collect();
         runs.sort_unstable_by(sort(sort_key.get()));

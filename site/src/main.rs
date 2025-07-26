@@ -1,5 +1,3 @@
-use lsl_website::state::oauth_client;
-
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 use axum::{
     body::Body as AxumBody,
@@ -14,7 +12,7 @@ use axum_session_sqlx::{SessionPgPool, SessionPgSessionStore};
 use http::Request;
 use leptos::prelude::*;
 use leptos_axum::{generate_route_list, handle_server_fns_with_context, LeptosRoutes};
-use lsl_website::{app::*, state::AppState};
+use lsl_website::{app::*, state::{AppState, oauth_client}};
 use sqlx::PgPool;
 use tower::ServiceBuilder;
 use server::auth::ssr::connect_to_database;
