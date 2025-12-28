@@ -6,6 +6,7 @@ use types::{
     api::ApiError,
     leptos::{UpdatePfpAction, UserResource},
 };
+use util::escape_regex;
 use wasm_bindgen::JsCast;
 use web_sys::{Event, FormData, HtmlFormElement, SubmitEvent};
 
@@ -269,7 +270,7 @@ pub fn Password() -> impl IntoView {
                         type="password"
                         id="password-repeat"
                         required
-                        pattern=password_new
+                        pattern=move || escape_regex(&password_new.read())
                         value=password_rep
                         on:input=move |e| set_password_rep(event_target_value::<Event>(&e))
                     />

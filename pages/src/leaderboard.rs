@@ -1,8 +1,8 @@
-use components::{Collapsible, Header, ListElements, Player};
+use components::{Collapsible, Filter, Header, ListElements, Player, Select};
 use leptos::{either::*, prelude::*};
 use leptos_meta::Title;
 use leptos_router::{
-    components::{A, Form},
+    components::A,
     hooks::{use_params_map, use_query_map},
 };
 use rust_decimal::Decimal;
@@ -75,47 +75,54 @@ pub fn Section(
                 }
             }}
         </Header>
-        <Collapsible id="filter" header=|| "Filters">
-            <Form method="GET" action="">
-                <div class="group">
-                    <h6>"Patch"</h6>
-                    <div class="options">
-                        <A href="../../../1.00/1/standard">"1.00"</A>
-                        <A href="../../../1.41/1/standard">"1.41"</A>
-                        <A href="../../../1.50/1/standard">"1.50"</A>
-                        <A href="../../../2.00/1/standard">"2.00"</A>
-                        <A href="../../../2.13/1/standard">"Current"</A>
-                    </div>
+        <Collapsible id="filter" attr:class="filter" header=|| "Filters">
+            <Filter attr:class="filter">
+                <div class="input-box">
+                    <label for="patch" class="indicator">
+                        "Patch"
+                    </label>
+                    <A href="../../../1.00/1/standard" attr:id="patch" attr:class="select">
+                        "1.00"
+                    </A>
                 </div>
-                <div class="group">
-                    <h6>"Sort by"</h6>
-                    <div class="options">
-                        <input type="radio" name="sort" value="time" id="time" />
-                        <label for="time">"Time"</label>
-
-                        <input type="radio" name="sort" value="date" id="date" />
-                        <label for="date">"Date"</label>
-                    </div>
+                <div class="input-box">
+                    <A href="../../../1.41/1/standard" attr:class="select">
+                        "1.41"
+                    </A>
                 </div>
-                <div class="group">
-                    <h6>"Filter"</h6>
-                    <div class="options">
-                        <input type="radio" name="filter" value="none" id="none" />
-                        <label for="none">"None"</label>
-                        <input type="radio" name="filter" value="is_pb" id="is_pb" />
-                        <label for="is_pb">"Is PB"</label>
-                        <input type="radio" name="filter" value="is_wr" id="is_wr" />
-                        <label for="is_wr">"Is WR"</label>
-                        <input type="radio" name="filter" value="was_pb" id="was_pb" />
-                        <label for="was_pb">"Was PB"</label>
-                        <input type="radio" name="filter" value="was_wr" id="was_wr" />
-                        <label for="was_wr">"Was WR"</label>
-                        <input type="radio" name="filter" value="verified" id="verified" />
-                        <label for="verified">"Verified"</label>
-                    </div>
+                <div class="input-box">
+                    <A href="../../../1.50/1/standard" attr:class="select">
+                        "1.50"
+                    </A>
                 </div>
-                <input type="submit" class="button" value="Apply" />
-            </Form>
+                <div class="input-box">
+                    <A href="../../../2.00/1/standard" attr:class="select">
+                        "2.00"
+                    </A>
+                </div>
+                <div class="input-box">
+                    <A href="../../../2.13/1/standard" attr:class="select">
+                        "Current"
+                    </A>
+                </div>
+                <Select
+                    name="sort"
+                    indicator="Sort By"
+                    options=[("time", "Time"), ("date", "Date")]
+                />
+                <Select
+                    name="filter"
+                    indicator="Filter"
+                    options=[
+                        ("none", "None"),
+                        ("is_pb", "Is Personal Best"),
+                        ("is_wr", "Is World Record"),
+                        ("was_pb", "Was Personal Best"),
+                        ("was_wr", "Was World Record"),
+                        ("verified", "Is Verified"),
+                    ]
+                />
+            </Filter>
         </Collapsible>
     }
 }

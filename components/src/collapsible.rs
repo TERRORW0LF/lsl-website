@@ -15,12 +15,12 @@ where
     if !swapped {
         Either::Left(view! {
             <details>
-                <summary class="row narrow" aria-details=id>
+                <summary class="row narrow" aria-details=id.clone()>
                     <span role="term" class="icon"></span>
                     {header.run()}
                 </summary>
             </details>
-            <div role="definition" id class="content">
+            <div role="definition" id=id.clone() class="content">
                 <div>
                     <div class="inner">{children()}</div>
                 </div>
@@ -28,7 +28,7 @@ where
         })
     } else {
         Either::Right(view! {
-            <div role="definition" id class="content">
+            <div role="definition" id=id.clone() class="content">
                 <div>
                     <div class="inner">{children()}</div>
                 </div>

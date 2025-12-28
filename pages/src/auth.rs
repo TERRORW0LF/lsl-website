@@ -6,6 +6,7 @@ use server::{
     auth::{Login, Register, Submit},
 };
 use types::api::{ApiError, Map};
+use util::escape_regex;
 use web_sys::Event;
 
 #[component]
@@ -164,7 +165,7 @@ pub fn Register() -> impl IntoView {
                         name="password_confirm"
                         id="password-repeat"
                         required
-                        pattern=password
+                        pattern=move || escape_regex(&password.read())
                         value=password_rep
                         on:input=move |e| set_password_rep(event_target_value::<Event>(&e))
                     />

@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+util = { path = "../util" }
 server = {path = "../server", default-features = false }
 types = {path = "../types", default-features = false }
 components = { path = "../components", default-features = false }

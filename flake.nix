@@ -23,30 +23,6 @@
               rust.stable.latest.default;
         })
         (final: prev: {
-          cargo-leptos = prev.rustPlatform.buildRustPackage rec {
-            pname = "cargo-leptos";
-            version = "0.2.34";
-
-            src = prev.fetchFromGitHub {
-              owner = "leptos-rs";
-              repo = "cargo-leptos";
-              rev = "v${version}";
-              hash = "sha256-y15ue6DKyDfX/SOhOoVUVoIx2wnCIJmg7wRBPTSYYok=";
-            };
-
-            nativeBuildInputs = [
-              prev.pkgs.perl
-            ];
-
-            useFetchCargoVendor = true;
-            cargoHash = "sha256-gKl+WfT2cMyMs4wm3gfiDGeT+jtuQMn96UFYgPTflgQ=";
-
-            # https://github.com/leptos-rs/cargo-leptos#dependencies
-            buildFeatures = [ "no_downloads" ]; # cargo-leptos will try to install missing dependencies on its own otherwise
-            doCheck = false; # Check phase tries to query crates.io
-          };
-        })
-        (final: prev: {
           mdbook-embedify = prev.rustPlatform.buildRustPackage rec {
             pname = "mdbook-embedify";
             version = "0.2.11";
@@ -78,6 +54,7 @@
             cargo-edit
             cargo-watch
             cargo-leptos
+            wasm-bindgen-cli_0_2_105
             mdbook
             mdbook-embedify
             binaryen

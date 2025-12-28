@@ -29,7 +29,7 @@ pub fn Select(
         <label for=name.clone() class="indicator">
             {indicator}
         </label>
-        <select class="select" name id=name.clone()>
+        <select class="select" name=name.clone() id=name>
             {options
                 .nodes
                 .into_iter()
