@@ -52,8 +52,9 @@ impl FromServerFnError for ApiError {
             UnsupportedRequestMethod(v) | Request(v) | Deserialization(v) | Serialization(v) => {
                 ApiError::ClientError(v)
             }
-            Registration(v) | MiddlewareError(v) | ServerError(v) | Args(v) | MissingArg(v)
-            | Response(v) => ApiError::ServerError(v),
+            Registration(v) | MiddlewareError(v) | ServerError(v) | Args(v) | MissingArg(v) | Response(v) => {
+                ApiError::ServerError(v)
+            }
         }
     }
 }
@@ -161,12 +162,7 @@ pub struct Run {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(
-    feature = "ssr",
-    derive(sqlx::Type),
-    derive(sqlx::FromRow),
-    sqlx(no_pg_array)
-)]
+#[cfg_attr(feature = "ssr", derive(sqlx::Type), derive(sqlx::FromRow), sqlx(no_pg_array))]
 pub struct PartialRun {
     pub id: i32,
     pub section_id: i32,
@@ -227,6 +223,8 @@ pub struct Ranking {
     pub title: Title,
     pub rank: i32,
     pub rating: f64,
+    pub percentage: f64,
+    pub points: f64,
     pub created_at: DateTime<Local>,
     pub updated_at: DateTime<Local>,
 }
@@ -240,6 +238,8 @@ pub struct PartialRanking {
     pub title: Title,
     pub rank: i32,
     pub rating: f64,
+    pub percentage: f64,
+    pub points: f64,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

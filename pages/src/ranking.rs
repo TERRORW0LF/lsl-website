@@ -50,7 +50,10 @@ pub fn ComboRanking(
             Signal::<String>::derive(move || match patch.get().as_str() {
                 "1.00" | "1.41" | "1.50" => "300 or more rating points".into(),
                 "2.00" => "150 or more rating points".into(),
-                "2.13" => "1500 or more rating points".into(),
+                "2.13" => format!(
+                    "{} or more rating points",
+                    if layout.get().is_none() { 300 } else { 500 }
+                ),
                 _ => "Unknown patch selected".into(),
             }),
         ),
@@ -59,7 +62,10 @@ pub fn ComboRanking(
             Signal::<String>::derive(move || match patch.get().as_str() {
                 "1.00" | "1.41" | "1.50" => "1000 or more rating points".into(),
                 "2.00" => "500 or more rating points".into(),
-                "2.13" => "3000 or more rating points".into(),
+                "2.13" => format!(
+                    "{} or more rating points",
+                    if layout.get().is_none() { 600 } else { 1500 }
+                ),
                 _ => "Unknown patch selected".into(),
             }),
         ),
@@ -68,7 +74,10 @@ pub fn ComboRanking(
             Signal::<String>::derive(move || match patch.get().as_str() {
                 "1.00" | "1.41" | "1.50" => "2000 or more rating points".into(),
                 "2.00" => "1000 or more rating points".into(),
-                "2.13" => "5000 or more rating points".into(),
+                "2.13" => format!(
+                    "{} or more rating points",
+                    if layout.get().is_none() { 1000 } else { 3000 }
+                ),
                 _ => "Unknown patch selected".into(),
             }),
         ),
@@ -77,7 +86,10 @@ pub fn ComboRanking(
             Signal::<String>::derive(move || match patch.get().as_str() {
                 "1.00" | "1.41" | "1.50" => "4000 or more rating points".into(),
                 "2.00" => "2000 or more rating points".into(),
-                "2.13" => "7500 or more rating points".into(),
+                "2.13" => format!(
+                    "{} or more rating points",
+                    if layout.get().is_none() { 3000 } else { 6000 }
+                ),
                 _ => "Unknown patch selected".into(),
             }),
         ),
@@ -86,7 +98,10 @@ pub fn ComboRanking(
             Signal::<String>::derive(move || match patch.get().as_str() {
                 "1.00" | "1.41" | "1.50" => "5500 or more rating points".into(),
                 "2.00" => "2750 or more rating points".into(),
-                "2.13" => "9000 or more rating points".into(),
+                "2.13" => format!(
+                    "{} or more rating points",
+                    if layout.get().is_none() { 5000 } else { 8000 }
+                ),
                 _ => "Unknown patch selected".into(),
             }),
         ),

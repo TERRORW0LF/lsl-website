@@ -4,6 +4,7 @@ use leptos::{either::Either, prelude::*};
 pub fn Collapsible<C>(
     #[prop(into)] id: String,
     #[prop(optional, into)] header: ViewFnOnce,
+    #[prop(optional, into)] class: String,
     #[prop(optional)] swapped: bool,
     children: TypedChildren<C>,
 ) -> impl IntoView
@@ -14,13 +15,13 @@ where
 
     if !swapped {
         Either::Left(view! {
-            <details>
+            <details class=class.clone()>
                 <summary class="row narrow" aria-details=id.clone()>
                     <span role="term" class="icon"></span>
                     {header.run()}
                 </summary>
             </details>
-            <div role="definition" id=id.clone() class="content">
+            <div role="definition" id=id.clone() class=format!("{} content", class.clone())>
                 <div>
                     <div class="inner">{children()}</div>
                 </div>
@@ -28,12 +29,12 @@ where
         })
     } else {
         Either::Right(view! {
-            <div role="definition" id=id.clone() class="content">
+            <div role="definition" id=id.clone() class=format!("{} content", class.clone())>
                 <div>
                     <div class="inner">{children()}</div>
                 </div>
             </div>
-            <details>
+            <details class=class>
                 <summary class="row narrow" aria-details=id>
                     <span role="term" class="icon"></span>
                     {header.run()}

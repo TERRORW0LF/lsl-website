@@ -1,6 +1,95 @@
 use http::{HeaderValue, header::CACHE_CONTROL};
 use leptos::prelude::{expect_context, server, server_fn::codec::GetUrl};
+use rust_decimal::Decimal;
 use types::api::*;
+
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
+struct RunFull {
+    id: i32,
+    created_at: chrono::DateTime<chrono::Local>,
+    section_id: i32,
+    user_id: i64,
+    time: Decimal,
+    proof: String,
+    yt_id: Option<String>,
+    verified: bool,
+}
+
+#[server(ExportRuns, prefix="/api", endpoint="runs/export", input=GetUrl)]
+pub async fn export_runs(patch: String) -> Result<(), ApiError> {
+    let pool = crate::auth::ssr::pool()?;
+    let runs = sqlx::query_as::<_, RunFull>(
+        r#"SELECT run.id, run.created_at, section_id, user_id, time, proof, yt_id, verified
+        FROM run
+        JOIN section on run.section_id = section.id
+        WHERE patch = $1
+        ORDER BY created_at ASC;"#,
+    )
+    .bind(patch.clone())
+    .fetch_all(&pool)
+    .await
+    .or(Err(ApiError::ServerError("Couldn't fetch runs".into())))?;
+
+    let file = std::fs::File::create(format!("{patch}.json")).unwrap();
+    let writer = std::io::BufWriter::new(file);
+    leptos::serde_json::to_writer_pretty(writer, &runs).expect("Couldn't write to file");
+    Ok(())
+}
+
+#[server(ImportRuns, prefix="/api", endpoint="runs/import", input=GetUrl)]
+pub async fn import_runs(patch: String) -> Result<(), ApiError> {
+    let pool = crate::auth::ssr::pool()?;
+    let file = std::fs::File::open(format!("{patch}.json")).expect("Can't find file");
+    let reader = std::io::BufReader::new(file);
+    let runs: Vec<RunFull> = leptos::serde_json::from_reader(reader).expect("Can't parse file");
+    let _ = sqlx::query(
+        r#"DELETE FROM run
+            USING section
+            WHERE run.section_id = section.id AND patch = $1;"#,
+    )
+    .bind(patch.clone())
+    .execute(&pool)
+    .await
+    .map_err(|_| ApiError::ServerError("Database delete failed".into()))?;
+
+    let _ = sqlx::query(
+        r#"DELETE FROM rank
+            WHERE patch = $1;"#,
+    )
+    .bind(patch)
+    .execute(&pool)
+    .await
+    .map_err(|_| ApiError::ServerError("Database delete failed".into()))?;
+
+    let _ = sqlx::query(
+        r#"SELECT setval(pg_get_serial_sequence('rank', 'id'), COALESCE(MAX(id) + 1, 1), FALSE) 
+        FROM rank;"#,
+    )
+    .execute(&pool)
+    .await
+    .map_err(|_| ApiError::ServerError("Sequence reset failed".into()))?;
+
+    for run in runs {
+        let _ = sqlx::query(
+            r#"INSERT INTO run (id, section_id, user_id, time, proof, yt_id, verified, created_at)
+            OVERRIDING SYSTEM VALUE
+                                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8);"#,
+        )
+        .bind(run.id)
+        .bind(run.section_id)
+        .bind(run.user_id)
+        .bind(run.time)
+        .bind(run.proof)
+        .bind(run.yt_id)
+        .bind(true)
+        .bind(run.created_at)
+        .execute(&pool)
+        .await
+        .map_err(|_| ApiError::ServerError("Database insert failed".into()))?;
+    }
+    Ok(())
+}
 
 #[server(GetRunsId, prefix="/api", endpoint="runs/id", input=GetUrl)]
 pub async fn get_runs_id(id: i32) -> Result<SectionRuns, ApiError> {
@@ -150,7 +239,7 @@ pub async fn get_rankings(
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let rankings = sqlx::query_as::<_, Ranking>(
         r#"SELECT r.id, r.patch, r.layout, r.category, r.user_id, 
-            u.name, r.title, r.rank, r.rating, r.created_at, r.updated_at
+            u.name, r.title, r.rank, r.rating, r.created_at, r.updated_at, r.percentage, r.points
         FROM rank r
         JOIN "user" u ON user_id = u.id
         WHERE r.patch = $1 AND r.layout IS NOT DISTINCT FROM $2 AND r.category IS NOT DISTINCT FROM $3
@@ -176,7 +265,7 @@ pub async fn get_rankings_user(id: i64) -> Result<Vec<Ranking>, ApiError> {
 
     sqlx::query_as::<_, Ranking>(
         r#"SELECT r.id, r.patch, r.layout, r.category, r.user_id, 
-            u.name, r.title, r.rank, r.rating, r.created_at, r.updated_at
+            u.name, r.title, r.rank, r.rating, r.created_at, r.updated_at, r.percentage, r.points
         FROM rank r
         JOIN "user" u ON user_id = u.id
         WHERE user_id = $1;"#,

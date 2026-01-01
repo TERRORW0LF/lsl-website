@@ -49,8 +49,9 @@
         }
 
         summary {
-            display: flex;
             height: 3rem;
+            width: 100%;
+            justify-content: start;
             align-items: center;
 
             span.icon {
@@ -68,7 +69,8 @@
     }
 
     div.content {
-        margin-left: 2rem;
+        margin-top: 0;
+        margin-bottom: 0;
     }
 
     details[open]~div.content {

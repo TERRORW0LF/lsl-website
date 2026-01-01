@@ -59,7 +59,7 @@ pub fn Submits() -> impl IntoView {
 
     view! {
         <section id="filter-list" class="runs">
-            <Collapsible id="filter" header=|| "Show Filters" attr:class="filter">
+            <Collapsible id="filter" class="filter" header=|| "Show Filters">
                 <Filter attr:class="filter">
                     <Select
                         name="sort"

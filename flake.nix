@@ -54,7 +54,7 @@
             cargo-edit
             cargo-watch
             cargo-leptos
-            wasm-bindgen-cli_0_2_105
+            wasm-bindgen-cli_0_2_106
             mdbook
             mdbook-embedify
             binaryen

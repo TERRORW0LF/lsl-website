@@ -59,8 +59,8 @@ pub fn Activity() -> impl IntoView {
 
     view! {
         <section id="filter-list" class="activity">
-            <Collapsible id="filter" header=|| "Show Filters">
-                <Filter>
+            <Collapsible id="filter" class="filter" header=|| "Show Filters">
+                <Filter attr:class="filter">
                     <Select
                         name="sort"
                         indicator="Sort By"

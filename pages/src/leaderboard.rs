@@ -75,9 +75,9 @@ pub fn Section(
                 }
             }}
         </Header>
-        <Collapsible id="filter" attr:class="filter" header=|| "Filters">
+        <Collapsible id="filter" class="filter" header=|| "Filters">
             <Filter attr:class="filter">
-                <div class="input-box">
+                <div>
                     <label for="patch" class="indicator">
                         "Patch"
                     </label>
@@ -85,22 +85,22 @@ pub fn Section(
                         "1.00"
                     </A>
                 </div>
-                <div class="input-box">
+                <div>
                     <A href="../../../1.41/1/standard" attr:class="select">
                         "1.41"
                     </A>
                 </div>
-                <div class="input-box">
+                <div>
                     <A href="../../../1.50/1/standard" attr:class="select">
                         "1.50"
                     </A>
                 </div>
-                <div class="input-box">
+                <div>
                     <A href="../../../2.00/1/standard" attr:class="select">
                         "2.00"
                     </A>
                 </div>
-                <div class="input-box">
+                <div>
                     <A href="../../../2.13/1/standard" attr:class="select">
                         "Current"
                     </A>

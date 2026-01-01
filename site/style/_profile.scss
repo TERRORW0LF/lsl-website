@@ -33,9 +33,13 @@
 }
 
 #filter-list {
-    margin: 2rem;
+    details {
+        margin-left: 2rem;
+        margin-top: 2rem;
+    }
 
     .grid {
+        margin: 1rem 2rem;
         display: grid;
         gap: 0.5rem 1rem;
         align-items: center;
@@ -63,7 +67,8 @@
     }
 
     .pages {
-        margin-top: 2rem;
+        padding: 2rem;
+        padding-top: 1rem;
         justify-content: center;
         gap: 0.2rem;
 

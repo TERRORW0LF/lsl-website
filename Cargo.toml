@@ -13,19 +13,19 @@ console_error_panic_hook = "0.1"
 console_log = "1"
 futures = { version = "0.3.31" }
 http = "1.1.0"
-leptos = { version = "0.8.10", features = ["nightly"] }
+leptos = { version = "0.8.15", features = ["nightly"] }
 leptos_meta = "0.8.5"
-leptos_router = "0.8.8"
+leptos_router = "0.8.11"
 rust_decimal = "1.36.0"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
 thiserror = "1.0.38"
 urlencoding = "2.1.3"
 log = "0.4"
-server_fn = { version = "0.8.7", features = ["multipart"] }
+server_fn = { version = "0.8.9", features = ["multipart"] }
 simple_logger = "5"
 strum = { version = "0.26", features = ["derive"] }
-wasm-bindgen = "=0.2.105"
+wasm-bindgen = "=0.2.106"
 web-sys = {version ="0.3", features = ["DataTransfer", "FileList", "DomRectReadOnly", "ResizeObserver", "ResizeObserverEntry"] }
 argon2 = "0.5.3"
 async-trait = "0.1"
@@ -33,7 +33,7 @@ axum = { version = "0.8", features = ["macros"] }
 axum_session = "0.16"
 axum_session_auth = "0.16"
 axum_session_sqlx = { version = "0.5", features = ["postgres", "tls-rustls"] }
-leptos_axum = "0.8.6"
+leptos_axum = "0.8.7"
 oauth2 = "4.4.2"
 rand = "0.8.5"
 reqwest = { version = "0.12.9", features = ["json"] }

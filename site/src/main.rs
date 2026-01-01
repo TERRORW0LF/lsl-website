@@ -1,3 +1,5 @@
+#![recursion_limit = "256"]
+
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 use axum::{
     body::Body as AxumBody,
