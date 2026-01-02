@@ -16,81 +16,6 @@ struct RunFull {
     verified: bool,
 }
 
-#[server(ExportRuns, prefix="/api", endpoint="runs/export", input=GetUrl)]
-pub async fn export_runs(patch: String) -> Result<(), ApiError> {
-    let pool = crate::auth::ssr::pool()?;
-    let runs = sqlx::query_as::<_, RunFull>(
-        r#"SELECT run.id, run.created_at, section_id, user_id, time, proof, yt_id, verified
-        FROM run
-        JOIN section on run.section_id = section.id
-        WHERE patch = $1
-        ORDER BY created_at ASC;"#,
-    )
-    .bind(patch.clone())
-    .fetch_all(&pool)
-    .await
-    .or(Err(ApiError::ServerError("Couldn't fetch runs".into())))?;
-
-    let file = std::fs::File::create(format!("{patch}.json")).unwrap();
-    let writer = std::io::BufWriter::new(file);
-    leptos::serde_json::to_writer_pretty(writer, &runs).expect("Couldn't write to file");
-    Ok(())
-}
-
-#[server(ImportRuns, prefix="/api", endpoint="runs/import", input=GetUrl)]
-pub async fn import_runs(patch: String) -> Result<(), ApiError> {
-    let pool = crate::auth::ssr::pool()?;
-    let file = std::fs::File::open(format!("{patch}.json")).expect("Can't find file");
-    let reader = std::io::BufReader::new(file);
-    let runs: Vec<RunFull> = leptos::serde_json::from_reader(reader).expect("Can't parse file");
-    let _ = sqlx::query(
-        r#"DELETE FROM run
-            USING section
-            WHERE run.section_id = section.id AND patch = $1;"#,
-    )
-    .bind(patch.clone())
-    .execute(&pool)
-    .await
-    .map_err(|_| ApiError::ServerError("Database delete failed".into()))?;
-
-    let _ = sqlx::query(
-        r#"DELETE FROM rank
-            WHERE patch = $1;"#,
-    )
-    .bind(patch)
-    .execute(&pool)
-    .await
-    .map_err(|_| ApiError::ServerError("Database delete failed".into()))?;
-
-    let _ = sqlx::query(
-        r#"SELECT setval(pg_get_serial_sequence('rank', 'id'), COALESCE(MAX(id) + 1, 1), FALSE) 
-        FROM rank;"#,
-    )
-    .execute(&pool)
-    .await
-    .map_err(|_| ApiError::ServerError("Sequence reset failed".into()))?;
-
-    for run in runs {
-        let _ = sqlx::query(
-            r#"INSERT INTO run (id, section_id, user_id, time, proof, yt_id, verified, created_at)
-            OVERRIDING SYSTEM VALUE
-                                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8);"#,
-        )
-        .bind(run.id)
-        .bind(run.section_id)
-        .bind(run.user_id)
-        .bind(run.time)
-        .bind(run.proof)
-        .bind(run.yt_id)
-        .bind(true)
-        .bind(run.created_at)
-        .execute(&pool)
-        .await
-        .map_err(|_| ApiError::ServerError("Database insert failed".into()))?;
-    }
-    Ok(())
-}
-
 #[server(GetRunsId, prefix="/api", endpoint="runs/id", input=GetUrl)]
 pub async fn get_runs_id(id: i32) -> Result<SectionRuns, ApiError> {
     let pool = crate::auth::ssr::pool()?;
@@ -130,7 +55,8 @@ pub async fn get_runs_category(patch: String, layout: String, category: String) 
         LEFT JOIN run r ON section_id = s.id
         LEFT JOIN "user" u ON user_id = u.id
         WHERE patch = $1 AND layout = $2 AND category = $3
-        GROUP BY s.id, patch, layout, category, map;"#,
+        GROUP BY s.id, patch, layout, category, map
+        ORDER BY map;"#,
     )
     .bind(patch)
     .bind(layout)
@@ -211,7 +137,8 @@ pub async fn get_maps() -> Result<Vec<Map>, ApiError> {
     let maps = sqlx::query_as::<_, Map>(
         r#"SELECT map, code
         FROM section
-        WHERE patch='2.13' AND layout='1' AND category='Standard';"#,
+        WHERE patch='2.13' AND layout='1' AND category='Standard'
+        ORDER BY map ASC;"#,
     )
     .fetch_all(&pool)
     .await
