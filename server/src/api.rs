@@ -1,20 +1,6 @@
 use http::{HeaderValue, header::CACHE_CONTROL};
 use leptos::prelude::{expect_context, server, server_fn::codec::GetUrl};
-use rust_decimal::Decimal;
 use types::api::*;
-
-#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
-struct RunFull {
-    id: i32,
-    created_at: chrono::DateTime<chrono::Local>,
-    section_id: i32,
-    user_id: i64,
-    time: Decimal,
-    proof: String,
-    yt_id: Option<String>,
-    verified: bool,
-}
 
 #[server(GetRunsId, prefix="/api", endpoint="runs/id", input=GetUrl)]
 pub async fn get_runs_id(id: i32) -> Result<SectionRuns, ApiError> {
