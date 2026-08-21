@@ -32,7 +32,7 @@ pub async fn get_runs_category(patch: String, layout: String, category: String) 
     let pool = crate::auth::ssr::pool()?;
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let runs = sqlx::query_as::<_, SectionRuns>(
-        r#"SELECT s.id, patch, layout, category, map,
+        r#"SELECT s.id, patch, layout, category, map, submittable,
             COALESCE(NULLIF(ARRAY_AGG((r.id, r.section_id, r.user_id, u."name", r.time,
                 r.proof, r.yt_id, r.verified, r.is_pb, r.is_wr, r.created_at)
             ORDER BY r.created_at ASC) 
@@ -41,7 +41,7 @@ pub async fn get_runs_category(patch: String, layout: String, category: String) 
         LEFT JOIN run r ON section_id = s.id
         LEFT JOIN "user" u ON user_id = u.id
         WHERE patch = $1 AND layout = $2 AND category = $3
-        GROUP BY s.id, patch, layout, category, map
+        GROUP BY s.id, patch, layout, category, map, submittable,
         ORDER BY map;"#,
     )
     .bind(patch)
@@ -121,7 +121,7 @@ pub async fn get_maps() -> Result<Vec<Map>, ApiError> {
     let pool = crate::auth::ssr::pool()?;
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let maps = sqlx::query_as::<_, Map>(
-        r#"SELECT map, code
+        r#"SELECT map, submittable, code
         FROM section
         WHERE patch='2.13' AND layout='1' AND category='Standard'
         ORDER BY map ASC;"#,

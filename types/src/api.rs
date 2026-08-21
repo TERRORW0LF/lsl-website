@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 use thiserror::Error;
 
-#[derive(Clone, Debug, Error, EnumString, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Error, EnumString, Serialize, Deserialize)]
 pub enum ApiError {
     #[error("Unauthorized")]
     #[strum(to_string = "Unauthorized")]
@@ -207,6 +207,7 @@ pub struct SectionRuns {
     pub layout: String,
     pub category: String,
     pub map: String,
+    pub submittable: bool,
     pub runs: Vec<PartialRun>,
 }
 
@@ -256,6 +257,7 @@ pub struct ComboRanking {
 pub struct Map {
     #[cfg_attr(feature = "ssr", sqlx(rename = "map"))]
     pub name: String,
+    pub submittable: bool,
     pub code: String,
 }
 

@@ -1,4 +1,5 @@
 pub use activity::Activity;
+pub use admin::Admin;
 pub use auth::Login;
 pub use auth::Register;
 pub use auth::Submit;
@@ -14,6 +15,7 @@ pub use submits::Submits;
 pub use user::ManageRuns;
 pub use user::Profile;
 pub mod activity;
+pub mod admin;
 pub mod auth;
 pub mod dash;
 pub mod error_template;

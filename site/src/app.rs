@@ -153,6 +153,20 @@ pub fn App() -> impl IntoView {
                                                                 <A href="/user/@me/submit">"Submit"</A>
                                                                 <A href="/user/@me/dashboard">"Dashboard"</A>
                                                                 <A href="/user/@me/manage">"Manage Runs"</A>
+                                                                <Show when=move || {
+                                                                    user.permissions.contains(&types::api::Permissions::Verify)
+                                                                        || user
+                                                                            .permissions
+                                                                            .contains(&types::api::Permissions::ManageUsers)
+                                                                        || user
+                                                                            .permissions
+                                                                            .contains(&types::api::Permissions::ManageRuns)
+                                                                        || user
+                                                                            .permissions
+                                                                            .contains(&types::api::Permissions::Administrator)
+                                                                }>
+                                                                    <A href="/admin">"Admin Panel"</A>
+                                                                </Show>
                                                                 <button
                                                                     type="button"
                                                                     class="dropdown-title"

@@ -111,8 +111,8 @@ pub fn Section(
                     options=[("time", "Time"), ("date", "Date")]
                 />
                 <Select
-                    name="filter"
-                    indicator="Filter"
+                    name="run_state"
+                    indicator="Run State"
                     options=[
                         ("none", "None"),
                         ("is_pb", "Is Personal Best"),
@@ -122,6 +122,14 @@ pub fn Section(
                         ("verified", "Is Verified"),
                     ]
                 />
+                <Select
+                    name="map_state"
+                    indicator="Map State"
+                    options=[
+                        ("submittable", "Submittable"),
+                        ("all", "All"),
+                    ]
+                />
             </Filter>
         </Collapsible>
     }
@@ -129,9 +137,19 @@ pub fn Section(
 
 #[component]
 pub fn Leaderboard(patch: Signal<String>, layout: Signal<String>, category: Signal<String>) -> impl IntoView {
+    let filter_key = Memo::new(|_| use_query_map().read().get("run_state").unwrap_or("all".into()));
     let selection = Signal::derive(move || (patch.get(), layout.get(), category.get()));
-    let maps = Resource::new(selection, |mut s| {
+    let maps_res = Resource::new(selection, |mut s| {
         get_runs_category(s.0, s.1, format!("{}{}", s.2.remove(0).to_uppercase(), s.2))
+    });
+    let maps = Memo::new(move |_| {
+        maps_res.get().map(|res| {
+            res.map(|vec| {
+                vec.into_iter()
+                    .filter(|map| map.submittable || *filter_key.read() == "all")
+                    .collect::<Vec<_>>()
+            })
+        })
     });
 
     view! {
@@ -139,7 +157,7 @@ pub fn Leaderboard(patch: Signal<String>, layout: Signal<String>, category: Sign
             view! { <p>"Loading..."</p> }
         }>
             {move || {
-                maps.map(|data| match data {
+                maps.get().map(|data| match data {
                     Err(e) => Either::Right(view! { <p>{e.to_string()}</p> }),
                     Ok(maps) => {
                         Either::Left(
@@ -163,10 +181,10 @@ pub fn Leaderboard(patch: Signal<String>, layout: Signal<String>, category: Sign
 
 #[component]
 pub fn LeaderboardEntry(map: SectionRuns) -> impl IntoView {
-    let filter_key = Memo::new(|_| use_query_map().read().get("filter"));
+    let filter_key = Memo::new(|_| use_query_map().read().get("run_state"));
     let sort_key = Memo::new(|_| use_query_map().read().get("sort"));
     let user = Memo::new(|_| use_params_map().read().get("id"));
-    let runs = Signal::derive(move || {
+    let runs = Memo::new(move |_| {
         let mut old_time = Decimal::new(999999, 3);
         let mut old_times = HashMap::<i64, Decimal>::new();
         let r = map.runs.clone();

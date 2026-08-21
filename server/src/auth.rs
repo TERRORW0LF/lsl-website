@@ -263,7 +263,7 @@ pub async fn update_bio(bio: Option<String>, redirect: Option<String>) -> Result
 #[server(UpdatePfp, prefix="/api", endpoint="user/update/avatar", input=MultipartFormData)]
 pub async fn update_pfp(data: MultipartData) -> Result<(), ApiError> {
     use crate::auth::ssr::{auth, pool};
-    use rand::{Rng, distributions::Alphanumeric, thread_rng};
+    use rand::{RngExt, distr::Alphanumeric, rng};
     use std::fs::{File, remove_file};
     use std::io::{BufWriter, Write};
 
@@ -283,11 +283,7 @@ pub async fn update_pfp(data: MultipartData) -> Result<(), ApiError> {
             return Err(ApiError::InvalidInput);
         }
 
-        let name: String = thread_rng()
-            .sample_iter(&Alphanumeric)
-            .take(64)
-            .map(char::from)
-            .collect();
+        let name: String = rng().sample_iter(&Alphanumeric).take(64).map(char::from).collect();
         let file = File::options()
             .append(true)
             .create_new(true)
@@ -384,7 +380,7 @@ pub async fn submit(
     let section_id = sqlx::query_as::<_, SectionId>(
         r#"SELECT id
         FROM section
-        WHERE patch='2.13' AND layout=$1 AND category=$2 AND map=$3;"#,
+        WHERE patch='2.13' AND layout=$1 AND category=$2 AND map=$3 AND submittable=true;"#,
     )
     .bind(&layout)
     .bind(&category)
