@@ -14,7 +14,7 @@ pub mod ssr {
     pub use axum_session_auth::{Authentication, HasPermission};
     pub use axum_session_sqlx::SessionPgPool;
     pub use leptos::prelude::{server, use_context};
-    use oauth2::basic::BasicClient;
+    use oauth2::{EndpointNotSet, EndpointSet, basic::BasicClient};
     pub use sqlx::{
         PgPool,
         postgres::{PgConnectOptions, PgPoolOptions},
@@ -45,8 +45,10 @@ pub mod ssr {
         use_context::<AuthSession>().ok_or(ApiError::ServerError("Auth session missing.".into()))
     }
 
-    pub fn oauth() -> Result<BasicClient, ApiError> {
-        use_context::<BasicClient>().ok_or(ApiError::ServerError("OAuth client missing.".into()))
+    pub fn oauth()
+    -> Result<BasicClient<EndpointSet, EndpointNotSet, EndpointNotSet, EndpointSet, EndpointSet>, ApiError> {
+        use_context::<BasicClient<EndpointSet, EndpointNotSet, EndpointNotSet, EndpointSet, EndpointSet>>()
+            .ok_or(ApiError::ServerError("OAuth client missing.".into()))
     }
 
     pub fn hash_password(password: &String) -> Result<String, ApiError> {
@@ -525,7 +527,7 @@ pub async fn discord_add() -> Result<(), ApiError> {
 #[server(DiscordAuth, prefix="/api", endpoint="user/discord/auth", input=GetUrl)]
 pub async fn discord_auth(code: String, state: String) -> Result<(), ApiError> {
     use self::ssr::*;
-    use oauth2::{AuthorizationCode, CsrfToken, TokenResponse, reqwest::async_http_client};
+    use oauth2::{AuthorizationCode, CsrfToken, TokenResponse, reqwest::ClientBuilder};
 
     leptos_axum::redirect("/user/@me/dashboard");
 
@@ -539,9 +541,13 @@ pub async fn discord_auth(code: String, state: String) -> Result<(), ApiError> {
     if *csrf.secret() != state {
         return Err(ApiError::InvalidCredentials);
     }
+    let req_client = ClientBuilder::new()
+        .redirect(oauth2::reqwest::redirect::Policy::none())
+        .build()
+        .map_err(|_| ApiError::ServerError("Failed to build client".into()))?;
     let token = oauth
         .exchange_code(AuthorizationCode::new(code))
-        .request_async(async_http_client)
+        .request_async(&req_client)
         .await
         .map_err(|_| ApiError::ServerError("Token exchange failed".into()))?;
 

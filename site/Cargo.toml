@@ -23,7 +23,7 @@ simple_logger.workspace = true
 wasm-bindgen.workspace = true
 web-sys.workspace = true
 axum = { workspace = true, optional = true }
-axum_session = {workspace = true, optional = true }
+axum_session = { workspace = true, optional = true }
 axum_session_auth = { workspace = true, optional = true }
 axum_session_sqlx = { workspace = true, optional = true }
 http = { workspace = true, optional = true }
@@ -39,7 +39,7 @@ default = [ "ssr" ]
 hydrate = [ "leptos/hydrate"]
 ssr = [
     "dep:axum",
-    "dep:axum_session",
+	"dep:axum_session",
     "dep:axum_session_auth",
     "dep:axum_session_sqlx",
     "dep:http",
