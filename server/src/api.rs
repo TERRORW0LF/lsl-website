@@ -7,7 +7,7 @@ pub async fn get_runs_id(id: i32) -> Result<SectionRuns, ApiError> {
     let pool = crate::auth::ssr::pool()?;
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let runs = sqlx::query_as::<_, SectionRuns>(
-        r#"SELECT s.id, s.patch, s.layout, s.category, s.map,
+        r#"SELECT s.id, s.patch, s.layout, s.category, s.map, s.submittable,
             COALESCE(NULLIF(ARRAY_AGG((r.id, r.section_id, u.id, u."name", r.time,
                 r.proof, r.yt_id, r.verified, r.is_pb, r.is_wr, r.created_at)
             ORDER BY r.created_at ASC)
@@ -16,7 +16,7 @@ pub async fn get_runs_id(id: i32) -> Result<SectionRuns, ApiError> {
         LEFT JOIN run r ON section_id = s.id
         LEFT JOIN "user" u ON user_id = u.id
         WHERE s.id = $1
-        GROUP BY s.id, patch, layout, category, map;"#,
+        GROUP BY s.id, patch, layout, category, map, submittable;"#,
     )
     .bind(id)
     .fetch_one(&pool)
@@ -41,7 +41,7 @@ pub async fn get_runs_category(patch: String, layout: String, category: String) 
         LEFT JOIN run r ON section_id = s.id
         LEFT JOIN "user" u ON user_id = u.id
         WHERE patch = $1 AND layout = $2 AND category = $3
-        GROUP BY s.id, patch, layout, category, map, submittable,
+        GROUP BY s.id, patch, layout, category, map, submittable
         ORDER BY map;"#,
     )
     .bind(patch)

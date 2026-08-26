@@ -341,7 +341,7 @@ pub fn Submit() -> impl IntoView {
                         <Await future=get_maps() let:maps>
                             {match maps {
                                 Ok(v) => {
-                                    set_maps(Some(v.iter().filter(|m| m.submittable).collect()));
+                                    set_maps(Some(v.clone().into_iter().filter(|m| m.submittable).collect()));
                                     Either::Left(
                                         v
                                             .into_iter()

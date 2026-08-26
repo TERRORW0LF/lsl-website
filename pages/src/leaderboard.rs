@@ -125,10 +125,7 @@ pub fn Section(
                 <Select
                     name="map_state"
                     indicator="Map State"
-                    options=[
-                        ("submittable", "Submittable"),
-                        ("all", "All"),
-                    ]
+                    options=[("submittable", "Submittable"), ("all", "All")]
                 />
             </Filter>
         </Collapsible>
@@ -142,6 +139,7 @@ pub fn Leaderboard(patch: Signal<String>, layout: Signal<String>, category: Sign
     let maps_res = Resource::new(selection, |mut s| {
         get_runs_category(s.0, s.1, format!("{}{}", s.2.remove(0).to_uppercase(), s.2))
     });
+    // TODO: hydration error
     let maps = Memo::new(move |_| {
         maps_res.get().map(|res| {
             res.map(|vec| {
@@ -157,23 +155,24 @@ pub fn Leaderboard(patch: Signal<String>, layout: Signal<String>, category: Sign
             view! { <p>"Loading..."</p> }
         }>
             {move || {
-                maps.get().map(|data| match data {
-                    Err(e) => Either::Right(view! { <p>{e.to_string()}</p> }),
-                    Ok(maps) => {
-                        Either::Left(
-                            view! {
-                                <div id="lb">
-                                    {maps
-                                        .into_iter()
-                                        .map(|map| {
-                                            view! { <LeaderboardEntry map=map.clone() /> }
-                                        })
-                                        .collect_view()}
-                                </div>
-                            },
-                        )
-                    }
-                })
+                maps.get()
+                    .map(|data| match data {
+                        Err(e) => Either::Right(view! { <p>{e.to_string()}</p> }),
+                        Ok(maps) => {
+                            Either::Left(
+                                view! {
+                                    <div id="lb">
+                                        {maps
+                                            .into_iter()
+                                            .map(|map| {
+                                                view! { <LeaderboardEntry map=map.clone() /> }
+                                            })
+                                            .collect_view()}
+                                    </div>
+                                },
+                            )
+                        }
+                    })
             }}
         </Transition>
     }
