@@ -27,9 +27,7 @@ pub fn Login() -> impl IntoView {
                             if e.is::<ApiError>() {
                                 let e = e.downcast_ref::<ApiError>().unwrap();
                                 match e {
-                                    ApiError::InvalidCredentials => {
-                                        "🛈 Incorrect username or password"
-                                    }
+                                    ApiError::InvalidCredentials => "🛈 Incorrect username or password",
                                     _ => "🛈 Something went wrong. Try again",
                                 }
                             } else {
@@ -285,10 +283,7 @@ pub fn Submit() -> impl IntoView {
                             name="layout"
                             id="layout"
                             prop:selectedIndex=move || {
-                                code.get()
-                                    .chars()
-                                    .next()
-                                    .map_or(0, |c| c.to_digit(10).unwrap_or(0) as i32 - 1)
+                                code.get().chars().next().map_or(0, |c| c.to_digit(10).unwrap_or(0) as i32 - 1)
                             }
                         >
                             <option value="1">"Layout 1"</option>
@@ -347,9 +342,7 @@ pub fn Submit() -> impl IntoView {
                                             .into_iter()
                                             .filter(|m| m.submittable)
                                             .map(|m| {
-                                                view! {
-                                                    <option value=m.name.clone()>{m.name.clone()}</option>
-                                                }
+                                                view! { <option value=m.name.clone()>{m.name.clone()}</option> }
                                             })
                                             .collect_view(),
                                     )

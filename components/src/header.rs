@@ -11,10 +11,7 @@ pub fn Header(children: ChildrenFragment) -> impl IntoView {
                     .enumerate()
                     .map(|(i, v)| {
                         view! {
-                            <ul
-                                class:middle=i != 0 && i != len - 1
-                                class:right=i == len - 1 && len != 1
-                            >
+                            <ul class:middle=i != 0 && i != len - 1 class:right=i == len - 1 && len != 1>
                                 {v}
                             </ul>
                         }

@@ -10,7 +10,7 @@ use std::{cmp::Ordering, collections::HashMap};
 
 use server::api::get_runs_category;
 use types::{
-    api::{PartialRun, SectionRuns},
+    api::{ApiError, PartialRun, SectionRuns},
     internal::Proof,
 };
 
@@ -35,12 +35,7 @@ pub fn Section(
                                 view! {
                                     <A
                                         href=move || {
-                                            format!(
-                                                "../../{}/{}{}",
-                                                l.0,
-                                                category.get(),
-                                                query.get().to_query_string(),
-                                            )
+                                            format!("../../{}/{}{}", l.0, category.get(), query.get().to_query_string())
                                         }
                                         scroll=false
                                     >
@@ -61,9 +56,7 @@ pub fn Section(
                             .map(|c| {
                                 view! {
                                     <A
-                                        href=move || {
-                                            format!("../{}{}", c.0, query.get().to_query_string())
-                                        }
+                                        href=move || { format!("../{}{}", c.0, query.get().to_query_string()) }
                                         scroll=false
                                     >
                                         <span class="text">{c.1.clone()}</span>
@@ -105,11 +98,7 @@ pub fn Section(
                         "Current"
                     </A>
                 </div>
-                <Select
-                    name="sort"
-                    indicator="Sort By"
-                    options=[("time", "Time"), ("date", "Date")]
-                />
+                <Select name="sort" indicator="Sort By" options=[("time", "Time"), ("date", "Date")] />
                 <Select
                     name="run_state"
                     indicator="Run State"
@@ -151,15 +140,31 @@ pub fn Leaderboard(patch: Signal<String>, layout: Signal<String>, category: Sign
     });
 
     view! {
-        <Transition fallback=move || {
-            view! { <p>"Loading..."</p> }
+        <ErrorBoundary fallback=|e| {
+            view! {
+                <span class="error">
+                    {move || {
+                        let e = e.get().into_iter().next().unwrap().1;
+                        if e.is::<ApiError>() {
+                            let e = e.downcast_ref::<ApiError>().unwrap();
+                            match e {
+                                ApiError::ServerError(s) => "🛈 ".to_owned() + s,
+                                _ => "🛈 Something went wrong. Try again".into(),
+                            }
+                        } else {
+                            "🛈 Something went wrong. Try again".into()
+                        }
+                    }}
+                </span>
+            }
         }>
-            {move || {
-                maps.get()
-                    .map(|data| match data {
-                        Err(e) => Either::Right(view! { <p>{e.to_string()}</p> }),
-                        Ok(maps) => {
-                            Either::Left(
+            <Transition fallback=move || {
+                view! { <p>"Loading..."</p> }
+            }>
+                {move || {
+                    maps.get()
+                        .map(|data| {
+                            data.map(|maps| {
                                 view! {
                                     <div id="lb">
                                         {maps
@@ -169,12 +174,12 @@ pub fn Leaderboard(patch: Signal<String>, layout: Signal<String>, category: Sign
                                             })
                                             .collect_view()}
                                     </div>
-                                },
-                            )
-                        }
-                    })
-            }}
-        </Transition>
+                                }
+                            })
+                        })
+                }}
+            </Transition>
+        </ErrorBoundary>
     }
 }
 
@@ -261,10 +266,7 @@ pub fn LeaderboardEntry(map: SectionRuns) -> impl IntoView {
                                             }}
                                         </span>
                                         <span class="name">
-                                            <A href=format!(
-                                                "/user/{}/leaderboard",
-                                                r.user_id,
-                                            )>{r.name}</A>
+                                            <A href=format!("/user/{}/leaderboard", r.user_id)>{r.name}</A>
                                         </span>
                                         <span class="time">{r.time.to_string()} " s"</span>
                                     </div>

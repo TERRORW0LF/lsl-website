@@ -88,40 +88,19 @@ pub fn Submits() -> impl IntoView {
                         <label for="faster" class="indicator">
                             "Faster Than"
                         </label>
-                        <input
-                            class="select"
-                            type="number"
-                            name="faster"
-                            id="faster"
-                            min="0"
-                            step="0.001"
-                        />
+                        <input class="select" type="number" name="faster" id="faster" min="0" step="0.001" />
                     </div>
                     <div>
                         <label for="slower" class="indicator">
                             "Slower Than"
                         </label>
-                        <input
-                            class="select"
-                            type="number"
-                            name="slower"
-                            id="slower"
-                            min="0"
-                            step="0.001"
-                        />
+                        <input class="select" type="number" name="slower" id="slower" min="0" step="0.001" />
                     </div>
                     <div>
                         <label for="user" class="indicator">
                             "User ID"
                         </label>
-                        <input
-                            class="select"
-                            type="number"
-                            name="user"
-                            id="user"
-                            min="1"
-                            step="1"
-                        />
+                        <input class="select" type="number" name="user" id="user" min="1" step="1" />
                     </div>
                     <Select
                         name="patch"
@@ -165,9 +144,7 @@ pub fn Submits() -> impl IntoView {
                                             v
                                                 .into_iter()
                                                 .map(|m| {
-                                                    view! {
-                                                        <option value=m.name.clone()>{m.name.clone()}</option>
-                                                    }
+                                                    view! { <option value=m.name.clone()>{m.name.clone()}</option> }
                                                 })
                                                 .collect_view(),
                                         )
@@ -200,9 +177,7 @@ pub fn Submits() -> impl IntoView {
                                         runs.into_iter()
                                             .map(|r| {
                                                 view! {
-                                                    <span>
-                                                        {format!("{}", r.created_at.format("%d/%m/%Y %H:%M"))}
-                                                    </span>
+                                                    <span>{format!("{}", r.created_at.format("%d/%m/%Y %H:%M"))}</span>
                                                     <span>{r.username}</span>
                                                     <span>"Patch " {r.patch}</span>
                                                     <span>"Layout " {r.layout}</span>
@@ -223,10 +198,7 @@ pub fn Submits() -> impl IntoView {
                 </Suspense>
             </div>
             <div class="pages row">
-                <Show
-                    when=move || offset.read() != 0
-                    fallback=|| view! { <div class="arrow disabled">"<"</div> }
-                >
+                <Show when=move || offset.read() != 0 fallback=|| view! { <div class="arrow disabled">"<"</div> }>
                     <A
                         class:arrow=true
                         href=move || {
@@ -240,10 +212,7 @@ pub fn Submits() -> impl IntoView {
                 </Show>
                 <div class="page">{move || offset.get() + 1}</div>
                 <Suspense fallback=|| view! { <div class="arrow disabled">">"</div> }>
-                    <Show
-                        when=move || !*last.read()
-                        fallback=|| view! { <div class="arrow disabled">">"</div> }
-                    >
+                    <Show when=move || !*last.read() fallback=|| view! { <div class="arrow disabled">">"</div> }>
                         <A
                             class:arrow=true
                             href=move || {

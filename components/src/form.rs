@@ -7,11 +7,7 @@ pub fn Filter(children: ChildrenFragment) -> impl IntoView {
     view! {
         <Form method="GET" action="">
             <div class="row">
-                {children()
-                    .nodes
-                    .into_iter()
-                    .map(|v| view! { <div class="input-box">{v}</div> })
-                    .collect_view()}
+                {children().nodes.into_iter().map(|v| view! { <div class="input-box">{v}</div> }).collect_view()}
             </div>
             <input type="submit" class="button" value="Apply" />
         </Form>

@@ -33,28 +33,18 @@ pub fn Player(proof: Signal<Option<Proof>>, cover: String) -> impl IntoView {
                                         }
                                     }
                                 >
-                                    <button
-                                        class="play-wrapper"
-                                        on:click=move |_| { set_play(true) }
-                                    >
+                                    <button class="play-wrapper" on:click=move |_| { set_play(true) }>
                                         <div></div>
                                     </button>
                                 </Show>
                                 <br />
-                                <a
-                                    class="external"
-                                    href=move || proof.get().unwrap().url
-                                    target="_blank"
-                                >
+                                <a class="external" href=move || proof.get().unwrap().url target="_blank">
                                     "Open in new Tab"
                                 </a>
                             </div>
                         </Show>
                         <div class="no-vid">
-                            <img
-                                src=format!("/cdn/maps/{}.jpg", cover)
-                                alt=format!("Picture of {}", cover)
-                            />
+                            <img src=format!("/cdn/maps/{}.jpg", cover) alt=format!("Picture of {}", cover) />
                         </div>
                     }
                 }

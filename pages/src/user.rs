@@ -30,13 +30,8 @@ pub fn Profile(id: Signal<i64>) -> impl IntoView {
                                     <h1>{u.username}</h1>
                                     <div class="row">
                                         <div>
-                                            <img
-                                                class="avatar"
-                                                src=format!("/cdn/users/{}.jpg", u.pfp)
-                                            />
-                                            <p>
-                                                {u.bio.unwrap_or("This user has no about me.".into())}
-                                            </p>
+                                            <img class="avatar" src=format!("/cdn/users/{}.jpg", u.pfp) />
+                                            <p>{u.bio.unwrap_or("This user has no about me.".into())}</p>
                                         </div>
                                         <div class="medals"></div>
                                     </div>
@@ -141,27 +136,13 @@ pub fn ManageRuns() -> impl IntoView {
                         <label for="faster" class="indicator">
                             "Faster Than"
                         </label>
-                        <input
-                            class="select"
-                            type="number"
-                            name="faster"
-                            id="faster"
-                            min="0"
-                            step="0.001"
-                        />
+                        <input class="select" type="number" name="faster" id="faster" min="0" step="0.001" />
                     </div>
                     <div>
                         <label for="slower" class="indicator">
                             "Slower Than"
                         </label>
-                        <input
-                            class="select"
-                            type="number"
-                            name="slower"
-                            id="slower"
-                            min="0"
-                            step="0.001"
-                        />
+                        <input class="select" type="number" name="slower" id="slower" min="0" step="0.001" />
                     </div>
                     <Select
                         name="layout"
@@ -193,9 +174,7 @@ pub fn ManageRuns() -> impl IntoView {
                                             v
                                                 .into_iter()
                                                 .map(|m| {
-                                                    view! {
-                                                        <option value=m.name.clone()>{m.name.clone()}</option>
-                                                    }
+                                                    view! { <option value=m.name.clone()>{m.name.clone()}</option> }
                                                 })
                                                 .collect_view(),
                                         )
@@ -229,9 +208,7 @@ pub fn ManageRuns() -> impl IntoView {
                                             .map(|r| {
                                                 view! {
                                                     <span>{r.id}</span>
-                                                    <span>
-                                                        {format!("{}", r.created_at.format("%d/%m/%Y %H:%M"))}
-                                                    </span>
+                                                    <span>{format!("{}", r.created_at.format("%d/%m/%Y %H:%M"))}</span>
                                                     <span>"Layout " {r.layout}</span>
                                                     <span>{r.category}</span>
                                                     <span>{r.map}</span>
@@ -262,10 +239,7 @@ pub fn ManageRuns() -> impl IntoView {
                 </Suspense>
             </div>
             <div class="pages row">
-                <Show
-                    when=move || offset.read() != 0
-                    fallback=|| view! { <div class="arrow disabled">"<"</div> }
-                >
+                <Show when=move || offset.read() != 0 fallback=|| view! { <div class="arrow disabled">"<"</div> }>
                     <A
                         class:arrow=true
                         href=move || {
@@ -279,10 +253,7 @@ pub fn ManageRuns() -> impl IntoView {
                 </Show>
                 <div class="page">{move || offset.get() + 1}</div>
                 <Suspense fallback=|| view! { <div class="arrow disabled">">"</div> }>
-                    <Show
-                        when=move || !*last.read()
-                        fallback=|| view! { <div class="arrow disabled">">"</div> }
-                    >
+                    <Show when=move || !*last.read() fallback=|| view! { <div class="arrow disabled">">"</div> }>
                         <A
                             class:arrow=true
                             href=move || {
@@ -343,10 +314,7 @@ pub fn Delete() -> impl IntoView {
                 />
                 <input type="text" name="id" hidden value=id />
                 <div class="row">
-                    <A
-                        attr:class="button secondary"
-                        href=|| format!("../{}", use_query_map().get().to_query_string())
-                    >
+                    <A attr:class="button secondary" href=|| format!("../{}", use_query_map().get().to_query_string())>
                         "Cancel"
                     </A>
                     <input type="submit" class="button danger" value="Delete" />

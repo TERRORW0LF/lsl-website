@@ -117,9 +117,7 @@ pub fn ComboRanking(
                         c += 1;
                         view! {
                             <div class="ranking">
-                                <h3 class="category">
-                                    {move || categories.get()[c - 1].1.clone()}
-                                </h3>
+                                <h3 class="category">{move || categories.get()[c - 1].1.clone()}</h3>
                                 <RankingLegend titles=titles.clone() />
                                 <Suspense fallback=move || { "Loading..." }>
                                     <ErrorBoundary fallback=move |_| { "Error fetching data." }>

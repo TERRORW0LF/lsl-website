@@ -248,9 +248,7 @@ fn MapRunList(map: String, runs: Vec<PartialRun>) -> impl IntoView {
                                                     </div>
                                                     <div class="entry">
                                                         <h3>"DATE"</h3>
-                                                        <p>
-                                                            {r.created_at.format("%a %d %b %Y %k:%M:%S").to_string()}
-                                                        </p>
+                                                        <p>{r.created_at.format("%a %d %b %Y %k:%M:%S").to_string()}</p>
                                                     </div>
                                                     <div class="entry">
                                                         <h3>"USER"</h3>

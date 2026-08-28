@@ -22,8 +22,7 @@ pub fn HomePage() -> impl IntoView {
                 <h1>"Welcome to the Lucio Surf League!"</h1>
                 <p>
                     "Since its inception in 2019 "<b>"Lucio Surf"</b>
-                    " has been a staple in Overwatch's custom game browser. The "
-                    <b>"Lucio Surf League"</b>
+                    " has been a staple in Overwatch's custom game browser. The " <b>"Lucio Surf League"</b>
                     " has been the proud maintainer and arbitrator of Lucio Surf since the beginning. "
                     "Updating the game mode and leaderboards, connecting the community, and holding tournaments, the Lucio Surf League "
                     "is your place for anything related to Lucio Surf. We welcome you as another frog in our ranks."
@@ -235,9 +234,7 @@ pub fn HomePage() -> impl IntoView {
                                         let rank = u
                                             .ranks
                                             .iter()
-                                            .filter(|r| {
-                                                r.patch == String::from("2.13") && r.layout.is_none()
-                                            })
+                                            .filter(|r| { r.patch == String::from("2.13") && r.layout.is_none() })
                                             .next();
                                         view! {
                                             <div class="row narrow">

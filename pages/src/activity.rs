@@ -61,11 +61,7 @@ pub fn Activity() -> impl IntoView {
         <section id="filter-list" class="activity">
             <Collapsible id="filter" class="filter" header=|| "Show Filters">
                 <Filter attr:class="filter">
-                    <Select
-                        name="sort"
-                        indicator="Sort By"
-                        options=[("date", "Date"), ("section", "Section")]
-                    />
+                    <Select name="sort" indicator="Sort By" options=[("date", "Date"), ("section", "Section")] />
                     <Select
                         name="order"
                         indicator="Order By"
@@ -98,14 +94,7 @@ pub fn Activity() -> impl IntoView {
                         <label for="user" class="indicator">
                             "User ID"
                         </label>
-                        <input
-                            class="select"
-                            type="number"
-                            name="user"
-                            id="user"
-                            min="1"
-                            step="1"
-                        />
+                        <input class="select" type="number" name="user" id="user" min="1" step="1" />
                     </div>
                     <Select
                         name="patch"
@@ -161,21 +150,13 @@ pub fn Activity() -> impl IntoView {
                                         runs.into_iter()
                                             .map(|r| {
                                                 view! {
-                                                    <span>
-                                                        {format!("{}", r.created_at.format("%d/%m/%Y %H:%M"))}
-                                                    </span>
+                                                    <span>{format!("{}", r.created_at.format("%d/%m/%Y %H:%M"))}</span>
                                                     <span>{r.username}</span>
                                                     <span>
-                                                        {r
-                                                            .patch
-                                                            .map(|v| format!("Patch {v}"))
-                                                            .unwrap_or("-".into())}
+                                                        {r.patch.map(|v| format!("Patch {v}")).unwrap_or("-".into())}
                                                     </span>
                                                     <span>
-                                                        {r
-                                                            .layout
-                                                            .map(|v| format!("Layout {v}"))
-                                                            .unwrap_or("-".into())}
+                                                        {r.layout.map(|v| format!("Layout {v}")).unwrap_or("-".into())}
                                                     </span>
                                                     <span>{r.category.unwrap_or("-".into())}</span>
                                                     <span class=format!(
@@ -201,15 +182,11 @@ pub fn Activity() -> impl IntoView {
                                                     <span class=format!(
                                                         "rank-{} color",
                                                         r.rank_old.map(|v| v.to_string()).unwrap_or_default(),
-                                                    )>
-                                                        {r.rank_old.map(|v| format!("#{v}")).unwrap_or("-".into())}
-                                                    </span>
+                                                    )>{r.rank_old.map(|v| format!("#{v}")).unwrap_or("-".into())}</span>
                                                     <span class=format!(
                                                         "rank-{} color",
                                                         r.rank_new.map(|v| v.to_string()).unwrap_or_default(),
-                                                    )>
-                                                        {r.rank_new.map(|v| format!("#{v}")).unwrap_or("-".into())}
-                                                    </span>
+                                                    )>{r.rank_new.map(|v| format!("#{v}")).unwrap_or("-".into())}</span>
                                                     <div class="divider"></div>
                                                 }
                                             })
@@ -221,10 +198,7 @@ pub fn Activity() -> impl IntoView {
                 </Suspense>
             </div>
             <div class="pages row">
-                <Show
-                    when=move || offset.read() != 0
-                    fallback=|| view! { <div class="arrow disabled">"<"</div> }
-                >
+                <Show when=move || offset.read() != 0 fallback=|| view! { <div class="arrow disabled">"<"</div> }>
                     <A
                         class:arrow=true
                         href=move || {
@@ -238,10 +212,7 @@ pub fn Activity() -> impl IntoView {
                 </Show>
                 <div class="page">{move || offset.get() + 1}</div>
                 <Suspense fallback=|| view! { <div class="arrow disabled">">"</div> }>
-                    <Show
-                        when=move || !*last.read()
-                        fallback=|| view! { <div class="arrow disabled">">"</div> }
-                    >
+                    <Show when=move || !*last.read() fallback=|| view! { <div class="arrow disabled">">"</div> }>
                         <A
                             class:arrow=true
                             href=move || {

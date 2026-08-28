@@ -68,9 +68,7 @@ pub fn Dashboard() -> impl IntoView {
                             <h3>"ABOUT ME"</h3>
                             <p>
                                 {move || {
-                                    user.and_then(|user| {
-                                        user.bio.clone().unwrap_or("No about me set.".into())
-                                    })
+                                    user.and_then(|user| { user.bio.clone().unwrap_or("No about me set.".into()) })
                                 }}
                             </p>
                         </div>
@@ -393,14 +391,7 @@ pub fn Avatar() -> impl IntoView {
                 action.dispatch_local(form_data);
             }>
                 <div class="input-box">
-                    <input
-                        node_ref=input_ref
-                        type="file"
-                        name="avatar"
-                        id="avatar"
-                        required
-                        accept=".jpg"
-                    />
+                    <input node_ref=input_ref type="file" name="avatar" id="avatar" required accept=".jpg" />
                     <label
                         for="avatar"
                         class="file"
@@ -485,11 +476,7 @@ pub fn DiscordList() -> impl IntoView {
                                             Either::Left(
                                                 view! {
                                                     <ActionForm action=discord_add>
-                                                        <input
-                                                            type="submit"
-                                                            class="discord-add"
-                                                            value="Add Account"
-                                                        />
+                                                        <input type="submit" class="discord-add" value="Add Account" />
                                                     </ActionForm>
                                                 },
                                             )
