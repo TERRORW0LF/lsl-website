@@ -110,6 +110,7 @@ pub fn Section(
                         ("was_wr", "Was World Record"),
                         ("verified", "Is Verified"),
                     ]
+                    selected=1
                 />
                 <Select
                     name="map_state"

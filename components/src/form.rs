@@ -1,5 +1,5 @@
 use leptos::prelude::*;
-use leptos_router::components::Form;
+use leptos_router::{components::Form, hooks::use_query_map};
 use types::leptos::SelectFragment;
 
 #[component]
@@ -21,18 +21,28 @@ pub fn Select(
     #[prop(optional)] selected: usize,
     #[prop(into)] options: SelectFragment,
 ) -> impl IntoView {
+    let val = name.clone();
+    let key = Memo::new(move |_| use_query_map().read().get(&val));
     view! {
         <label for=name.clone() class="indicator">
             {indicator}
         </label>
-        <select class="select" name=name.clone() id=name>
+        <select class="select" name=name.clone() id=name autocomplete="off">
             {options
                 .nodes
                 .into_iter()
                 .enumerate()
                 .map(|(i, v)| {
+                    let key_val = v.0.clone();
                     view! {
-                        <option value=v.0 selected=move || (i == selected).then_some("")>
+                        <option
+                            value=v.0
+                            selected=move || {
+                                leptos::logging::warn!("{:?}", key.get());
+                                ((i == selected && key.read().is_none()) || key.read() == Some(key_val.clone()))
+                                    .then_some("")
+                            }
+                        >
                             {v.1}
                         </option>
                     }
