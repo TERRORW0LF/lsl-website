@@ -123,20 +123,10 @@ pub fn Section(
 
 #[component]
 pub fn Leaderboard(patch: Signal<String>, layout: Signal<String>, category: Signal<String>) -> impl IntoView {
-    let filter_key = Memo::new(|_| use_query_map().read().get("run_state").unwrap_or("all".into()));
+    let filter_key = Memo::new(|_| use_query_map().read().get("map_state").unwrap_or("submittable".into()));
     let selection = Signal::derive(move || (patch.get(), layout.get(), category.get()));
     let maps_res = Resource::new(selection, |mut s| {
         get_runs_category(s.0, s.1, format!("{}{}", s.2.remove(0).to_uppercase(), s.2))
-    });
-    // TODO: hydration error
-    let maps = Memo::new(move |_| {
-        maps_res.get().map(|res| {
-            res.map(|vec| {
-                vec.into_iter()
-                    .filter(|map| map.submittable || *filter_key.read() == "all")
-                    .collect::<Vec<_>>()
-            })
-        })
     });
 
     view! {
@@ -162,6 +152,18 @@ pub fn Leaderboard(patch: Signal<String>, layout: Signal<String>, category: Sign
                 view! { <p>"Loading..."</p> }
             }>
                 {move || {
+                    let maps = Memo::new(move |_| {
+                        leptos::logging::warn!("{}", *filter_key.read());
+                        maps_res
+                            .get()
+                            .map(|res| {
+                                res.map(|vec| {
+                                    vec.into_iter()
+                                        .filter(|map| map.submittable || *filter_key.read() == "all")
+                                        .collect::<Vec<_>>()
+                                })
+                            })
+                    });
                     maps.get()
                         .map(|data| {
                             data.map(|maps| {
