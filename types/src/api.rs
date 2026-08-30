@@ -142,16 +142,24 @@ impl Default for ActivityFilters {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
-pub struct Run {
+pub struct Section {
+    #[sqlx(rename = "section_id")]
     pub id: i32,
-    pub section_id: i32,
     pub patch: String,
     pub layout: String,
     pub category: String,
     pub map: String,
-    pub user_id: i64,
-    #[cfg_attr(feature = "ssr", sqlx(rename = "name"))]
-    pub username: String,
+    pub submittable: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
+pub struct Run {
+    pub id: i32,
+    #[sqlx(flatten)]
+    pub section: Section,
+    #[sqlx(flatten)]
+    pub user: PartialUser,
     pub time: Decimal,
     pub proof: String,
     pub yt_id: Option<String>,
@@ -166,8 +174,8 @@ pub struct Run {
 pub struct PartialRun {
     pub id: i32,
     pub section_id: i32,
-    pub user_id: i64,
-    pub name: String,
+    #[sqlx(flatten)]
+    pub user: PartialUser,
     pub time: Decimal,
     pub proof: String,
     pub yt_id: Option<String>,
@@ -202,12 +210,8 @@ impl sqlx::postgres::PgHasArrayType for PartialRanking {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
 pub struct SectionRuns {
-    pub id: i32,
-    pub patch: String,
-    pub layout: String,
-    pub category: String,
-    pub map: String,
-    pub submittable: bool,
+    #[sqlx(flatten)]
+    pub section: Section,
     pub runs: Vec<PartialRun>,
 }
 
@@ -218,9 +222,8 @@ pub struct Ranking {
     pub patch: String,
     pub layout: Option<String>,
     pub category: Option<String>,
-    pub user_id: i64,
-    #[cfg_attr(feature = "ssr", sqlx(rename = "name"))]
-    pub username: String,
+    #[sqlx(flatten)]
+    pub user: PartialUser,
     pub title: Title,
     pub rank: i32,
     pub rating: f64,
@@ -234,8 +237,8 @@ pub struct Ranking {
 #[cfg_attr(feature = "ssr", derive(sqlx::Type), sqlx(no_pg_array))]
 pub struct PartialRanking {
     pub id: i32,
-    pub user_id: i64,
-    pub username: String,
+    #[sqlx(flatten)]
+    pub user: PartialUser,
     pub title: Title,
     pub rank: i32,
     pub rating: f64,
@@ -252,22 +255,12 @@ pub struct ComboRanking {
     pub rankings: Vec<PartialRanking>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
-pub struct Map {
-    #[cfg_attr(feature = "ssr", sqlx(rename = "map"))]
-    pub name: String,
-    pub submittable: bool,
-    pub code: String,
-}
-
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
 pub struct Activity {
     pub id: i32,
-    pub user_id: i64,
-    #[cfg_attr(feature = "ssr", sqlx(rename = "name"))]
-    pub username: String,
+    #[sqlx(flatten)]
+    pub user: PartialUser,
     pub rank_id: Option<i32>,
     pub patch: Option<String>,
     pub layout: Option<String>,
@@ -300,6 +293,13 @@ pub struct User {
     pub pfp: String,
     pub ranks: Vec<Rank>,
     pub permissions: HashSet<Permissions>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ssr", derive(sqlx::FromRow), derive(sqlx::Type))]
+pub struct PartialUser {
+    pub id: i64,
+    pub username: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

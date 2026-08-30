@@ -2,18 +2,20 @@ use http::{HeaderValue, header::CACHE_CONTROL};
 use leptos::prelude::{expect_context, server, server_fn::codec::GetUrl};
 use types::api::*;
 
+// TODO: Adjust queries for new Section / PartialUser type
+
 #[server(GetRunsId, prefix="/api", endpoint="runs/id", input=GetUrl)]
 pub async fn get_runs_id(id: i32) -> Result<SectionRuns, ApiError> {
     let pool = crate::auth::ssr::pool()?;
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let runs = sqlx::query_as::<_, SectionRuns>(
-        r#"SELECT s.id, s.patch, s.layout, s.category, s.map, s.submittable,
-            COALESCE(NULLIF(ARRAY_AGG((r.id, r.section_id, u.id, u."name", r.time,
+        r#"SELECT s.id AS section_id, s.patch, s.layout, s.category, s.map, s.submittable,
+            COALESCE(NULLIF(ARRAY_AGG((r.id, r.section_id, u.id, u."name" AS username, r.time,
                 r.proof, r.yt_id, r.verified, r.is_pb, r.is_wr, r.created_at)
             ORDER BY r.created_at ASC)
             FILTER(WHERE r.id IS NOT NULL), '{NULL}'), '{}') AS runs
         FROM section s
-        LEFT JOIN run r ON section_id = s.id
+        LEFT JOIN run r ON r.section_id = s.id
         LEFT JOIN "user" u ON user_id = u.id
         WHERE s.id = $1
         GROUP BY s.id, patch, layout, category, map, submittable;"#,
@@ -32,13 +34,13 @@ pub async fn get_runs_category(patch: String, layout: String, category: String) 
     let pool = crate::auth::ssr::pool()?;
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let runs = sqlx::query_as::<_, SectionRuns>(
-        r#"SELECT s.id, patch, layout, category, map, submittable,
-            COALESCE(NULLIF(ARRAY_AGG((r.id, r.section_id, r.user_id, u."name", r.time,
+        r#"SELECT s.id AS section_id, patch, layout, category, map, submittable,
+            COALESCE(NULLIF(ARRAY_AGG((r.id, r.section_id, r.user_id, u."name" AS username, r.time,
                 r.proof, r.yt_id, r.verified, r.is_pb, r.is_wr, r.created_at)
             ORDER BY r.created_at ASC) 
             FILTER(WHERE r.id IS NOT NULL), '{NULL}'), '{}') AS runs
         FROM section s
-        LEFT JOIN run r ON section_id = s.id
+        LEFT JOIN run r ON r.section_id = s.id
         LEFT JOIN "user" u ON user_id = u.id
         WHERE patch = $1 AND layout = $2 AND category = $3
         GROUP BY s.id, patch, layout, category, map, submittable
@@ -117,11 +119,11 @@ pub async fn get_runs(filter: RunFilters, offset: i32) -> Result<Vec<Run>, ApiEr
 }
 
 #[server(GetMaps, prefix="/api", endpoint="maps", input=GetUrl)]
-pub async fn get_maps() -> Result<Vec<Map>, ApiError> {
+pub async fn get_maps() -> Result<Vec<Section>, ApiError> {
     let pool = crate::auth::ssr::pool()?;
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
-    let maps = sqlx::query_as::<_, Map>(
-        r#"SELECT map, submittable, code
+    let maps = sqlx::query_as::<_, Section>(
+        r#"SELECT id, patch, layout, category, map, submittable, code
         FROM section
         WHERE patch='2.13' AND layout='1' AND category='Standard'
         ORDER BY map ASC;"#,
