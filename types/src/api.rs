@@ -298,7 +298,7 @@ pub struct User {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ssr", derive(sqlx::FromRow), derive(sqlx::Type))]
 pub struct PartialUser {
-    pub id: i64,
+    pub user_id: i64,
     pub username: String,
 }
 

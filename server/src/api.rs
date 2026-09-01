@@ -10,7 +10,7 @@ pub async fn get_runs_id(id: i32) -> Result<SectionRuns, ApiError> {
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let runs = sqlx::query_as::<_, SectionRuns>(
         r#"SELECT s.id AS section_id, s.patch, s.layout, s.category, s.map, s.submittable,
-            COALESCE(NULLIF(ARRAY_AGG((r.id, r.section_id, u.id, u."name" AS username, r.time,
+            COALESCE(NULLIF(ARRAY_AGG((r.id, r.section_id, u.id, u."name", r.time,
                 r.proof, r.yt_id, r.verified, r.is_pb, r.is_wr, r.created_at)
             ORDER BY r.created_at ASC)
             FILTER(WHERE r.id IS NOT NULL), '{NULL}'), '{}') AS runs
@@ -35,7 +35,7 @@ pub async fn get_runs_category(patch: String, layout: String, category: String) 
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let runs = sqlx::query_as::<_, SectionRuns>(
         r#"SELECT s.id AS section_id, patch, layout, category, map, submittable,
-            COALESCE(NULLIF(ARRAY_AGG((r.id, r.section_id, r.user_id, u."name" AS username, r.time,
+            COALESCE(NULLIF(ARRAY_AGG((r.id, r.section_id, r.user_id, u."name", r.time,
                 r.proof, r.yt_id, r.verified, r.is_pb, r.is_wr, r.created_at)
             ORDER BY r.created_at ASC) 
             FILTER(WHERE r.id IS NOT NULL), '{NULL}'), '{}') AS runs
@@ -64,7 +64,7 @@ pub async fn get_runs(filter: RunFilters, offset: i32) -> Result<Vec<Run>, ApiEr
     let pool = crate::auth::ssr::pool()?;
     let mut query = QueryBuilder::<Postgres>::new(
         r#"SELECT run.id, run.created_at, section_id, patch, layout, 
-            category, map, user_id, "name", time, proof, yt_id, verified, is_pb, is_wr
+            category, map, user_id, "name" AS username, time, proof, yt_id, verified, is_pb, is_wr
         FROM run
         INNER JOIN section s ON section_id = s.id
         INNER JOIN "user" u ON user_id = u.id 
