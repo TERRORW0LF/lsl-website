@@ -2,8 +2,6 @@ use http::{HeaderValue, header::CACHE_CONTROL};
 use leptos::prelude::{expect_context, server, server_fn::codec::GetUrl};
 use types::api::*;
 
-// TODO: Adjust queries for new Section / PartialUser type
-
 #[server(GetRunsId, prefix="/api", endpoint="runs/id", input=GetUrl)]
 pub async fn get_runs_id(id: i32) -> Result<SectionRuns, ApiError> {
     let pool = crate::auth::ssr::pool()?;
@@ -154,7 +152,7 @@ pub async fn get_rankings(
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let rankings = sqlx::query_as::<_, Ranking>(
         r#"SELECT r.id, r.patch, r.layout, r.category, r.user_id, 
-            u.name, r.title, r.rank, r.rating, r.created_at, r.updated_at, r.percentage, r.points
+            u.name AS username, r.title, r.rank, r.rating, r.created_at, r.updated_at, r.percentage, r.points
         FROM rank r
         JOIN "user" u ON user_id = u.id
         WHERE r.patch = $1 AND r.layout IS NOT DISTINCT FROM $2 AND r.category IS NOT DISTINCT FROM $3
@@ -180,7 +178,7 @@ pub async fn get_rankings_user(id: i64) -> Result<Vec<Ranking>, ApiError> {
 
     sqlx::query_as::<_, Ranking>(
         r#"SELECT r.id, r.patch, r.layout, r.category, r.user_id, 
-            u.name, r.title, r.rank, r.rating, r.created_at, r.updated_at, r.percentage, r.points
+            u.name AS username, r.title, r.rank, r.rating, r.created_at, r.updated_at, r.percentage, r.points
         FROM rank r
         JOIN "user" u ON user_id = u.id
         WHERE user_id = $1;"#,
