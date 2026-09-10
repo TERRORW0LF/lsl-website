@@ -5,7 +5,7 @@ use server::{
     api::get_maps,
     auth::{Login, Register, Submit},
 };
-use types::api::{ApiError, Map};
+use types::api::{ApiError, Section};
 use util::escape_regex;
 use web_sys::Event;
 
@@ -192,7 +192,7 @@ pub fn Submit() -> impl IntoView {
     let (time, set_time) = signal(String::new());
     let (map, set_map) = signal(String::new());
     let (yt, set_yt) = signal(String::new());
-    let (maps, set_maps) = signal::<Option<Vec<Map>>>(None);
+    let (maps, set_maps) = signal::<Option<Vec<Section>>>(None);
     view! {
         <Title text="Submit" />
         <section id="box">
@@ -241,7 +241,7 @@ pub fn Submit() -> impl IntoView {
                                             .to_ascii_uppercase();
                                         let m = ms.into_iter().find(|m| m.code[2..4] == id);
                                         match m {
-                                            Some(m) => set_map(m.name),
+                                            Some(m) => set_map(m.map),
                                             None => set_map(String::new()),
                                         };
                                     }
@@ -342,7 +342,7 @@ pub fn Submit() -> impl IntoView {
                                             .into_iter()
                                             .filter(|m| m.submittable)
                                             .map(|m| {
-                                                view! { <option value=m.name.clone()>{m.name.clone()}</option> }
+                                                view! { <option value=m.map.clone()>{m.map.clone()}</option> }
                                             })
                                             .collect_view(),
                                     )

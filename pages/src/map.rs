@@ -40,9 +40,9 @@ pub fn Map(id: Signal<i32>) -> impl IntoView {
                                 data.map(|runs| {
                                     view! {
                                         <div>
-                                            <h1>{runs.map.clone()}</h1>
+                                            <h1>{runs.section.map.clone()}</h1>
                                             <PbChart runs=runs.runs.clone() />
-                                            <MapRunList map=runs.map runs=runs.runs />
+                                            <MapRunList map=runs.section.map runs=runs.runs />
                                         </div>
                                     }
                                 })
@@ -61,10 +61,10 @@ fn PbChart(mut runs: Vec<PartialRun>) -> impl IntoView {
     runs.sort_by_key(|r| r.created_at);
     runs = runs
         .into_iter()
-        .filter(|r| user.get().is_none() || r.user_id == user.get().unwrap().parse::<i64>().unwrap_or(-1))
+        .filter(|r| user.get().is_none() || r.user.user_id == user.get().unwrap().parse::<i64>().unwrap_or(-1))
         .filter(|r| {
-            if &r.time < old_times.get(&r.user_id).unwrap_or(&Decimal::new(999999, 3)) {
-                old_times.insert(r.user_id, r.time);
+            if &r.time < old_times.get(&r.user.user_id).unwrap_or(&Decimal::new(999999, 3)) {
+                old_times.insert(r.user.user_id, r.time);
                 true
             } else {
                 false
@@ -81,14 +81,14 @@ fn PbChart(mut runs: Vec<PartialRun>) -> impl IntoView {
         if run.time > max && run.time <= Decimal::from_i32(90).unwrap() {
             max = run.time;
         }
-        if let Some(user) = users.get_mut(&run.name) {
+        if let Some(user) = users.get_mut(&run.user.username) {
             user.push(CompositeValue::Array(vec![
                 CompositeValue::String(run.created_at.to_rfc3339()),
                 CompositeValue::Number(charming::datatype::NumericValue::Float(run.time.to_f64().unwrap())),
             ]));
         } else {
             users.insert(
-                run.name.clone(),
+                run.user.username.clone(),
                 vec![CompositeValue::Array(vec![
                     CompositeValue::String(run.created_at.to_rfc3339()),
                     CompositeValue::Number(charming::datatype::NumericValue::Float(run.time.to_f64().unwrap())),
@@ -182,7 +182,7 @@ fn MapRunList(map: String, runs: Vec<PartialRun>) -> impl IntoView {
         let mut runs: Vec<PartialRun> = runs
             .clone()
             .into_iter()
-            .filter(|r| user_id.map(|u| u == r.user_id).is_none_or(|b| b))
+            .filter(|r| user_id.map(|u| u == r.user.user_id).is_none_or(|b| b))
             .filter(|r| filter(r, filter_key.get(), &mut old_time, &mut old_times))
             .collect();
         runs.sort_unstable_by(sort(sort_key.get()));
@@ -199,7 +199,7 @@ fn MapRunList(map: String, runs: Vec<PartialRun>) -> impl IntoView {
                         each=runs_disp
                         key=|r| r.1.id
                         children=move |(i, r)| {
-                            let username = r.name.clone();
+                            let username = r.user.username.clone();
                             let map2 = map.clone();
                             view! {
                                 <div class="map-entry">
@@ -223,7 +223,7 @@ fn MapRunList(map: String, runs: Vec<PartialRun>) -> impl IntoView {
                                                     <span class="name">
                                                         <A href=format!(
                                                             "/user/{}/leaderboard",
-                                                            r.user_id,
+                                                            r.user.user_id,
                                                         )>{username}</A>
                                                     </span>
                                                     <span class="time">{r.time.to_string()} " s"</span>
@@ -255,8 +255,8 @@ fn MapRunList(map: String, runs: Vec<PartialRun>) -> impl IntoView {
                                                         <p>
                                                             <A href=format!(
                                                                 "/user/{}/leaderboard",
-                                                                r.user_id,
-                                                            )>{r.name}</A>
+                                                                r.user.user_id,
+                                                            )>{r.user.username}</A>
                                                         </p>
                                                     </div>
                                                     <div class="entry">

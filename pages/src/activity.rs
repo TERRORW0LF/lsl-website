@@ -151,7 +151,7 @@ pub fn Activity() -> impl IntoView {
                                             .map(|r| {
                                                 view! {
                                                     <span>{format!("{}", r.created_at.format("%d/%m/%Y %H:%M"))}</span>
-                                                    <span>{r.username}</span>
+                                                    <span>{r.user.username}</span>
                                                     <span>
                                                         {r.patch.map(|v| format!("Patch {v}")).unwrap_or("-".into())}
                                                     </span>

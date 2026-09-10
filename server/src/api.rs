@@ -49,7 +49,10 @@ pub async fn get_runs_category(patch: String, layout: String, category: String) 
     .bind(category)
     .fetch_all(&pool)
     .await
-    .or(Err(ApiError::ServerError("Database lookup failed".into())))?;
+    .map_err(|e| {
+        leptos::logging::warn!("{e:?}");
+        ApiError::ServerError("Database lookup failed".into())
+    })?;
 
     res_opts.append_header(CACHE_CONTROL, HeaderValue::from_static("max-age=900"));
     Ok(runs)
@@ -121,7 +124,7 @@ pub async fn get_maps() -> Result<Vec<Section>, ApiError> {
     let pool = crate::auth::ssr::pool()?;
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let maps = sqlx::query_as::<_, Section>(
-        r#"SELECT id, patch, layout, category, map, submittable, code
+        r#"SELECT id, patch, layout, category, map, submittable, code, created_at
         FROM section
         WHERE patch='2.13' AND layout='1' AND category='Standard'
         ORDER BY map ASC;"#,

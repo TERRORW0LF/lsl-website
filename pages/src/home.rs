@@ -110,7 +110,7 @@ pub fn HomePage() -> impl IntoView {
                                                                     EitherOf3::C(())
                                                                 }}
                                                             </div>
-                                                            <h6>"for " {act.username}</h6>
+                                                            <h6>"for " {act.user.username}</h6>
                                                         </div>
                                                         <div class="column">
                                                             <p>
@@ -178,14 +178,16 @@ pub fn HomePage() -> impl IntoView {
                                                     <div class="row">
                                                         <a href=run.proof target="_blank" class="play"></a>
                                                         <div class="column">
-                                                            <A href=format!("/leaderboard/map/{}", run.section_id)>
-                                                                <h5>{run.map}</h5>
+                                                            <A href=format!("/leaderboard/map/{}", run.section.id)>
+                                                                <h5>{run.section.map}</h5>
                                                             </A>
-                                                            <h6>{run.time.to_string()} " sec by " {run.username}</h6>
+                                                            <h6>
+                                                                {run.time.to_string()} " sec by " {run.user.username}
+                                                            </h6>
                                                         </div>
                                                         <div class="column">
-                                                            <p>"Layout " {run.layout}</p>
-                                                            <p>{run.category}</p>
+                                                            <p>"Layout " {run.section.layout}</p>
+                                                            <p>{run.section.category}</p>
                                                             <p>
                                                                 {if diff.num_hours() == 0 {
                                                                     format!(

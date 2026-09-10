@@ -144,7 +144,7 @@ pub fn Submits() -> impl IntoView {
                                             v
                                                 .into_iter()
                                                 .map(|m| {
-                                                    view! { <option value=m.name.clone()>{m.name.clone()}</option> }
+                                                    view! { <option value=m.map.clone()>{m.map.clone()}</option> }
                                                 })
                                                 .collect_view(),
                                         )
@@ -178,11 +178,11 @@ pub fn Submits() -> impl IntoView {
                                             .map(|r| {
                                                 view! {
                                                     <span>{format!("{}", r.created_at.format("%d/%m/%Y %H:%M"))}</span>
-                                                    <span>{r.username}</span>
-                                                    <span>"Patch " {r.patch}</span>
-                                                    <span>"Layout " {r.layout}</span>
-                                                    <span>{r.category}</span>
-                                                    <span>{r.map}</span>
+                                                    <span>{r.user.username}</span>
+                                                    <span>"Patch " {r.section.patch}</span>
+                                                    <span>"Layout " {r.section.layout}</span>
+                                                    <span>{r.section.category}</span>
+                                                    <span>{r.section.map}</span>
                                                     <span>
                                                         <a href=r.proof>"link"</a>
                                                     </span>

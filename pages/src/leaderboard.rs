@@ -154,13 +154,12 @@ pub fn Leaderboard(patch: Signal<String>, layout: Signal<String>, category: Sign
             }>
                 {move || {
                     let maps = Memo::new(move |_| {
-                        leptos::logging::warn!("{}", *filter_key.read());
                         maps_res
                             .get()
                             .map(|res| {
                                 res.map(|vec| {
                                     vec.into_iter()
-                                        .filter(|map| map.submittable || *filter_key.read() == "all")
+                                        .filter(|map| map.section.submittable || *filter_key.read() == "all")
                                         .collect::<Vec<_>>()
                                 })
                             })
@@ -197,13 +196,13 @@ pub fn LeaderboardEntry(map: SectionRuns) -> impl IntoView {
         let r = map.runs.clone();
         let mut runs: Vec<PartialRun> = r
             .into_iter()
-            .filter(|r| user().is_none() || r.user_id == user.get().unwrap().parse::<i64>().unwrap_or(-1))
+            .filter(|r| user().is_none() || r.user.user_id == user.get().unwrap().parse::<i64>().unwrap_or(-1))
             .filter(|r| filter(r, filter_key.get(), &mut old_time, &mut old_times))
             .collect();
         runs.sort_unstable_by(sort(sort_key.get()));
         runs.into_iter().enumerate().collect::<Vec<(usize, PartialRun)>>()
     });
-    let map_name = map.map.clone();
+    let map_name = map.section.map.clone();
     let (top_run, set_top_run) = signal::<Option<PartialRun>>(None);
     let (sel_run, set_sel_run) = signal::<Option<PartialRun>>(None);
     let proof = Signal::derive(move || {
@@ -216,7 +215,7 @@ pub fn LeaderboardEntry(map: SectionRuns) -> impl IntoView {
     view! {
         <div class="lb_entry">
             <div class="header">
-                <A href=format!("../../../map/{}", map.id.to_string())>
+                <A href=format!("../../../map/{}", map.section.id.to_string())>
                     <h2>{map_name}</h2>
                 </A>
                 {move || match runs().get(0) {
@@ -225,8 +224,8 @@ pub fn LeaderboardEntry(map: SectionRuns) -> impl IntoView {
                         set_sel_run(Some(r.clone()));
                         Either::Left(
                             view! {
-                                <a href=format!("/user/{}/leaderboard", r.user_id)>
-                                    <h5>{r.name.clone()}</h5>
+                                <a href=format!("/user/{}/leaderboard", r.user.user_id)>
+                                    <h5>{r.user.username.clone()}</h5>
                                 </a>
                                 <h5>{r.time.to_string()} " seconds"</h5>
                             },
@@ -236,7 +235,7 @@ pub fn LeaderboardEntry(map: SectionRuns) -> impl IntoView {
                 }}
             </div>
             <div class="content">
-                <Player proof cover=map.map />
+                <Player proof cover=map.section.map />
                 <div class="lb_entry_ranks">
                     <Show
                         when=move || top_run.with(|r| r.is_some())
@@ -269,7 +268,10 @@ pub fn LeaderboardEntry(map: SectionRuns) -> impl IntoView {
                                             }}
                                         </span>
                                         <span class="name">
-                                            <A href=format!("/user/{}/leaderboard", r.user_id)>{r.name}</A>
+                                            <A href=format!(
+                                                "/user/{}/leaderboard",
+                                                r.user.user_id,
+                                            )>{r.user.username}</A>
                                         </span>
                                         <span class="time">{r.time.to_string()} " s"</span>
                                     </div>
@@ -288,8 +290,8 @@ pub fn filter<'a>(r: &'a PartialRun, f: Option<String>, t: &'a mut Decimal, ts: 
         Some(f) => match f.as_str() {
             "verified" => r.verified,
             "was_pb" => {
-                if &r.time < ts.get(&r.user_id).unwrap_or(&Decimal::new(999999, 3)) {
-                    ts.insert(r.user_id, r.time);
+                if &r.time < ts.get(&r.user.user_id).unwrap_or(&Decimal::new(999999, 3)) {
+                    ts.insert(r.user.user_id, r.time);
                     true
                 } else {
                     false

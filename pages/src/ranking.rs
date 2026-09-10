@@ -137,8 +137,8 @@ pub fn ComboRanking(
                                                                     >
                                                                         <h5>{r.rank}</h5>
                                                                     </div>
-                                                                    <A href=format!("/user/{}/ranking", r.user_id)>
-                                                                        <h4 class="name">{r.username}</h4>
+                                                                    <A href=format!("/user/{}/ranking", r.user.user_id)>
+                                                                        <h4 class="name">{r.user.username}</h4>
                                                                     </A>
                                                                     <div class="rating row narrow">
                                                                         <h4 class=format!(

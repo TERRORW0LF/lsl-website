@@ -1,14 +1,12 @@
 use leptos::prelude::*;
 use server_fn::codec::GetUrl;
-use types::{
-    api::{ApiError, Permissions},
-    internal::ssr::GetUser,
-};
+use types::api::{ApiError, Permissions};
 
 // TODO: Move rank and title updates into rating update trigger tied to rank table
 #[server(RecalculateRankings, prefix="/api", endpoint="ranking/recalculate", input=GetUrl)]
 pub async fn recalculate_ranks(layout: Option<String>, category: Option<String>) -> Result<(), ApiError> {
     use crate::auth::ssr::{auth, pool};
+    use types::internal::ssr::GetUser;
 
     let user = auth()?.current_user.ok_or(ApiError::Unauthenticated)?;
     user.has(&Permissions::ManageRuns).ok_or(ApiError::Unauthorized)?;
@@ -52,6 +50,7 @@ pub async fn recalculate_ranks(layout: Option<String>, category: Option<String>)
 #[server(RecalculateRuns, prefix="/api", endpoint="runs/recalculate", input=GetUrl)]
 pub async fn recalculate_runs(layout: String, category: String, map: String) -> Result<(), ApiError> {
     use crate::auth::ssr::{auth, pool};
+    use types::internal::ssr::GetUser;
 
     let user = auth()?.current_user.ok_or(ApiError::Unauthenticated)?;
     user.has(&Permissions::ManageRuns).ok_or(ApiError::Unauthorized)?;
@@ -86,6 +85,7 @@ pub async fn add_section(
     submittable: bool,
 ) -> Result<(), ApiError> {
     use crate::auth::ssr::{auth, pool};
+    use types::internal::ssr::GetUser;
 
     let user = auth()?.current_user.ok_or(ApiError::Unauthenticated)?;
     user.has(&Permissions::Administrator).ok_or(ApiError::Unauthorized)?;
@@ -108,8 +108,9 @@ pub async fn add_section(
 }
 
 #[server(UpdateSetion, prefix="/api", endpoint="section/update", input=GetUrl)]
-pub async fn update_section(id: i32, submittable: Option<bool>) -> Result<(), ApiError> {
+pub async fn update_section(id: i32, submittable: Option<bool>, name: Option<String>) -> Result<(), ApiError> {
     use crate::auth::ssr::{auth, pool};
+    use types::internal::ssr::GetUser;
 
     let user = auth()?.current_user.ok_or(ApiError::Unauthenticated)?;
     user.has(&Permissions::Administrator).ok_or(ApiError::Unauthorized)?;
@@ -120,9 +121,14 @@ pub async fn update_section(id: i32, submittable: Option<bool>) -> Result<(), Ap
         r#"UPDATE section
         SET"#,
     );
+    let mut set = query.separated(", ");
     if let Some(submit) = submittable {
         update = true;
-        query.push(" submittable = ").push_bind(submit);
+        set.push(" submittable = ").push_bind_unseparated(submit);
+    }
+    if let Some(name) = name {
+        update = true;
+        set.push(" map = ").push_bind_unseparated(name);
     }
     update.ok_or(ApiError::InvalidInput)?;
     let _ = query
