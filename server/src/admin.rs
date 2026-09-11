@@ -16,18 +16,27 @@ pub async fn recalculate_ranks(layout: Option<String>, category: Option<String>)
     let pool = pool()?;
 
     let _ = sqlx::query(
-        r#"WITH ran AS (SELECT (percentage ^ (1 / (1.3 + percentage))) AS p, user_id AS u 
-				FROM rank
-				WHERE patch = '2.13' AND layout IS NOT DISTINCT FROM $1 
-					AND category IS NOT DISTINCT FROM $2),
+        r#"WITH perc AS (SELECT COUNT (DISTINCT section_id)::double precision / (SELECT COUNT(id) 
+                    FROM section 
+                    WHERE patch = '2.13' AND ($1 IS NULL OR layout = $1) 
+                        AND ($2 IS NULL OR category = $2) AND submittable = true) 
+                AS p, user_id AS u
+            FROM run
+            JOIN section ON section.id = section_id
+            WHERE patch = '2.13' AND ($1 IS NULL OR layout = $1) 
+                AND ($2 IS NULL OR category = $2) AND submittable = true
+            GROUP BY user_id),
+        ran AS (SELECT (p ^ (1 / (1.3 + p))) AS p, u
+			FROM perc),
 		po AS (SELECT AVG(points) as p, user_id as u 
 			FROM run r 
 			JOIN section s ON section_id = s.id
-			WHERE s.patch = '2.13' AND layout = $1
-				AND category = $2 AND submittable = true
+			WHERE s.patch = '2.13' AND ($1 IS NULL OR layout = $1)
+				AND ($2 IS NULL OR category = $2) AND submittable = true
 			GROUP BY user_id)
 		UPDATE rank r
-		SET points = (SELECT p FROM po WHERE u = r.user_id),
+		SET percentage = (SELECT p FROM perc WHERE u = r.user_id),
+        points = (SELECT p FROM po WHERE u = r.user_id),
 		rating = (-10000 * (SELECT p FROM ran WHERE u = r.user_id) * (
 			(EXP((-(SELECT p FROM po WHERE u = r.user_id) + 1) ^ 
 				(1 / (12 - 10.7 * (-EXP((-(SELECT p FROM po WHERE u = r.user_id) + 1) ^ 
@@ -35,14 +44,17 @@ pub async fn recalculate_ranks(layout: Option<String>, category: Option<String>)
                         * (2 - (SELECT p FROM ran WHERE u = r.user_id))))) 
 				+ EXP(1.0)) / (EXP(1.0) - 1)))) 
 			- EXP(1.0)) / (EXP(1.0) - 1))),
-		updated_at = NEW.created_at
-		WHERE patch = '2.13' AND layout IS NOT DINSTINCT FROM $1 AND category IS NOT DISTINCT FROM $2;"#,
+		updated_at = now()
+		WHERE patch = '2.13' AND layout IS NOT DISTINCT FROM $1 AND category IS NOT DISTINCT FROM $2;"#,
     )
     .bind(layout)
     .bind(category)
     .execute(&pool)
     .await
-    .map_err(|_| ApiError::ServerError("Database update failed".into()))?;
+    .map_err(|e| {
+        leptos::logging::warn!("{e:?}");
+        ApiError::ServerError("Database update failed".into())
+    })?;
 
     Ok(())
 }
