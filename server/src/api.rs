@@ -8,7 +8,7 @@ pub async fn get_runs_id(id: i32) -> Result<SectionRuns, ApiError> {
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let runs = sqlx::query_as::<_, SectionRuns>(
         r#"SELECT s.id AS section_id, s.patch, s.layout, s.category, s.map, s.submittable,
-            COALESCE(NULLIF(ARRAY_AGG((r.id, r.section_id, u.id, u."name", r.time,
+            COALESCE(NULLIF(ARRAY_AGG((r.id, r.section_id, (u.id, u."name"), r.time,
                 r.proof, r.yt_id, r.verified, r.is_pb, r.is_wr, r.created_at)
             ORDER BY r.created_at ASC)
             FILTER(WHERE r.id IS NOT NULL), '{NULL}'), '{}') AS runs
@@ -33,7 +33,7 @@ pub async fn get_runs_category(patch: String, layout: String, category: String) 
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let runs = sqlx::query_as::<_, SectionRuns>(
         r#"SELECT s.id AS section_id, patch, layout, category, map, submittable,
-            COALESCE(NULLIF(ARRAY_AGG((r.id, r.section_id, r.user_id, u."name", r.time,
+            COALESCE(NULLIF(ARRAY_AGG((r.id, r.section_id, (r.user_id, u."name"), r.time,
                 r.proof, r.yt_id, r.verified, r.is_pb, r.is_wr, r.created_at)
             ORDER BY r.created_at ASC) 
             FILTER(WHERE r.id IS NOT NULL), '{NULL}'), '{}') AS runs
@@ -65,7 +65,7 @@ pub async fn get_runs(filter: RunFilters, offset: i32) -> Result<Vec<Run>, ApiEr
     let pool = crate::auth::ssr::pool()?;
     let mut query = QueryBuilder::<Postgres>::new(
         r#"SELECT run.id, run.created_at, section_id, patch, layout, 
-            category, map, user_id, "name" AS username, time, proof, yt_id, verified, is_pb, is_wr
+            category, map, submittable, user_id, "name" AS username, time, proof, yt_id, verified, is_pb, is_wr
         FROM run
         INNER JOIN section s ON section_id = s.id
         INNER JOIN "user" u ON user_id = u.id 
@@ -216,7 +216,7 @@ pub async fn get_activity(filter: ActivityFilters, offset: i32) -> Result<Vec<Ac
 
     let pool = crate::auth::ssr::pool()?;
     let mut query = QueryBuilder::<Postgres>::new(
-        r#"SELECT a.id, a.user_id, name, rank_id, patch, layout, category, 
+        r#"SELECT a.id, a.user_id, name AS username, rank_id, patch, layout, category, 
                     title_old, title_new, rank_old, rank_new, a.created_at
                 FROM activity a
                 INNER JOIN "user" u ON a.user_id = u.id
