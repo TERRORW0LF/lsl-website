@@ -1,5 +1,4 @@
-use std::collections::HashSet;
-
+use bit_vec::BitVec;
 use chrono::{DateTime, Local};
 use leptos::{
     prelude::{FromServerFnError, ServerFnErrorErr},
@@ -284,17 +283,18 @@ pub struct Activity {
     pub created_at: DateTime<Local>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]
 #[cfg_attr(feature = "ssr", derive(sqlx::Type), sqlx(type_name = "permissions"))]
 pub enum Permissions {
-    View,
-    Submit,
-    Trusted,
-    Delete,
-    Verify,
-    ManageRuns,
-    ManageUsers,
-    Administrator,
+    View = 0,
+    Submit = 1,
+    Trusted = 2,
+    Delete = 3,
+    Verify = 4,
+    ManageRuns = 5,
+    ManageSections = 6,
+    ManageUsers = 7,
+    Administrator = 63,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -304,16 +304,11 @@ pub struct User {
     pub bio: Option<String>,
     pub pfp: String,
     pub ranks: Vec<Rank>,
-    pub permissions: HashSet<Permissions>,
+    pub permissions: BitVec,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(
-    feature = "ssr",
-    derive(sqlx::FromRow),
-    derive(sqlx::Type),
-    sqlx(type_name = "RECORD")
-)]
+#[cfg_attr(feature = "ssr", derive(sqlx::FromRow), derive(sqlx::Type), sqlx(type_name = "RECORD"))]
 pub struct PartialUser {
     pub user_id: i64,
     pub username: String,
@@ -335,16 +330,20 @@ pub struct Rank {
 
 impl Default for User {
     fn default() -> Self {
-        let permissions = HashSet::new();
+        let permissions = BitVec::from_bytes(&[0b10000000, 0b0, 0b0, 0b0]);
 
-        Self {
-            id: -1,
-            username: "Guest".into(),
-            bio: None,
-            permissions,
-            ranks: Vec::new(),
-            pfp: "default".into(),
-        }
+        Self { id: -1, username: "Guest".into(), bio: None, permissions, ranks: Vec::new(), pfp: "default".into() }
+    }
+}
+
+pub trait UserPermissions {
+    fn has(&self, perm: &Permissions) -> bool;
+}
+
+impl UserPermissions for User {
+    fn has(&self, perm: &Permissions) -> bool {
+        self.permissions.get(Permissions::Administrator as usize).is_some_and(|v| v == true)
+            || self.permissions.get(*perm as usize).is_some_and(|v| v == true)
     }
 }
 

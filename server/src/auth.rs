@@ -30,11 +30,7 @@ pub mod ssr {
             .host(&std::env::var("PG_HOST").unwrap())
             .port(std::env::var("PG_PORT").unwrap().parse::<u16>().unwrap());
 
-        PgPoolOptions::new()
-            .max_connections(5)
-            .connect_with(connect_opts)
-            .await
-            .unwrap()
+        PgPoolOptions::new().max_connections(5).connect_with(connect_opts).await.unwrap()
     }
 
     pub fn pool() -> Result<PgPool, ApiError> {
@@ -64,9 +60,7 @@ pub mod ssr {
         let pwd_parsed = PasswordHash::new(pass_hash)
             .map_err(|_| ApiError::ServerError("Login failed: Failed to hash password".into()))?;
 
-        Argon2::default()
-            .verify_password(password.as_bytes(), &pwd_parsed)
-            .or(Err(ApiError::InvalidCredentials))
+        Argon2::default().verify_password(password.as_bytes(), &pwd_parsed).or(Err(ApiError::InvalidCredentials))
     }
 
     pub fn check_password(password: &String) -> bool {
@@ -76,9 +70,7 @@ pub mod ssr {
     pub fn check_username(username: &String) -> bool {
         username.len() >= 2
             && username.len() <= 32
-            && username
-                .chars()
-                .all(|c| c.is_alphanumeric() || c == '_' || c == '-' || c == '.')
+            && username.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-' || c == '.')
     }
 }
 
@@ -152,9 +144,8 @@ pub async fn login(
     let pool = pool()?;
     let auth = auth()?;
 
-    let (user, UserPasshash(expected_passhash)) = User::get_from_username_with_passhash(username, &pool)
-        .await
-        .ok_or(ApiError::InvalidCredentials)?;
+    let (user, UserPasshash(expected_passhash)) =
+        User::get_from_username_with_passhash(username, &pool).await.ok_or(ApiError::InvalidCredentials)?;
     verify_password(&expected_passhash, &password)?;
 
     auth.login_user(user.id);
@@ -286,10 +277,7 @@ pub async fn update_pfp(data: MultipartData) -> Result<(), ApiError> {
         }
 
         let name: String = rng().sample_iter(&Alphanumeric).take(64).map(char::from).collect();
-        let file = File::options()
-            .append(true)
-            .create_new(true)
-            .open(format!("target/site/cdn/users/{name}.jpg"));
+        let file = File::options().append(true).create_new(true).open(format!("target/site/cdn/users/{name}.jpg"));
         let res = match file {
             Ok(file) => {
                 let mut writer = BufWriter::new(file);
@@ -306,13 +294,9 @@ pub async fn update_pfp(data: MultipartData) -> Result<(), ApiError> {
                     if count > 4 * 1024 * 1024 {
                         return Err(ApiError::InvalidInput);
                     }
-                    writer
-                        .write_all(&chunk)
-                        .map_err(|_| ApiError::ServerError("Failed to save file".into()))?;
+                    writer.write_all(&chunk).map_err(|_| ApiError::ServerError("Failed to save file".into()))?;
                 }
-                writer
-                    .flush()
-                    .map_err(|_| ApiError::ServerError("Failed to save file".into()))?;
+                writer.flush().map_err(|_| ApiError::ServerError("Failed to save file".into()))?;
                 sqlx::query(
                     r#"UPDATE "user"
                     SET pfp = $1
@@ -391,17 +375,12 @@ pub async fn submit(
     .await
     .or(Err(ApiError::InvalidSection))?;
 
-    let r = reqwest::get(format!(
-        "https://www.googleapis.com/youtube/v3/videos?key={}&part=id&id={yt_id}",
-        env!("YT_KEY")
-    ))
-    .await
-    .map_err(|_| ApiError::ServerError("YT api request failed".into()))?;
+    let r =
+        reqwest::get(format!("https://www.googleapis.com/youtube/v3/videos?key={}&part=id&id={yt_id}", env!("YT_KEY")))
+            .await
+            .map_err(|_| ApiError::ServerError("YT api request failed".into()))?;
 
-    let v = r
-        .json::<YtJson>()
-        .await
-        .map_err(|_| ApiError::ServerError("Failed to parse yt api response".into()))?;
+    let v = r.json::<YtJson>().await.map_err(|_| ApiError::ServerError("Failed to parse yt api response".into()))?;
 
     if v.page_info.total_results == 0 {
         Err(ApiError::InvalidYtId)
@@ -534,10 +513,7 @@ pub async fn discord_auth(code: String, state: String) -> Result<(), ApiError> {
     let auth = auth()?;
     let user = auth.current_user.ok_or(ApiError::Unauthenticated)?;
     let oauth = oauth()?;
-    let csrf = auth
-        .session
-        .get_remove::<CsrfToken>("csrf")
-        .ok_or(ApiError::Unauthenticated)?;
+    let csrf = auth.session.get_remove::<CsrfToken>("csrf").ok_or(ApiError::Unauthenticated)?;
     if *csrf.secret() != state {
         return Err(ApiError::InvalidCredentials);
     }

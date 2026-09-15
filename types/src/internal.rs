@@ -11,8 +11,7 @@ pub mod ssr {
     use axum_session_auth::Authentication;
     use chrono::{DateTime, Local};
     use serde::{Deserialize, Serialize};
-    use sqlx::PgPool;
-    use std::collections::HashSet;
+    use sqlx::{PgPool, types::BitVec};
 
     pub trait GetUser {
         #[allow(async_fn_in_trait)]
@@ -31,7 +30,6 @@ pub mod ssr {
         async fn get_from_username(name: String, pool: &PgPool) -> Option<Self>
         where
             Self: Sized;
-        fn has(&self, perm: &Permissions) -> bool;
     }
 
     impl GetUser for User {
@@ -41,15 +39,6 @@ pub mod ssr {
                 .fetch_one(pool)
                 .await
                 .ok()?;
-
-            //lets just get all the tokens the user can use, we will only use the full permissions if modifying them.
-            let pg_user_perms =
-                sqlx::query_as::<_, PgPermissionToken>("SELECT token FROM permission WHERE user_id = $1;")
-                    .bind(id)
-                    .fetch_all(pool)
-                    .await
-                    .ok()?;
-
             let pg_user_ranks = sqlx::query_as::<_, Rank>(
                 r#"SELECT patch, layout, category, title, rank, rating, percentage, created_at, updated_at
                     FROM rank
@@ -61,7 +50,7 @@ pub mod ssr {
             .await
             .ok()?;
 
-            Some(pg_user.into_user(Some(pg_user_perms), Some(pg_user_ranks)))
+            Some(pg_user.into_user(Some(pg_user_ranks)))
         }
 
         async fn get(id: i64, pool: &PgPool) -> Option<Self> {
@@ -69,19 +58,13 @@ pub mod ssr {
         }
 
         async fn get_from_username_with_passhash(name: String, pool: &PgPool) -> Option<(Self, UserPasshash)> {
-            let pg_user = sqlx::query_as::<_, PgUser>("SELECT * FROM \"user\" WHERE \"name\" = $1;")
-                .bind(name)
-                .fetch_one(pool)
-                .await
-                .ok()?;
-
-            //lets just get all the tokens the user can use, we will only use the full permissions if modifying them.
-            let pg_user_perms =
-                sqlx::query_as::<_, PgPermissionToken>("SELECT token FROM permission WHERE user_id = $1;")
-                    .bind(pg_user.id)
-                    .fetch_all(pool)
-                    .await
-                    .ok()?;
+            let pg_user = sqlx::query_as::<_, PgUser>(
+                r#"SELECT id, "name", password, pfp, bio, permission, created_at FROM "user" WHERE "name" = $1;"#,
+            )
+            .bind(name)
+            .fetch_one(pool)
+            .await
+            .ok()?;
 
             let pg_user_ranks = sqlx::query_as::<_, Rank>(
                 r#"SELECT patch, layout, category, title, rank, rating, percentage, created_at, updated_at
@@ -94,17 +77,13 @@ pub mod ssr {
             .await
             .ok()?;
 
-            Some(pg_user.into_user(Some(pg_user_perms), Some(pg_user_ranks)))
+            Some(pg_user.into_user(Some(pg_user_ranks)))
         }
 
         async fn get_from_username(name: String, pool: &PgPool) -> Option<Self> {
             User::get_from_username_with_passhash(name, pool)
                 .await
                 .map(|(user, _)| user)
-        }
-
-        fn has(&self, perm: &Permissions) -> bool {
-            self.permissions.contains(&Permissions::Administrator) || self.permissions.contains(perm)
         }
     }
 
@@ -135,11 +114,6 @@ pub mod ssr {
     #[derive(Clone, Debug, PartialEq, Eq)]
     pub struct UserPasshash(pub String);
 
-    #[derive(sqlx::FromRow, Clone)]
-    pub struct PgPermissionToken {
-        pub token: Permissions,
-    }
-
     #[derive(sqlx::FromRow)]
     pub struct UserId {
         pub id: i64,
@@ -149,31 +123,21 @@ pub mod ssr {
     pub struct PgUser {
         pub id: i64,
         pub name: String,
-        pub bio: Option<String>,
-        pub created_at: DateTime<Local>,
         pub password: String,
         pub pfp: String,
+        pub bio: Option<String>,
+        pub permission: BitVec,
+        pub created_at: DateTime<Local>,
     }
 
     impl PgUser {
-        pub fn into_user(
-            self,
-            pg_user_perms: Option<Vec<PgPermissionToken>>,
-            pg_user_ranks: Option<Vec<Rank>>,
-        ) -> (User, UserPasshash) {
+        pub fn into_user(self, pg_user_ranks: Option<Vec<Rank>>) -> (User, UserPasshash) {
             (
                 User {
                     id: self.id,
                     username: self.name,
                     bio: self.bio,
-                    permissions: if let Some(user_perms) = pg_user_perms {
-                        user_perms
-                            .into_iter()
-                            .map(|x| x.token)
-                            .collect::<HashSet<Permissions>>()
-                    } else {
-                        HashSet::<Permissions>::new()
-                    },
+                    permissions: self.permission,
                     ranks: pg_user_ranks.unwrap_or_default(),
                     pfp: self.pfp,
                 },

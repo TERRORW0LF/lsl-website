@@ -6,6 +6,7 @@ resolver = "3"
 
 [workspace.dependencies]
 anyhow = "1.0.88"
+bit-vec = { version = "0.8", features = ["serde"] }
 cfg-if = "1"
 charming = { version = "0.6", features = ["wasm"] }
 chrono = { version = "0.4.38", features = ["serde"] }
@@ -37,7 +38,8 @@ leptos_axum = "0.8.7"
 oauth2 = "5.0.0"
 rand = "0.10.2"
 reqwest = { version = "0.13.4", features = ["json"] }
-sqlx = { version = "0.9", features = ["postgres", "runtime-tokio", "tls-rustls", "macros", "chrono", "rust_decimal"] }
+sqlx = { version = "0.9", features = ["postgres", "runtime-tokio", "tls-rustls", "macros", "chrono", "rust_decimal",
+"bit-vec"] }
 tokio = "1.53.0"
 tokio-stream = "0.1.16"
 tower = { version = "0.5.0", features = ["util"] }

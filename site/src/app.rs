@@ -9,8 +9,9 @@ use leptos_router::{
     path,
 };
 use pages::{
-    Activity, ComboRanking, Dashboard, ErrorTemplate, FAQ, HomePage, Leaderboard, Login, ManageRuns, Map, Profile,
-    Register, Submit, Submits, UserRanking,
+    Activity, Admin, ComboRanking, Dashboard, ErrorTemplate, FAQ, HomePage, Leaderboard, Login, ManageRuns, Map,
+    Profile, Register, Submit, Submits, UserRanking,
+    admin::{ManageSections, ManageUsers},
     dash::{Avatar, Bio, DiscordList, Password, Username},
     error_template::AppError,
     leaderboard::Section,
@@ -18,7 +19,10 @@ use pages::{
     user::Delete,
 };
 use server::auth::{Login, Logout, Register, UpdateBio, UpdateCreds, get_current_user, update_pfp};
-use types::leptos::UserResource;
+use types::{
+    api::{Permissions, UserPermissions},
+    leptos::UserResource,
+};
 use wasm_bindgen::{JsCast, prelude::Closure};
 use web_sys::FormData;
 
@@ -129,12 +133,13 @@ pub fn App() -> impl IntoView {
                                     )
                                 }
                                 Ok(user) => {
+                                    let pfp = user.pfp.clone();
                                     Either::Right(
                                         view! {
                                             <ListElements>
                                                 <div class="row narrow">
                                                     <A href=format!("/user/{}/leaderboard", user.id)>
-                                                        <img src=format!("/cdn/users/{}.jpg", user.pfp) />
+                                                        <img src=format!("/cdn/users/{}.jpg", pfp) />
                                                     </A>
                                                     <div class="dropdown">
                                                         <button
@@ -154,16 +159,10 @@ pub fn App() -> impl IntoView {
                                                                 <A href="/user/@me/dashboard">"Dashboard"</A>
                                                                 <A href="/user/@me/manage">"Manage Runs"</A>
                                                                 <Show when=move || {
-                                                                    user.permissions.contains(&types::api::Permissions::Verify)
-                                                                        || user
-                                                                            .permissions
-                                                                            .contains(&types::api::Permissions::ManageUsers)
-                                                                        || user
-                                                                            .permissions
-                                                                            .contains(&types::api::Permissions::ManageRuns)
-                                                                        || user
-                                                                            .permissions
-                                                                            .contains(&types::api::Permissions::Administrator)
+                                                                    user.has(&Permissions::Verify)
+                                                                        || user.has(&Permissions::ManageUsers)
+                                                                        || user.has(&Permissions::ManageRuns)
+                                                                        || user.has(&Permissions::Administrator)
                                                                 }>
                                                                     <A href="/admin">"Admin Panel"</A>
                                                                 </Show>
@@ -218,11 +217,54 @@ fn AppRouter() -> impl IntoView {
             <RankingRouter />
             <Route path=path!("register") view=Register />
             <Route path=path!("login") view=Login />
+            <ModerationRouter />
             <UserRouter />
         </Routes>
     }
 }
 
+#[component(transparent)]
+fn ModerationRouter() -> impl MatchNestedRoutes + Clone {
+    let user = expect_context::<UserResource>();
+    view! {
+        <ProtectedParentRoute
+            path=path!("moderation")
+            condition=move || {
+                user.get()
+                    .map(|n| {
+                        n.is_ok_and(|u| {
+                            u.has(&Permissions::ManageRuns) || u.has(&Permissions::ManageSections)
+                                || u.has(&Permissions::ManageUsers)
+                        })
+                    })
+            }
+            redirect_path=|| "/login?redirect=moderation"
+            view=Admin
+        >
+            <Route path=path!("") view=() />
+            <ProtectedRoute
+                path=path!("runs")
+                condition=move || { user.get().map(|n| n.is_ok_and(|u| u.has(&Permissions::ManageRuns))) }
+                redirect_path=|| "/login?redirect=moderation/runs"
+                view=pages::admin::ManageRuns
+            />
+            <ProtectedRoute
+                path=path!("sections")
+                condition=move || { user.get().map(|n| n.is_ok_and(|u| u.has(&Permissions::ManageSections))) }
+                redirect_path=|| "/login?redirect=moderation/sections"
+                view=ManageSections
+            />
+            <ProtectedRoute
+                path=path!("users")
+                condition=move || { user.get().map(|n| n.is_ok_and(|u| u.has(&Permissions::ManageUsers))) }
+                redirect_path=|| "/login?redirect=moderation/users"
+                view=ManageUsers
+            />
+        </ProtectedParentRoute>
+    }
+    .into_inner()
+    .into_any_nested_route()
+}
 #[component(transparent)]
 fn UserRouter() -> impl MatchNestedRoutes + Clone {
     let user = expect_context::<UserResource>();

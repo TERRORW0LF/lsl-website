@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+bit-vec.workspace = true
 chrono.workspace = true
 leptos.workspace = true
 leptos_meta.workspace = true

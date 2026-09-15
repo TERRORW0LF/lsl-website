@@ -6,7 +6,7 @@ use types::api::{ApiError, Permissions};
 #[server(RecalculateRankings, prefix="/api", endpoint="ranking/recalculate", input=GetUrl)]
 pub async fn recalculate_ranks(layout: Option<String>, category: Option<String>) -> Result<(), ApiError> {
     use crate::auth::ssr::{auth, pool};
-    use types::internal::ssr::GetUser;
+    use types::api::UserPermissions;
 
     let user = auth()?.current_user.ok_or(ApiError::Unauthenticated)?;
     user.has(&Permissions::ManageRuns).ok_or(ApiError::Unauthorized)?;
@@ -62,7 +62,7 @@ pub async fn recalculate_ranks(layout: Option<String>, category: Option<String>)
 #[server(RecalculateRuns, prefix="/api", endpoint="runs/recalculate", input=GetUrl)]
 pub async fn recalculate_runs(layout: String, category: String, map: String) -> Result<(), ApiError> {
     use crate::auth::ssr::{auth, pool};
-    use types::internal::ssr::GetUser;
+    use types::api::UserPermissions;
 
     let user = auth()?.current_user.ok_or(ApiError::Unauthenticated)?;
     user.has(&Permissions::ManageRuns).ok_or(ApiError::Unauthorized)?;
@@ -97,7 +97,7 @@ pub async fn add_section(
     submittable: bool,
 ) -> Result<(), ApiError> {
     use crate::auth::ssr::{auth, pool};
-    use types::internal::ssr::GetUser;
+    use types::api::UserPermissions;
 
     let user = auth()?.current_user.ok_or(ApiError::Unauthenticated)?;
     user.has(&Permissions::Administrator).ok_or(ApiError::Unauthorized)?;
@@ -122,7 +122,7 @@ pub async fn add_section(
 #[server(UpdateSetion, prefix="/api", endpoint="section/update", input=GetUrl)]
 pub async fn update_section(id: i32, submittable: Option<bool>, name: Option<String>) -> Result<(), ApiError> {
     use crate::auth::ssr::{auth, pool};
-    use types::internal::ssr::GetUser;
+    use types::api::UserPermissions;
 
     let user = auth()?.current_user.ok_or(ApiError::Unauthenticated)?;
     user.has(&Permissions::Administrator).ok_or(ApiError::Unauthorized)?;
