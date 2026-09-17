@@ -23,102 +23,93 @@ pub fn Section(
     let query = use_query_map();
 
     view! {
-        <Title text="Leaderboard" />
-        <Header attr:id="lb_header">
-            {move || {
-                let layouts = layouts.get();
-                view! {
-                    <ListElements>
-                        {layouts
-                            .into_iter()
-                            .map(|l| {
-                                view! {
-                                    <A
-                                        href=move || {
-                                            format!("../../{}/{}{}", l.0, category.get(), query.get().to_query_string())
-                                        }
-                                        scroll=false
-                                    >
-                                        <span class="text">{l.1.clone()}</span>
-                                    </A>
-                                }
-                            })
-                            .collect_view()}
-                    </ListElements>
-                }
-            }}
-            {move || {
-                let categories = categories.get();
-                view! {
-                    <ListElements>
-                        {categories
-                            .into_iter()
-                            .map(|c| {
-                                view! {
-                                    <A
-                                        href=move || { format!("../{}{}", c.0, query.get().to_query_string()) }
-                                        scroll=false
-                                    >
-                                        <span class="text">{c.1.clone()}</span>
-                                    </A>
-                                }
-                            })
-                            .collect_view()}
-                    </ListElements>
-                }
-            }}
-        </Header>
-        <Collapsible id="filter" class="filter" header=|| "Filters">
-            <Filter attr:class="filter">
-                <div>
-                    <label for="patch" class="indicator">
-                        "Patch"
-                    </label>
-                    <A href="../../../1.00/1/standard" attr:id="patch" attr:class="select">
-                        "1.00"
+      <Title text="Leaderboard" />
+      <Header attr:id="lb_header">
+        {move || {
+          let layouts = layouts.get();
+          view! {
+            <ListElements>
+              {layouts
+                .into_iter()
+                .map(|l| {
+                  view! {
+                    <A
+                      href=move || { format!("../../{}/{}{}", l.0, category.get(), query.get().to_query_string()) }
+                      scroll=false
+                    >
+                      <span class="text">{l.1.clone()}</span>
                     </A>
-                </div>
-                <div>
-                    <A href="../../../1.41/1/standard" attr:class="select">
-                        "1.41"
+                  }
+                })
+                .collect_view()}
+            </ListElements>
+          }
+        }}
+        {move || {
+          let categories = categories.get();
+          view! {
+            <ListElements>
+              {categories
+                .into_iter()
+                .map(|c| {
+                  view! {
+                    <A href=move || { format!("../{}{}", c.0, query.get().to_query_string()) } scroll=false>
+                      <span class="text">{c.1.clone()}</span>
                     </A>
-                </div>
-                <div>
-                    <A href="../../../1.50/1/standard" attr:class="select">
-                        "1.50"
-                    </A>
-                </div>
-                <div>
-                    <A href="../../../2.00/1/standard" attr:class="select">
-                        "2.00"
-                    </A>
-                </div>
-                <div>
-                    <A href="../../../2.13/1/standard" attr:class="select">
-                        "Current"
-                    </A>
-                </div>
-                <Select name="sort" indicator="Sort By" options=[("time", "Time"), ("date", "Date")] />
-                <Select
-                    name="run_state"
-                    indicator="Run State"
-                    options=[
-                        ("none", "None"),
-                        ("is_pb", "Is Personal Best"),
-                        ("is_wr", "Is World Record"),
-                        ("was_pb", "Was Personal Best"),
-                        ("was_wr", "Was World Record"),
-                        ("verified", "Is Verified"),
-                    ]
-                    selected=1
-                />
-                <Select
-                    name="map_state"
-                    indicator="Map State"
-                    options=[("submittable", "Submittable"), ("all", "All")]
-                />
-            </Filter>
-        </Collapsible>
+                  }
+                })
+                .collect_view()}
+            </ListElements>
+          }
+        }}
+      </Header>
+      <Collapsible id="filter" class="filter" header=|| "Filters">
+        <Filter attr:class="filter">
+          <div>
+            <label for="patch" class="indicator">
+              "Patch"
+            </label>
+            <A href="../../../1.00/1/standard" attr:id="patch" attr:class="select">
+              "1.00"
+            </A>
+          </div>
+          <div>
+            <A href="../../../1.41/1/standard" attr:class="select">
+              "1.41"
+            </A>
+          </div>
+          <div>
+            <A href="../../../1.50/1/standard" attr:class="select">
+              "1.50"
+            </A>
+          </div>
+          <div>
+            <A href="../../../2.00/1/standard" attr:class="select">
+              "2.00"
+            </A>
+          </div>
+          <div>
+            <A href="../../../2.13/1/standard" attr:class="select">
+              "Current"
+            </A>
+          </div>
+          <Select name="sort" indicator="Sort By" options=[("time", "Time"), ("date", "Date")] />
+          <Select
+            name="run_state"
+            indicator="Run State"
+            options=[
+              ("none", "None"),
+              ("is_pb", "Is Personal Best"),
+              ("is_wr", "Is World Record"),
+              ("was_pb", "Was Personal Best"),
+              ("was_wr", "Was World Record"),
+              ("verified", "Is Verified"),
+            ]
+            selected=1
+          />
+          <Select name="map_state" indicator="Map State" options=[("submittable", "Submittable"), ("all", "All")] />
+        </Filter>
+      </Collapsible>
     }
 }
 
@@ -131,57 +122,58 @@ pub fn Leaderboard(patch: Signal<String>, layout: Signal<String>, category: Sign
     });
 
     view! {
-        <ErrorBoundary fallback=|e| {
-            view! {
-                <span class="error">
-                    {move || {
-                        let e = e.get().into_iter().next().unwrap().1;
-                        if e.is::<ApiError>() {
-                            let e = e.downcast_ref::<ApiError>().unwrap();
-                            match e {
-                                ApiError::ServerError(s) => "🛈 ".to_owned() + s,
-                                _ => "🛈 Something went wrong. Try again".into(),
-                            }
-                        } else {
-                            "🛈 Something went wrong. Try again".into()
-                        }
-                    }}
-                </span>
-            }
+      <ErrorBoundary fallback=|e| {
+        view! {
+          <span class="error">
+            {move || {
+              let e = e.get().into_iter().next().unwrap().1;
+              if e.is::<ApiError>() {
+                let e = e.downcast_ref::<ApiError>().unwrap();
+                match e {
+                  ApiError::ServerError(s) => "🛈 ".to_owned() + s,
+                  _ => "🛈 Something went wrong. Try again".into(),
+                }
+              } else {
+                "🛈 Something went wrong. Try again".into()
+              }
+            }}
+          </span>
+        }
+      }>
+        <Transition fallback=move || {
+          view! { <p>"Loading..."</p> }
         }>
-            <Transition fallback=move || {
-                view! { <p>"Loading..."</p> }
-            }>
-                {move || {
-                    let maps = Memo::new(move |_| {
-                        maps_res
-                            .get()
-                            .map(|res| {
-                                res.map(|vec| {
-                                    vec.into_iter()
-                                        .filter(|map| map.section.submittable || *filter_key.read() == "all")
-                                        .collect::<Vec<_>>()
-                                })
-                            })
-                    });
-                    maps.get()
-                        .map(|data| {
-                            data.map(|maps| {
-                                view! {
-                                    <div id="lb">
-                                        {maps
-                                            .into_iter()
-                                            .map(|map| {
-                                                view! { <LeaderboardEntry map=map.clone() /> }
-                                            })
-                                            .collect_view()}
-                                    </div>
-                                }
-                            })
-                        })
-                }}
-            </Transition>
-        </ErrorBoundary>
+          {move || {
+            let maps = Memo::new(move |_| {
+              maps_res
+                .and_then(|vec| {
+                  let vec = vec.clone();
+                  vec
+                    .into_iter()
+                    .filter(|map| map.section.submittable || *filter_key.read() == "all")
+                    .collect::<Vec<_>>()
+                })
+            });
+            maps
+              .get()
+              .map(|data| {
+                data
+                  .map(|maps| {
+                    view! {
+                      <div id="lb">
+                        {maps
+                          .into_iter()
+                          .map(|map| {
+                            view! { <LeaderboardEntry map=map.clone() /> }
+                          })
+                          .collect_view()}
+                      </div>
+                    }
+                  })
+              })
+          }}
+        </Transition>
+      </ErrorBoundary>
     }
 }
 
@@ -205,83 +197,75 @@ pub fn LeaderboardEntry(map: SectionRuns) -> impl IntoView {
     let map_name = map.section.map.clone();
     let (top_run, set_top_run) = signal::<Option<PartialRun>>(None);
     let (sel_run, set_sel_run) = signal::<Option<PartialRun>>(None);
-    let proof = Signal::derive(move || {
-        sel_run.get().map(|r| Proof {
-            yt_id: r.yt_id,
-            url: r.proof,
-        })
-    });
+    let proof = Signal::derive(move || sel_run.get().map(|r| Proof { yt_id: r.yt_id, url: r.proof }));
 
     view! {
-        <div class="lb_entry">
-            <div class="header">
-                <A href=format!("../../../map/{}", map.section.id.to_string())>
-                    <h2>{map_name}</h2>
-                </A>
-                {move || match runs().get(0) {
-                    Some((_, r)) => {
-                        set_top_run(Some(r.clone()));
-                        set_sel_run(Some(r.clone()));
-                        Either::Left(
-                            view! {
-                                <a href=format!("/user/{}/leaderboard", r.user.user_id)>
-                                    <h5>{r.user.username.clone()}</h5>
-                                </a>
-                                <h5>{r.time.to_string()} " seconds"</h5>
-                            },
-                        )
-                    }
-                    None => Either::Right(view! {}),
-                }}
-            </div>
-            <div class="content">
-                <Player proof cover=map.section.map />
-                <div class="lb_entry_ranks">
-                    <Show
-                        when=move || top_run.with(|r| r.is_some())
-                        fallback=|| view! { <span class="no-data">"No Runs Found"</span> }
-                    >
-                        <For
-                            each=runs
-                            key=|r| r.1.id
-                            children=move |(i, r)| {
-                                let selected = move || sel_run().is_some_and(|s| s.id == r.id);
-                                let run = r.clone();
-                                view! {
-                                    <div
-                                        class="lb_entry_rank"
-                                        on:click=move |_| {
-                                            set_sel_run(Some(run.clone()));
-                                        }
-                                        class:selected=selected
-                                    >
-                                        <span class="rank">
-                                            {move || match sort_key() {
-                                                Some(k) => {
-                                                    if k == "time" {
-                                                        "#".to_string() + &(i + 1).to_string()
-                                                    } else {
-                                                        format!("{}", r.created_at.format("%d/%m/%y"))
-                                                    }
-                                                }
-                                                None => "#".to_string() + &(i + 1).to_string(),
-                                            }}
-                                        </span>
-                                        <span class="name">
-                                            <A href=format!(
-                                                "/user/{}/leaderboard",
-                                                r.user.user_id,
-                                            )>{r.user.username}</A>
-                                        </span>
-                                        <span class="time">{r.time.to_string()} " s"</span>
-                                    </div>
-                                }
-                            }
-                        />
-                    </Show>
-                </div>
-            </div>
+      <div class="lb_entry">
+        <div class="header">
+          <A href=format!("../../../map/{}", map.section.id.to_string())>
+            <h2>{map_name}</h2>
+          </A>
+          {move || match runs().get(0) {
+            Some((_, r)) => {
+              set_top_run(Some(r.clone()));
+              set_sel_run(Some(r.clone()));
+              Either::Left(
+                view! {
+                  <a href=format!("/user/{}/leaderboard", r.user.user_id)>
+                    <h5>{r.user.username.clone()}</h5>
+                  </a>
+                  <h5>{r.time.to_string()} " seconds"</h5>
+                },
+              )
+            }
+            None => Either::Right(view! {}),
+          }}
         </div>
+        <div class="content">
+          <Player proof cover=map.section.map />
+          <div class="lb_entry_ranks">
+            <Show
+              when=move || top_run.with(|r| r.is_some())
+              fallback=|| view! { <span class="no-data">"No Runs Found"</span> }
+            >
+              <For
+                each=runs
+                key=|r| r.1.id
+                children=move |(i, r)| {
+                  let selected = move || sel_run().is_some_and(|s| s.id == r.id);
+                  let run = r.clone();
+                  view! {
+                    <div
+                      class="lb_entry_rank"
+                      on:click=move |_| {
+                        set_sel_run(Some(run.clone()));
+                      }
+                      class:selected=selected
+                    >
+                      <span class="rank">
+                        {move || match sort_key() {
+                          Some(k) => {
+                            if k == "time" {
+                              "#".to_string() + &(i + 1).to_string()
+                            } else {
+                              format!("{}", r.created_at.format("%d/%m/%y"))
+                            }
+                          }
+                          None => "#".to_string() + &(i + 1).to_string(),
+                        }}
+                      </span>
+                      <span class="name">
+                        <A href=format!("/user/{}/leaderboard", r.user.user_id)>{r.user.username}</A>
+                      </span>
+                      <span class="time">{r.time.to_string()} " s"</span>
+                    </div>
+                  }
+                }
+              />
+            </Show>
+          </div>
+        </div>
+      </div>
     }
 }
 
@@ -317,34 +301,18 @@ pub fn sort(s: Option<String>) -> impl Fn(&PartialRun, &PartialRun) -> Ordering 
     match s {
         Some(s) => match s.as_str() {
             "date" => move |r1: &PartialRun, r2: &PartialRun| -> Ordering {
-                if r1.created_at > r2.created_at {
-                    Ordering::Less
-                } else {
-                    Ordering::Greater
-                }
+                if r1.created_at > r2.created_at { Ordering::Less } else { Ordering::Greater }
             },
             _ => move |r1: &PartialRun, r2: &PartialRun| -> Ordering {
                 if r1.time == r2.time {
-                    if r1.created_at < r2.created_at {
-                        Ordering::Less
-                    } else {
-                        Ordering::Greater
-                    }
+                    if r1.created_at < r2.created_at { Ordering::Less } else { Ordering::Greater }
                 } else {
-                    if r1.time < r2.time {
-                        Ordering::Less
-                    } else {
-                        Ordering::Greater
-                    }
+                    if r1.time < r2.time { Ordering::Less } else { Ordering::Greater }
                 }
             },
         },
         None => move |r1: &PartialRun, r2: &PartialRun| -> Ordering {
-            if r1.time < r2.time {
-                Ordering::Less
-            } else {
-                Ordering::Greater
-            }
+            if r1.time < r2.time { Ordering::Less } else { Ordering::Greater }
         },
     }
 }

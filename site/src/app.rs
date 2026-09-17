@@ -1,5 +1,5 @@
 use components::{Header, ListElements};
-use leptos::{either::*, prelude::*};
+use leptos::prelude::*;
 use leptos_meta::*;
 use leptos_router::{
     MatchNestedRoutes, NavigateOptions,
@@ -28,28 +28,28 @@ use web_sys::FormData;
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
-        <!DOCTYPE html>
-        <html lang="en" dir="ltr">
-            <head>
-                <HashedStylesheet options=options.clone() />
-                <Link rel="preconnect" href="https://fonts.googleapis.com" />
-                <Link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
-                <Link
-                    href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,100..1000&display=swap"
-                    rel="stylesheet"
-                />
-                <meta charset="utf-8" />
-                <meta name="viewport" content="width=device-width, initial-scale=1" />
-                <AutoReload options=options.clone() />
-                <Script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js" />
-                <Script src="https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js" />
-                <HydrationScripts options />
-                <MetaTags />
-            </head>
-            <body tabindex="-1">
-                <App />
-            </body>
-        </html>
+      <!DOCTYPE html>
+      <html lang="en" dir="ltr">
+        <head>
+          <HashedStylesheet options=options.clone() />
+          <Link rel="preconnect" href="https://fonts.googleapis.com" />
+          <Link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+          <Link
+            href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,100..1000&display=swap"
+            rel="stylesheet"
+          />
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <AutoReload options=options.clone() />
+          <Script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js" />
+          <Script src="https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js" />
+          <HydrationScripts options />
+          <MetaTags />
+        </head>
+        <body tabindex="-1">
+          <App />
+        </body>
+      </html>
     }
 }
 
@@ -100,126 +100,109 @@ pub fn App() -> impl IntoView {
     });
 
     view! {
-        // sets the document title
-        <Title text="Lucio Surf League" />
-        // content for this welcome page
-        <Router>
-            <Header attr:id="main-nav">
+      // sets the document title
+      <Title text="Lucio Surf League" />
+      // content for this welcome page
+      <Router>
+        <Header attr:id="main-nav">
+          <ListElements>
+            <A href="/home">"Home"</A>
+            <A href="/leaderboard/2.13/1/standard">"Leaderboard"</A>
+            <A href="/ranking/2.13/1">"Ranking"</A>
+            <a href="https://discord.com/invite/G9QBCDY" rel="external">
+              "Discord"
+            </a>
+          </ListElements>
+          <ErrorBoundary fallback=|_| {
+            view! {
+              <ListElements>
+                <a href="/login">"Login"</a>
+              </ListElements>
+            }
+          }>
+            <Transition fallback=move || {
+              view! {
                 <ListElements>
-                    <A href="/home">"Home"</A>
-                    <A href="/leaderboard/2.13/1/standard">"Leaderboard"</A>
-                    <A href="/ranking/2.13/1">"Ranking"</A>
-                    <a href="https://discord.com/invite/G9QBCDY" rel="external">
-                        "Discord"
-                    </a>
+                  <span>"Loading..."</span>
                 </ListElements>
-                <Transition fallback=move || {
+              }
+            }>
+              {move || {
+                user
+                  .and_then(|user| {
+                    let user = user.clone();
+                    let pfp = user.pfp.clone();
                     view! {
-                        <ListElements>
-                            <span>"Loading..."</span>
-                        </ListElements>
+                      <ListElements>
+                        <div class="row narrow">
+                          <A href=format!("/user/{}/leaderboard", user.id)>
+                            <img src=format!("/cdn/users/{}.jpg", pfp) />
+                          </A>
+                          <div class="dropdown">
+                            <button type="button" class="dropdown-title" aria-controls="user-dropdown">
+                              "▼"
+                            </button>
+                            <ul class="dropdown-menu" id="user-dropdown">
+                              <ListElements>
+                                <A href=format!("/user/{}/leaderboard", user.id)>"Profile"</A>
+                                <A href="/user/@me/submit">"Submit"</A>
+                                <A href="/user/@me/dashboard">"Dashboard"</A>
+                                <A href="/user/@me/manage">"Manage Runs"</A>
+                                <Show when=move || {
+                                  user.has(&Permissions::Verify) || user.has(&Permissions::ManageUsers)
+                                    || user.has(&Permissions::ManageRuns) || user.has(&Permissions::ManageSections)
+                                }>
+                                  <A href="/moderation">"Admin Panel"</A>
+                                </Show>
+                                <ActionForm action=logout>
+                                  <button type="submit" class="dropdown-title">
+                                    "Log Out"
+                                  </button>
+                                </ActionForm>
+                              </ListElements>
+                            </ul>
+                          </div>
+                        </div>
+                      </ListElements>
                     }
-                }>
-                    {move || {
-                        user.get()
-                            .map(|user| match user {
-                                Err(_) => {
-                                    Either::Left(
-                                        view! {
-                                            <ListElements>
-                                                <a href="/login">"Login"</a>
-                                            </ListElements>
-                                        },
-                                    )
-                                }
-                                Ok(user) => {
-                                    let pfp = user.pfp.clone();
-                                    Either::Right(
-                                        view! {
-                                            <ListElements>
-                                                <div class="row narrow">
-                                                    <A href=format!("/user/{}/leaderboard", user.id)>
-                                                        <img src=format!("/cdn/users/{}.jpg", pfp) />
-                                                    </A>
-                                                    <div class="dropdown">
-                                                        <button
-                                                            type="button"
-                                                            class="dropdown-title"
-                                                            aria-controls="user-dropdown"
-                                                        >
-                                                            "▼"
-                                                        </button>
-                                                        <ul class="dropdown-menu" id="user-dropdown">
-                                                            <ListElements>
-                                                                <A href=format!(
-                                                                    "/user/{}/leaderboard",
-                                                                    user.id,
-                                                                )>"Profile"</A>
-                                                                <A href="/user/@me/submit">"Submit"</A>
-                                                                <A href="/user/@me/dashboard">"Dashboard"</A>
-                                                                <A href="/user/@me/manage">"Manage Runs"</A>
-                                                                <Show when=move || {
-                                                                    user.has(&Permissions::Verify)
-                                                                        || user.has(&Permissions::ManageUsers)
-                                                                        || user.has(&Permissions::ManageRuns)
-                                                                        || user.has(&Permissions::Administrator)
-                                                                }>
-                                                                    <A href="/admin">"Admin Panel"</A>
-                                                                </Show>
-                                                                <button
-                                                                    type="button"
-                                                                    class="dropdown-title"
-                                                                    on:click=move |_| {
-                                                                        let _ = logout.dispatch(Logout {});
-                                                                    }
-                                                                >
-                                                                    "Log Out"
-                                                                </button>
-                                                            </ListElements>
-                                                        </ul>
-                                                    </div>
-                                                </div>
-                                            </ListElements>
-                                        },
-                                    )
-                                }
-                            })
-                    }}
-                </Transition>
-            </Header>
-            <main>
-                <AppRouter />
-            </main>
-        </Router>
+                  })
+              }}
+            </Transition>
+          </ErrorBoundary>
+        </Header>
+        <main>
+          <AppRouter />
+        </main>
+      </Router>
     }
 }
 
 #[component(transparent)]
 fn AppRouter() -> impl IntoView {
     view! {
-        <Routes fallback=|| {
-            let mut outside_errors = Errors::default();
-            outside_errors.insert_with_default_key(AppError::NotFound);
-            view! { <ErrorTemplate outside_errors /> }
-        }>
-            <Route path=path!("") view=|| view! { <Redirect path="home" /> } />
-            <Route path=path!("home") view=HomePage />
-            <Route
-                path=path!("discord")
-                view=|| {
-                    view! { <Redirect path="https://discord.com/invite/G9QBCDY" /> }
-                }
-            />
-            <Route path=path!("faq") view=FAQ />
-            <Route path=path!("runs") view=Submits />
-            <Route path=path!("activity") view=Activity />
-            <LeaderboardRouter />
-            <RankingRouter />
-            <Route path=path!("register") view=Register />
-            <Route path=path!("login") view=Login />
-            <ModerationRouter />
-            <UserRouter />
-        </Routes>
+      <Routes fallback=|| {
+        let mut outside_errors = Errors::default();
+        outside_errors.insert_with_default_key(AppError::NotFound);
+        view! { <ErrorTemplate outside_errors /> }
+      }>
+        <Route path=path!("") view=|| view! { <Redirect path="home" /> } />
+        <Route path=path!("home") view=HomePage />
+        <Route
+          path=path!("discord")
+          view=|| {
+            view! { <Redirect path="https://discord.com/invite/G9QBCDY" /> }
+          }
+        />
+        <Route path=path!("faq") view=FAQ />
+        <Route path=path!("runs") view=Submits />
+        <Route path=path!("activity") view=Activity />
+        <LeaderboardRouter />
+        <RankingRouter />
+        <Route path=path!("register") view=Register />
+        <Route path=path!("login") view=Login />
+        <ModerationRouter />
+        <UserRouter />
+      </Routes>
     }
 }
 
@@ -227,76 +210,78 @@ fn AppRouter() -> impl IntoView {
 fn ModerationRouter() -> impl MatchNestedRoutes + Clone {
     let user = expect_context::<UserResource>();
     view! {
-        <ProtectedParentRoute
-            path=path!("moderation")
-            condition=move || {
-                user.get()
-                    .map(|n| {
-                        n.is_ok_and(|u| {
-                            u.has(&Permissions::ManageRuns) || u.has(&Permissions::ManageSections)
-                                || u.has(&Permissions::ManageUsers)
-                        })
-                    })
-            }
-            redirect_path=|| "/login?redirect=moderation"
-            view=Admin
-        >
-            <Route path=path!("") view=() />
-            <ProtectedRoute
-                path=path!("runs")
-                condition=move || { user.get().map(|n| n.is_ok_and(|u| u.has(&Permissions::ManageRuns))) }
-                redirect_path=|| "/login?redirect=moderation/runs"
-                view=pages::admin::ManageRuns
-            />
-            <ProtectedRoute
-                path=path!("sections")
-                condition=move || { user.get().map(|n| n.is_ok_and(|u| u.has(&Permissions::ManageSections))) }
-                redirect_path=|| "/login?redirect=moderation/sections"
-                view=ManageSections
-            />
-            <ProtectedRoute
-                path=path!("users")
-                condition=move || { user.get().map(|n| n.is_ok_and(|u| u.has(&Permissions::ManageUsers))) }
-                redirect_path=|| "/login?redirect=moderation/users"
-                view=ManageUsers
-            />
-        </ProtectedParentRoute>
+      <ProtectedParentRoute
+        path=path!("moderation")
+        condition=move || {
+          user
+            .get()
+            .map(|n| {
+              n.is_ok_and(|u| {
+                u.has(&Permissions::ManageRuns) || u.has(&Permissions::ManageSections)
+                  || u.has(&Permissions::ManageUsers)
+              })
+            })
+        }
+        redirect_path=|| "/login?redirect=moderation"
+        view=Admin
+      >
+        <Route path=path!("") view=() />
+        <ProtectedRoute
+          path=path!("runs")
+          condition=move || { user.get().map(|n| n.is_ok_and(|u| u.has(&Permissions::ManageRuns))) }
+          redirect_path=|| "/login?redirect=moderation/runs"
+          view=pages::admin::ManageRuns
+        />
+        <ProtectedRoute
+          path=path!("sections")
+          condition=move || { user.get().map(|n| n.is_ok_and(|u| u.has(&Permissions::ManageSections))) }
+          redirect_path=|| "/login?redirect=moderation/sections"
+          view=ManageSections
+        />
+        <ProtectedRoute
+          path=path!("users")
+          condition=move || { user.get().map(|n| n.is_ok_and(|u| u.has(&Permissions::ManageUsers))) }
+          redirect_path=|| "/login?redirect=moderation/users"
+          view=ManageUsers
+        />
+      </ProtectedParentRoute>
     }
     .into_inner()
     .into_any_nested_route()
 }
+
 #[component(transparent)]
 fn UserRouter() -> impl MatchNestedRoutes + Clone {
     let user = expect_context::<UserResource>();
     view! {
-        <ProtectedParentRoute
-            path=path!("user/@me/dashboard")
-            condition=move || user.get().map(|n| n.is_ok())
-            redirect_path=|| "/login?redirect=user/@me/dashboard"
-            view=Dashboard
-        >
-            <Route path=path!("") view=() />
-            <Route path=path!("username") view=Username />
-            <Route path=path!("password") view=Password />
-            <Route path=path!("bio") view=Bio />
-            <Route path=path!("avatar") view=Avatar />
-            <Route path=path!("discord") view=DiscordList />
-        </ProtectedParentRoute>
-        <ProtectedParentRoute
-            path=path!("user/@me/manage")
-            condition=move || user.get().map(|n| n.is_ok())
-            redirect_path=|| "/login?redirect=user/@me/manage"
-            view=ManageRuns
-        >
-            <Route path=path!("") view=() />
-            <Route path=path!(":id") view=Delete />
-        </ProtectedParentRoute>
-        <ProtectedRoute
-            path=path!("user/@me/submit")
-            condition=move || user.get().map(|n| n.is_ok())
-            redirect_path=|| "/login?redirect=user/@me/submit"
-            view=Submit
-        />
+      <ProtectedParentRoute
+        path=path!("user/@me/dashboard")
+        condition=move || user.get().map(|n| n.is_ok())
+        redirect_path=|| "/login?redirect=user/@me/dashboard"
+        view=Dashboard
+      >
+        <Route path=path!("") view=() />
+        <Route path=path!("username") view=Username />
+        <Route path=path!("password") view=Password />
+        <Route path=path!("bio") view=Bio />
+        <Route path=path!("avatar") view=Avatar />
+        <Route path=path!("discord") view=DiscordList />
+      </ProtectedParentRoute>
+      <ProtectedParentRoute
+        path=path!("user/@me/manage")
+        condition=move || user.get().map(|n| n.is_ok())
+        redirect_path=|| "/login?redirect=user/@me/manage"
+        view=ManageRuns
+      >
+        <Route path=path!("") view=() />
+        <Route path=path!(":id") view=Delete />
+      </ProtectedParentRoute>
+      <ProtectedRoute
+        path=path!("user/@me/submit")
+        condition=move || user.get().map(|n| n.is_ok())
+        redirect_path=|| "/login?redirect=user/@me/submit"
+        view=Submit
+      />
     }
     .into_inner()
     .into_any_nested_route()
@@ -305,154 +290,154 @@ fn UserRouter() -> impl MatchNestedRoutes + Clone {
 #[component(transparent)]
 fn LeaderboardRouter() -> impl MatchNestedRoutes + Clone {
     view! {
-        <Route
-            path=path!("leaderboard")
-            view=move || {
-                let mut options = NavigateOptions::default();
-                options.replace = true;
-                view! { <Redirect path="2.13/1/standard" options /> }
+      <Route
+        path=path!("leaderboard")
+        view=move || {
+          let mut options = NavigateOptions::default();
+          options.replace = true;
+          view! { <Redirect path="2.13/1/standard" options /> }
+        }
+      />
+      <Route
+        path=path!("leaderboard/:patch/:layout/:category")
+        view=move || {
+          let params = use_params_map();
+          let patch = Signal::derive(move || { params.read().get("patch").unwrap() });
+          let layout = Signal::derive(move || { params.read().get("layout").unwrap() });
+          let category = Signal::derive(move || { params.read().get("category").unwrap() });
+          let layouts = Signal::derive(move || match patch.get().as_str() {
+            "1.00" => vec![("1".into(), "Layout 1".into()), ("2".into(), "Layout 2".into())],
+            "1.41" => {
+              vec![
+                ("1".into(), "Layout 1".into()),
+                ("2".into(), "Layout 2".into()),
+                ("3".into(), "Layout 3".into()),
+                ("4".into(), "Layout 4".into()),
+              ]
             }
+            "1.50" | "2.00" | "2.13" => {
+              vec![
+                ("1".into(), "Layout 1".into()),
+                ("2".into(), "Layout 2".into()),
+                ("3".into(), "Layout 3".into()),
+                ("4".into(), "Layout 4".into()),
+                ("5".into(), "Layout 5".into()),
+              ]
+            }
+            _ => vec![],
+          });
+          let categories: Vec<(String, String)> = vec![
+            ("standard".into(), "Standard".into()),
+            ("gravspeed".into(), "Gravspeed".into()),
+          ];
+          view! {
+            <section id="leaderboard">
+              <Section layouts categories category />
+              <Leaderboard patch layout category />
+            </section>
+          }
+        }
+      />
+      <Route
+        path=path!("leaderboard/map/:map")
+        view=move || {
+          let params = use_params_map();
+          let id = Signal::derive(move || { params.read().get("map").unwrap().parse::<i32>().unwrap_or(0) });
+          view! {
+            <section id="leaderboard">
+              <Map id />
+            </section>
+          }
+        }
+      />
+      <ParentRoute
+        path=path!("user/:id")
+        view=move || {
+          let params = use_params_map();
+          let id = Signal::derive(move || { params.read().get("id").unwrap().parse::<i64>().unwrap_or(0) });
+          view! {
+            <Profile id />
+            <Outlet />
+          }
+        }
+      >
+        <Route
+          path=path!("leaderboard/:patch/:layout/:category")
+          view=move || {
+            let params = use_params_map();
+            let patch = Signal::derive(move || { params.read().get("patch").unwrap() });
+            let layout = Signal::derive(move || { params.read().get("layout").unwrap() });
+            let category = Signal::derive(move || { params.read().get("category").unwrap() });
+            let layouts = Signal::derive(move || match patch.get().as_str() {
+              "1.00" => vec![("1".into(), "Layout 1".into()), ("2".into(), "Layout 2".into())],
+              "1.41" => {
+                vec![
+                  ("1".into(), "Layout 1".into()),
+                  ("2".into(), "Layout 2".into()),
+                  ("3".into(), "Layout 3".into()),
+                  ("4".into(), "Layout 4".into()),
+                ]
+              }
+              "1.50" | "2.00" | "2.13" => {
+                vec![
+                  ("1".into(), "Layout 1".into()),
+                  ("2".into(), "Layout 2".into()),
+                  ("3".into(), "Layout 3".into()),
+                  ("4".into(), "Layout 4".into()),
+                  ("5".into(), "Layout 5".into()),
+                ]
+              }
+              _ => vec![],
+            });
+            let categories: Vec<(String, String)> = vec![
+              ("standard".into(), "Standard".into()),
+              ("gravspeed".into(), "Gravspeed".into()),
+            ];
+            view! {
+              <section id="leaderboard">
+                <Section layouts categories category />
+                <Leaderboard patch layout category />
+              </section>
+            }
+          }
         />
         <Route
-            path=path!("leaderboard/:patch/:layout/:category")
-            view=move || {
-                let params = use_params_map();
-                let patch = Signal::derive(move || { params.read().get("patch").unwrap() });
-                let layout = Signal::derive(move || { params.read().get("layout").unwrap() });
-                let category = Signal::derive(move || { params.read().get("category").unwrap() });
-                let layouts = Signal::derive(move || match patch.get().as_str() {
-                    "1.00" => vec![("1".into(), "Layout 1".into()), ("2".into(), "Layout 2".into())],
-                    "1.41" => {
-                        vec![
-                            ("1".into(), "Layout 1".into()),
-                            ("2".into(), "Layout 2".into()),
-                            ("3".into(), "Layout 3".into()),
-                            ("4".into(), "Layout 4".into()),
-                        ]
-                    }
-                    "1.50" | "2.00" | "2.13" => {
-                        vec![
-                            ("1".into(), "Layout 1".into()),
-                            ("2".into(), "Layout 2".into()),
-                            ("3".into(), "Layout 3".into()),
-                            ("4".into(), "Layout 4".into()),
-                            ("5".into(), "Layout 5".into()),
-                        ]
-                    }
-                    _ => vec![],
-                });
-                let categories: Vec<(String, String)> = vec![
-                    ("standard".into(), "Standard".into()),
-                    ("gravspeed".into(), "Gravspeed".into()),
-                ];
-                view! {
-                    <section id="leaderboard">
-                        <Section layouts categories category />
-                        <Leaderboard patch layout category />
-                    </section>
-                }
+          path=path!("leaderboard/map/:map")
+          view=move || {
+            let params = use_params_map();
+            let id = Signal::derive(move || { params.read().get("map").unwrap().parse::<i32>().unwrap_or(0) });
+            view! {
+              <section id="leaderboard">
+                <Map id />
+              </section>
             }
+          }
         />
         <Route
-            path=path!("leaderboard/map/:map")
-            view=move || {
-                let params = use_params_map();
-                let id = Signal::derive(move || { params.read().get("map").unwrap().parse::<i32>().unwrap_or(0) });
-                view! {
-                    <section id="leaderboard">
-                        <Map id />
-                    </section>
-                }
-            }
+          path=path!("ranking")
+          view=move || {
+            let params = use_params_map();
+            let id = Signal::derive(move || { params.read().get("id").unwrap().parse::<i64>().unwrap_or(0) });
+            let patches: Vec<(String, String)> = vec![
+              ("1.00".into(), "Patch 1.00".into()),
+              ("1.41".into(), "Patch 1.41".into()),
+              ("1.50".into(), "Patch 1.50".into()),
+              ("2.00".into(), "Patch 2.00".into()),
+              ("2.13".into(), "Patch 2.13".into()),
+            ];
+            view! { <UserRanking id patches /> }
+          }
         />
-        <ParentRoute
-            path=path!("user/:id")
-            view=move || {
-                let params = use_params_map();
-                let id = Signal::derive(move || { params.read().get("id").unwrap().parse::<i64>().unwrap_or(0) });
-                view! {
-                    <Profile id />
-                    <Outlet />
-                }
-            }
-        >
-            <Route
-                path=path!("leaderboard/:patch/:layout/:category")
-                view=move || {
-                    let params = use_params_map();
-                    let patch = Signal::derive(move || { params.read().get("patch").unwrap() });
-                    let layout = Signal::derive(move || { params.read().get("layout").unwrap() });
-                    let category = Signal::derive(move || { params.read().get("category").unwrap() });
-                    let layouts = Signal::derive(move || match patch.get().as_str() {
-                        "1.00" => vec![("1".into(), "Layout 1".into()), ("2".into(), "Layout 2".into())],
-                        "1.41" => {
-                            vec![
-                                ("1".into(), "Layout 1".into()),
-                                ("2".into(), "Layout 2".into()),
-                                ("3".into(), "Layout 3".into()),
-                                ("4".into(), "Layout 4".into()),
-                            ]
-                        }
-                        "1.50" | "2.00" | "2.13" => {
-                            vec![
-                                ("1".into(), "Layout 1".into()),
-                                ("2".into(), "Layout 2".into()),
-                                ("3".into(), "Layout 3".into()),
-                                ("4".into(), "Layout 4".into()),
-                                ("5".into(), "Layout 5".into()),
-                            ]
-                        }
-                        _ => vec![],
-                    });
-                    let categories: Vec<(String, String)> = vec![
-                        ("standard".into(), "Standard".into()),
-                        ("gravspeed".into(), "Gravspeed".into()),
-                    ];
-                    view! {
-                        <section id="leaderboard">
-                            <Section layouts categories category />
-                            <Leaderboard patch layout category />
-                        </section>
-                    }
-                }
-            />
-            <Route
-                path=path!("leaderboard/map/:map")
-                view=move || {
-                    let params = use_params_map();
-                    let id = Signal::derive(move || { params.read().get("map").unwrap().parse::<i32>().unwrap_or(0) });
-                    view! {
-                        <section id="leaderboard">
-                            <Map id />
-                        </section>
-                    }
-                }
-            />
-            <Route
-                path=path!("ranking")
-                view=move || {
-                    let params = use_params_map();
-                    let id = Signal::derive(move || { params.read().get("id").unwrap().parse::<i64>().unwrap_or(0) });
-                    let patches: Vec<(String, String)> = vec![
-                        ("1.00".into(), "Patch 1.00".into()),
-                        ("1.41".into(), "Patch 1.41".into()),
-                        ("1.50".into(), "Patch 1.50".into()),
-                        ("2.00".into(), "Patch 2.00".into()),
-                        ("2.13".into(), "Patch 2.13".into()),
-                    ];
-                    view! { <UserRanking id patches /> }
-                }
-            />
-            <Route
-                path=path!("leaderboard")
-                view=move || {
-                    let mut options = NavigateOptions::default();
-                    options.replace = true;
-                    view! { <Redirect path="2.13/1/standard" options /> }
-                }
-            />
-            <Route path=path!("") view=move || view! {} />
-        </ParentRoute>
+        <Route
+          path=path!("leaderboard")
+          view=move || {
+            let mut options = NavigateOptions::default();
+            options.replace = true;
+            view! { <Redirect path="2.13/1/standard" options /> }
+          }
+        />
+        <Route path=path!("") view=move || view! {} />
+      </ParentRoute>
     }
     .into_inner()
     .into_any_nested_route()
@@ -464,92 +449,89 @@ struct Patch(Signal<String>);
 #[component(transparent)]
 fn RankingRouter() -> impl MatchNestedRoutes + Clone {
     view! {
+      <ParentRoute
+        path=path!("/ranking")
+        view=move || {
+          let patches: Vec<(String, String)> = vec![
+            ("1.00".into(), "Patch 1.00".into()),
+            ("1.41".into(), "Patch 1.41".into()),
+            ("1.50".into(), "Patch 1.50".into()),
+            ("2.00".into(), "Patch 2.00".into()),
+            ("2.13".into(), "Patch 2.13".into()),
+          ];
+          view! {
+            <section id="ranking">
+              <RankingHeader links=patches />
+              <Outlet />
+            </section>
+          }
+        }
+      >
+        <Route path=path!("") view=|| view! { <p>"Please select a patch to view the rankings of."</p> } />
         <ParentRoute
-            path=path!("/ranking")
-            view=move || {
-                let patches: Vec<(String, String)> = vec![
-                    ("1.00".into(), "Patch 1.00".into()),
-                    ("1.41".into(), "Patch 1.41".into()),
-                    ("1.50".into(), "Patch 1.50".into()),
-                    ("2.00".into(), "Patch 2.00".into()),
-                    ("2.13".into(), "Patch 2.13".into()),
-                ];
-                view! {
-                    <section id="ranking">
-                        <RankingHeader links=patches />
-                        <Outlet />
-                    </section>
-                }
+          path=path!(":patch")
+          view=move || {
+            let params = use_params_map();
+            let patch = Signal::derive(move || { params.get().get("patch").unwrap() });
+            let layouts = Signal::derive(move || match patch.get().as_str() {
+              "1.00" => vec![("1".into(), "Layout 1".into()), ("2".into(), "Layout 2".into())],
+              "1.41" => {
+                vec![
+                  ("1".into(), "Layout 1".into()),
+                  ("2".into(), "Layout 2".into()),
+                  ("3".into(), "Layout 3".into()),
+                  ("4".into(), "Layout 4".into()),
+                ]
+              }
+              "1.50" | "2.00" | "2.13" => {
+                vec![
+                  ("1".into(), "Layout 1".into()),
+                  ("2".into(), "Layout 2".into()),
+                  ("3".into(), "Layout 3".into()),
+                  ("4".into(), "Layout 4".into()),
+                  ("5".into(), "Layout 5".into()),
+                ]
+              }
+              _ => vec![],
+            });
+            provide_context(Patch(patch));
+            view! {
+              <ComboRanking patch=patch layout=None categories=vec![(None, "Combined".into())] />
+              <RankingHeader links=layouts />
+              <Outlet />
             }
+          }
         >
-            <Route path=path!("") view=|| view! { <p>"Please select a patch to view the rankings of."</p> } />
-            <ParentRoute
-                path=path!(":patch")
-                view=move || {
-                    let params = use_params_map();
-                    let patch = Signal::derive(move || { params.get().get("patch").unwrap() });
-                    let layouts = Signal::derive(move || match patch.get().as_str() {
-                        "1.00" => vec![("1".into(), "Layout 1".into()), ("2".into(), "Layout 2".into())],
-                        "1.41" => {
-                            vec![
-                                ("1".into(), "Layout 1".into()),
-                                ("2".into(), "Layout 2".into()),
-                                ("3".into(), "Layout 3".into()),
-                                ("4".into(), "Layout 4".into()),
-                            ]
-                        }
-                        "1.50" | "2.00" | "2.13" => {
-                            vec![
-                                ("1".into(), "Layout 1".into()),
-                                ("2".into(), "Layout 2".into()),
-                                ("3".into(), "Layout 3".into()),
-                                ("4".into(), "Layout 4".into()),
-                                ("5".into(), "Layout 5".into()),
-                            ]
-                        }
-                        _ => vec![],
-                    });
-                    provide_context(Patch(patch));
-                    view! {
-                        <ComboRanking patch=patch layout=None categories=vec![(None, "Combined".into())] />
-                        <RankingHeader links=layouts />
-                        <Outlet />
-                    }
+          <Route
+            path=path!(":layout")
+            view=move || {
+              let params = use_params_map();
+              let patch = expect_context::<Patch>().0;
+              let layout = Signal::derive(move || { params.read().get("layout") });
+              let categories = Signal::derive(move || match patch.get().as_str() {
+                "1.00" | "1.41" | "1.50" | "2.00" => {
+                  vec![
+                    (Some("Standard".into()), "Standard".into()),
+                    (Some("Gravspeed".into()), "Gravspeed".into()),
+                    (None, "Combined".into()),
+                  ]
                 }
-            >
-                <Route
-                    path=path!(":layout")
-                    view=move || {
-                        let params = use_params_map();
-                        let patch = expect_context::<Patch>().0;
-                        let layout = Signal::derive(move || { params.read().get("layout") });
-                        let categories = Signal::derive(move || match patch.get().as_str() {
-                            "1.00" | "1.41" | "1.50" | "2.00" => {
-                                vec![
-                                    (Some("Standard".into()), "Standard".into()),
-                                    (Some("Gravspeed".into()), "Gravspeed".into()),
-                                    (None, "Combined".into()),
-                                ]
-                            }
-                            "2.13" => {
-                                vec![
-                                    (Some("Standard".into()), "Standard".into()),
-                                    (Some("Gravspeed".into()), "Gravspeed".into()),
-                                ]
-                            }
-                            _ => vec![],
-                        });
-                        view! { <ComboRanking patch layout categories /> }
-                    }
-                />
-                <Route
-                    path=path!("")
-                    view=|| {
-                        view! { <p>"Please select a layout to view the rankings of."</p> }
-                    }
-                />
-            </ParentRoute>
+                "2.13" => {
+                  vec![(Some("Standard".into()), "Standard".into()), (Some("Gravspeed".into()), "Gravspeed".into())]
+                }
+                _ => vec![],
+              });
+              view! { <ComboRanking patch layout categories /> }
+            }
+          />
+          <Route
+            path=path!("")
+            view=|| {
+              view! { <p>"Please select a layout to view the rankings of."</p> }
+            }
+          />
         </ParentRoute>
+      </ParentRoute>
     }
     .into_inner()
     .into_any_nested_route()

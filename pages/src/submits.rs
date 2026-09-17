@@ -1,7 +1,7 @@
 use chrono::{Local, NaiveDateTime, TimeZone};
-use components::{Collapsible, Filter, Select};
+use components::{Collapsible, Filter, Pager, Select, Table, TableLine};
 use leptos::{either::Either, prelude::*};
-use leptos_router::{components::A, hooks::use_query_map};
+use leptos_router::hooks::use_query_map;
 use server::api::{get_maps, get_runs};
 use types::api::RunFilters;
 
@@ -37,18 +37,9 @@ pub fn Submits() -> impl IntoView {
             ascending: !p.get("order").filter(|v| !v.is_empty()).is_none_or(|s| s == "desc"),
         })
     });
-    let offset = Signal::derive(move || {
-        params
-            .get()
-            .get("page")
-            .unwrap_or(String::from("0"))
-            .parse::<i32>()
-            .unwrap()
-    });
-    let runs = Resource::new(
-        move || (filters.get(), offset.get()),
-        move |f| async move { get_runs(f.0, f.1 * 50).await },
-    );
+    let offset = Signal::derive(move || params.get().get("page").unwrap_or(String::from("0")).parse::<i32>().unwrap());
+    let runs =
+        Resource::new(move || (filters.get(), offset.get()), move |f| async move { get_runs(f.0, f.1 * 50).await });
     let last = Signal::derive(move || {
         let mut last = true;
         runs.map(|res| {
@@ -58,174 +49,142 @@ pub fn Submits() -> impl IntoView {
     });
 
     view! {
-        <section id="filter-list" class="runs">
-            <Collapsible id="filter" class="filter" header=|| "Show Filters">
-                <Filter attr:class="filter">
-                    <Select
-                        name="sort"
-                        indicator="Sort By"
-                        options=[("date", "Date"), ("time", "Time"), ("section", "Section")]
-                    />
-                    <Select
-                        name="order"
-                        indicator="Order By"
-                        selected=1
-                        options=[("asc", "Ascending"), ("desc", "Descending")]
-                    />
-                    <div>
-                        <label for="before" class="indicator">
-                            "Before"
-                        </label>
-                        <input class="select" type="datetime-local" name="before" id="before" />
-                    </div>
-                    <div>
-                        <label for="after" class="indicator">
-                            "After"
-                        </label>
-                        <input class="select" type="datetime-local" name="after" id="after" />
-                    </div>
-                    <div>
-                        <label for="faster" class="indicator">
-                            "Faster Than"
-                        </label>
-                        <input class="select" type="number" name="faster" id="faster" min="0" step="0.001" />
-                    </div>
-                    <div>
-                        <label for="slower" class="indicator">
-                            "Slower Than"
-                        </label>
-                        <input class="select" type="number" name="slower" id="slower" min="0" step="0.001" />
-                    </div>
-                    <div>
-                        <label for="user" class="indicator">
-                            "User ID"
-                        </label>
-                        <input class="select" type="number" name="user" id="user" min="1" step="1" />
-                    </div>
-                    <Select
-                        name="patch"
-                        indicator="Patch"
-                        options=[
-                            ("", "All"),
-                            ("1.00", "1.00"),
-                            ("1.41", "1.41"),
-                            ("1.50", "1.50"),
-                            ("2.00", "2.00"),
-                            ("2.13", "Current"),
-                        ]
-                    />
-                    <Select
-                        name="layout"
-                        indicator="Layout"
-                        options=[
-                            ("", "All"),
-                            ("1", "Layout 1"),
-                            ("2", "Layout 2"),
-                            ("3", "Layout 3"),
-                            ("4", "Layout 4"),
-                            ("5", "Layout 5"),
-                        ]
-                    />
-                    <Select
-                        name="category"
-                        indicator="Category"
-                        options=[("", "All"), ("Standard", "Standard"), ("Gravspeed", "Gravspeed")]
-                    />
-                    <div>
-                        <label for="map" class="indicator">
-                            "Map"
-                        </label>
-                        <input class="select" list="maps" name="map" id="map" />
-                        <datalist id="maps">
-                            <Await future=get_maps() let:maps>
-                                {match maps {
-                                    Ok(v) => {
-                                        Either::Left(
-                                            v
-                                                .into_iter()
-                                                .map(|m| {
-                                                    view! { <option value=m.map.clone()>{m.map.clone()}</option> }
-                                                })
-                                                .collect_view(),
-                                        )
-                                    }
-                                    Err(_) => Either::Right(view! {}),
-                                }}
-                            </Await>
-                        </datalist>
-                    </div>
-                </Filter>
-            </Collapsible>
-            <div class="grid">
-                <span class="heading">"date"</span>
-                <span class="heading">"user"</span>
-                <span class="heading">"patch"</span>
-                <span class="heading">"layout"</span>
-                <span class="heading">"category"</span>
-                <span class="heading">"map"</span>
-                <span class="heading">"proof"</span>
-                <span class="heading last">"time"</span>
-                <div class="divider header"></div>
-                <Suspense fallback=|| { "Fetching Runs" }>
-                    <ErrorBoundary fallback=|_| {
-                        view! { <div class="error-display">"You are not logged in"</div> }
-                    }>
-                        {move || {
-                            runs.get()
-                                .map(|res| {
-                                    res.map(|runs| {
-                                        runs.into_iter()
-                                            .map(|r| {
-                                                view! {
-                                                    <span>{format!("{}", r.created_at.format("%d/%m/%Y %H:%M"))}</span>
-                                                    <span>{r.user.username}</span>
-                                                    <span>"Patch " {r.section.patch}</span>
-                                                    <span>"Layout " {r.section.layout}</span>
-                                                    <span>{r.section.category}</span>
-                                                    <span>{r.section.map}</span>
-                                                    <span>
-                                                        <a href=r.proof>"link"</a>
-                                                    </span>
-                                                    <span class="last">{r.time.to_string()} " sec"</span>
-                                                    <div class="divider"></div>
-                                                }
-                                            })
-                                            .collect::<Vec<_>>()
-                                    })
-                                })
-                        }}
-                    </ErrorBoundary>
-                </Suspense>
+      <section id="filter-list" class="runs">
+        <Collapsible id="filter" class="filter" header=|| "Show Filters">
+          <Filter attr:class="filter">
+            <Select
+              name="sort"
+              indicator="Sort By"
+              options=[("date", "Date"), ("time", "Time"), ("section", "Section")]
+            />
+            <Select
+              name="order"
+              indicator="Order By"
+              selected=1
+              options=[("asc", "Ascending"), ("desc", "Descending")]
+            />
+            <div>
+              <label for="before" class="indicator">
+                "Before"
+              </label>
+              <input class="select" type="datetime-local" name="before" id="before" />
             </div>
-            <div class="pages row">
-                <Show when=move || offset.read() != 0 fallback=|| view! { <div class="arrow disabled">"<"</div> }>
-                    <A
-                        class:arrow=true
-                        href=move || {
-                            let mut map = params.get();
-                            map.replace("page", (offset.get() - 1).to_string());
-                            map.to_query_string()
-                        }
-                    >
-                        "<"
-                    </A>
-                </Show>
-                <div class="page">{move || offset.get() + 1}</div>
-                <Suspense fallback=|| view! { <div class="arrow disabled">">"</div> }>
-                    <Show when=move || !*last.read() fallback=|| view! { <div class="arrow disabled">">"</div> }>
-                        <A
-                            class:arrow=true
-                            href=move || {
-                                let mut map = params.get();
-                                map.replace("page", (offset.get() + 1).to_string());
-                                map.to_query_string()
-                            }
-                        >
-                            ">"
-                        </A>
-                    </Show>
-                </Suspense>
+            <div>
+              <label for="after" class="indicator">
+                "After"
+              </label>
+              <input class="select" type="datetime-local" name="after" id="after" />
             </div>
-        </section>
+            <div>
+              <label for="faster" class="indicator">
+                "Faster Than"
+              </label>
+              <input class="select" type="number" name="faster" id="faster" min="0" step="0.001" />
+            </div>
+            <div>
+              <label for="slower" class="indicator">
+                "Slower Than"
+              </label>
+              <input class="select" type="number" name="slower" id="slower" min="0" step="0.001" />
+            </div>
+            <div>
+              <label for="user" class="indicator">
+                "User ID"
+              </label>
+              <input class="select" type="number" name="user" id="user" min="1" step="1" />
+            </div>
+            <Select
+              name="patch"
+              indicator="Patch"
+              options=[
+                ("", "All"),
+                ("1.00", "1.00"),
+                ("1.41", "1.41"),
+                ("1.50", "1.50"),
+                ("2.00", "2.00"),
+                ("2.13", "Current"),
+              ]
+            />
+            <Select
+              name="layout"
+              indicator="Layout"
+              options=[
+                ("", "All"),
+                ("1", "Layout 1"),
+                ("2", "Layout 2"),
+                ("3", "Layout 3"),
+                ("4", "Layout 4"),
+                ("5", "Layout 5"),
+              ]
+            />
+            <Select
+              name="category"
+              indicator="Category"
+              options=[("", "All"), ("Standard", "Standard"), ("Gravspeed", "Gravspeed")]
+            />
+            <div>
+              <label for="map" class="indicator">
+                "Map"
+              </label>
+              <input class="select" list="maps" name="map" id="map" />
+              <datalist id="maps">
+                <ErrorBoundary fallback=|_| ()>
+                  <Await future=get_maps() let:maps>
+                    {
+                      let maps = maps.clone();
+                      maps
+                        .map(|v| {
+                          v.into_iter()
+                            .map(|m| {
+                              view! { <option value=m.map.clone()>{m.map.clone()}</option> }
+                            })
+                            .collect_view()
+                        })
+                    }
+                  </Await>
+                </ErrorBoundary>
+              </datalist>
+            </div>
+          </Filter>
+        </Collapsible>
+        <Suspense fallback=|| { "Fetching Runs" }>
+          <ErrorBoundary fallback=|_| {
+            view! { <div class="error-display">"Failed to load submits"</div> }
+          }>
+            {move || {
+              runs
+                .and_then(|runs| {
+                  let runs = runs.clone();
+                  view! {
+                    <Table headers=vec![
+                      "date".into(),
+                      "user".into(),
+                      "patch".into(),
+                      "layout".into(),
+                      "category".into(),
+                      "map".into(),
+                      "proof".into(),
+                      "time".into(),
+                    ]>
+                      {runs
+                        .into_iter()
+                        .map(|r| {
+                          view! {
+                            <TableLine>
+                              {format!("{}", r.created_at.format("%d/%m/%Y %H:%M"))} {r.user.username}
+                              {format!("Patch {}", r.section.patch)} {format!("Layout {}", r.section.layout)}
+                              {r.section.category} {r.section.map} <a href=r.proof>"link"</a> {r.time.to_string()}
+                            </TableLine>
+                          }
+                        })
+                        .collect::<Vec<_>>()}
+                    </Table>
+                  }
+                })
+            }}
+          </ErrorBoundary>
+        </Suspense>
+        <Pager name="page" last />
+      </section>
     }
 }

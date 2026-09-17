@@ -81,9 +81,7 @@ pub mod ssr {
         }
 
         async fn get_from_username(name: String, pool: &PgPool) -> Option<Self> {
-            User::get_from_username_with_passhash(name, pool)
-                .await
-                .map(|(user, _)| user)
+            User::get_from_username_with_passhash(name, pool).await.map(|(user, _)| user)
         }
     }
 
@@ -92,9 +90,7 @@ pub mod ssr {
         async fn load_user(userid: i64, pool: Option<&PgPool>) -> Result<User, anyhow::Error> {
             let pool = pool.unwrap();
 
-            User::get(userid, pool)
-                .await
-                .ok_or_else(|| anyhow::anyhow!("Cannot get user"))
+            User::get(userid, pool).await.ok_or_else(|| anyhow::anyhow!("Cannot get user"))
         }
 
         fn is_authenticated(&self) -> bool {

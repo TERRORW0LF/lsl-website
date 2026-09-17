@@ -8,7 +8,7 @@ use charming::{
 };
 use chrono::Local;
 use components::{Chart, Collapsible, Player};
-use leptos::{either::Either, prelude::*};
+use leptos::prelude::*;
 use leptos_router::{
     components::A,
     hooks::{use_params_map, use_query_map},
@@ -27,30 +27,28 @@ pub fn Map(id: Signal<i32>) -> impl IntoView {
     let map = Resource::new(id, |s| get_runs_id(s));
 
     view! {
-        <section id="map">
-            <Transition fallback=move || {
-                view! { <p>"Loading..."</p> }
-            }>
-                <ErrorBoundary fallback=|_| {
-                    view! { <span class="error">"🛈 Something went wrong. Try again"</span> }
-                }>
-                    {move || {
-                        map.get()
-                            .map(|data| {
-                                data.map(|runs| {
-                                    view! {
-                                        <div>
-                                            <h1>{runs.section.map.clone()}</h1>
-                                            <PbChart runs=runs.runs.clone() />
-                                            <MapRunList map=runs.section.map runs=runs.runs />
-                                        </div>
-                                    }
-                                })
-                            })
-                    }}
-                </ErrorBoundary>
-            </Transition>
-        </section>
+      <section id="map">
+        <Transition fallback=move || {
+          view! { <p>"Loading..."</p> }
+        }>
+          <ErrorBoundary fallback=|_| {
+            view! { <span class="error">"🛈 Something went wrong. Try again"</span> }
+          }>
+            {move || {
+              map
+                .and_then(|runs| {
+                  view! {
+                    <div>
+                      <h1>{runs.section.map.clone()}</h1>
+                      <PbChart runs=runs.runs.clone() />
+                      <MapRunList map=runs.section.map.clone() runs=runs.runs.clone() />
+                    </div>
+                  }
+                })
+            }}
+          </ErrorBoundary>
+        </Transition>
+      </section>
     }
 }
 
@@ -87,21 +85,15 @@ fn PbChart(mut runs: Vec<PartialRun>) -> impl IntoView {
                 CompositeValue::Number(charming::datatype::NumericValue::Float(run.time.to_f64().unwrap())),
             ]));
         } else {
-            users.insert(
-                run.user.username.clone(),
-                vec![CompositeValue::Array(vec![
-                    CompositeValue::String(run.created_at.to_rfc3339()),
-                    CompositeValue::Number(charming::datatype::NumericValue::Float(run.time.to_f64().unwrap())),
-                ])],
-            );
+            users.insert(run.user.username.clone(), vec![CompositeValue::Array(vec![
+                CompositeValue::String(run.created_at.to_rfc3339()),
+                CompositeValue::Number(charming::datatype::NumericValue::Float(run.time.to_f64().unwrap())),
+            ])]);
         }
     }
     for user in &mut users {
         if let Some(CompositeValue::Array(vec)) = user.1.last() {
-            user.1.push(CompositeValue::Array(vec![
-                CompositeValue::String(Local::now().to_rfc3339()),
-                vec[1].clone(),
-            ]));
+            user.1.push(CompositeValue::Array(vec![CompositeValue::String(Local::now().to_rfc3339()), vec[1].clone()]));
         }
     }
     let mut chart =
@@ -190,112 +182,103 @@ fn MapRunList(map: String, runs: Vec<PartialRun>) -> impl IntoView {
     });
 
     view! {
-        {if runs_disp.read().is_empty() {
-            Either::Left(view! { <h2>"No Runs Found"</h2> })
-        } else {
-            Either::Right(
+      <Show when=move || runs_disp.read().is_empty() fallback=|| view! { <h2>"No Runs Found"</h2> }>
+        {
+          let map2 = map.clone();
+          view! {
+            <For each=runs_disp key=|r| r.1.id let((i, r))>
+              {
+                let map2 = map2.clone();
+                let username = r.user.username.clone();
                 view! {
-                    <For
-                        each=runs_disp
-                        key=|r| r.1.id
-                        children=move |(i, r)| {
-                            let username = r.user.username.clone();
-                            let map2 = map.clone();
-                            view! {
-                                <div class="map-entry">
-                                    <Collapsible
-                                        id=format!("run_{}", r.id)
-                                        header=move || {
-                                            view! {
-                                                <div class="row">
-                                                    <span class="rank">
-                                                        {move || match sort_key() {
-                                                            Some(k) => {
-                                                                if k == "time" {
-                                                                    "#".to_string() + &(i + 1).to_string()
-                                                                } else {
-                                                                    format!("{}", r.created_at.format("%d/%m/%y"))
-                                                                }
-                                                            }
-                                                            None => "#".to_string() + &(i + 1).to_string(),
-                                                        }}
-                                                    </span>
-                                                    <span class="name">
-                                                        <A href=format!(
-                                                            "/user/{}/leaderboard",
-                                                            r.user.user_id,
-                                                        )>{username}</A>
-                                                    </span>
-                                                    <span class="time">{r.time.to_string()} " s"</span>
-                                                </div>
-                                            }
-                                        }
-                                    >
-                                        <div class="row">
-                                            <Player
-                                                proof=Proof {
-                                                    yt_id: r.yt_id,
-                                                    url: r.proof.clone(),
-                                                }
-                                                    .into()
-                                                cover=map2
-                                            />
-                                            <div class="run-data">
-                                                <div class="grid">
-                                                    <div class="entry">
-                                                        <h3>"RANK"</h3>
-                                                        <p>"#"{i + 1}</p>
-                                                    </div>
-                                                    <div class="entry">
-                                                        <h3>"DATE"</h3>
-                                                        <p>{r.created_at.format("%a %d %b %Y %k:%M:%S").to_string()}</p>
-                                                    </div>
-                                                    <div class="entry">
-                                                        <h3>"USER"</h3>
-                                                        <p>
-                                                            <A href=format!(
-                                                                "/user/{}/leaderboard",
-                                                                r.user.user_id,
-                                                            )>{r.user.username}</A>
-                                                        </p>
-                                                    </div>
-                                                    <div class="entry">
-                                                        <h3>"TIME"</h3>
-                                                        <p>{r.time.to_string()} " sec"</p>
-                                                    </div>
-                                                    <div class="entry">
-                                                        <h3>"STATUS"</h3>
-                                                        <p>
-                                                            {if r.is_wr {
-                                                                "World Record"
-                                                            } else if r.is_pb {
-                                                                "Personal Best"
-                                                            } else if r.verified {
-                                                                "Verified"
-                                                            } else {
-                                                                "Unverified"
-                                                            }}
-                                                        </p>
-                                                    </div>
-                                                    <div class="entry">
-                                                        <h3>"PROOF"</h3>
-                                                        <p>
-                                                            <a class="extern".to_string() href=r.proof target="_blank">
-                                                                "link"
-                                                            </a>
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                <div class="id">{r.id}</div>
-                                            </div>
-                                        </div>
-                                    </Collapsible>
-                                </div>
-                            }
+                  <div class="map-entry">
+                    <Collapsible
+                      id=format!("run_{}", r.id)
+                      header=move || {
+                        view! {
+                          <div class="row">
+                            <span class="rank">
+                              {move || match sort_key() {
+                                Some(k) => {
+                                  if k == "time" {
+                                    "#".to_string() + &(i + 1).to_string()
+                                  } else {
+                                    format!("{}", r.created_at.format("%d/%m/%y"))
+                                  }
+                                }
+                                None => "#".to_string() + &(i + 1).to_string(),
+                              }}
+                            </span>
+                            <span class="name">
+                              <A href=format!("/user/{}/leaderboard", r.user.user_id)>{username}</A>
+                            </span>
+                            <span class="time">{r.time.to_string()} " s"</span>
+                          </div>
                         }
-                    />
-                },
-            )
-        }}
+                      }
+                    >
+                      <div class="row">
+                        <Player
+                          proof=Proof {
+                            yt_id: r.yt_id,
+                            url: r.proof.clone(),
+                          }
+                            .into()
+                          cover=map2.clone()
+                        />
+                        <div class="run-data">
+                          <div class="grid">
+                            <div class="entry">
+                              <h3>"RANK"</h3>
+                              <p>"#"{i + 1}</p>
+                            </div>
+                            <div class="entry">
+                              <h3>"DATE"</h3>
+                              <p>{r.created_at.format("%a %d %b %Y %k:%M:%S").to_string()}</p>
+                            </div>
+                            <div class="entry">
+                              <h3>"USER"</h3>
+                              <p>
+                                <A href=format!("/user/{}/leaderboard", r.user.user_id)>{r.user.username}</A>
+                              </p>
+                            </div>
+                            <div class="entry">
+                              <h3>"TIME"</h3>
+                              <p>{r.time.to_string()} " sec"</p>
+                            </div>
+                            <div class="entry">
+                              <h3>"STATUS"</h3>
+                              <p>
+                                {if r.is_wr {
+                                  "World Record"
+                                } else if r.is_pb {
+                                  "Personal Best"
+                                } else if r.verified {
+                                  "Verified"
+                                } else {
+                                  "Unverified"
+                                }}
+                              </p>
+                            </div>
+                            <div class="entry">
+                              <h3>"PROOF"</h3>
+                              <p>
+                                <a class="extern".to_string() href=r.proof target="_blank">
+                                  "link"
+                                </a>
+                              </p>
+                            </div>
+                          </div>
+                          <div class="id">{r.id}</div>
+                        </div>
+                      </div>
+                    </Collapsible>
+                  </div>
+                }
+              }
+            </For>
+          }
+        }
+      </Show>
     }
 }
