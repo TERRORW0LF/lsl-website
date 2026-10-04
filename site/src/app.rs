@@ -144,15 +144,15 @@ pub fn App() -> impl IntoView {
                             </button>
                             <ul class="dropdown-menu" id="user-dropdown">
                               <ListElements>
-                                <A href=format!("/user/{}/leaderboard", user.id)>"Profile"</A>
-                                <A href="/user/@me/submit">"Submit"</A>
                                 <A href="/user/@me/dashboard">"Dashboard"</A>
-                                <A href="/user/@me/manage">"Manage Runs"</A>
+                                <A href=format!("/user/{}/leaderboard", user.id)>"View Profile"</A>
+                                <A href="/user/@me/submit">"Submit"</A>
+                                <A href="/user/@me/manage">"Delete"</A>
                                 <Show when=move || {
                                   user.has(&Permissions::Verify) || user.has(&Permissions::ManageUsers)
                                     || user.has(&Permissions::ManageRuns) || user.has(&Permissions::ManageSections)
                                 }>
-                                  <A href="/moderation">"Admin Panel"</A>
+                                  <A href="/moderation">"Manage"</A>
                                 </Show>
                                 <ActionForm action=logout>
                                   <button type="submit" class="dropdown-title">

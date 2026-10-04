@@ -405,30 +405,6 @@ pub async fn submit(
     }
 }
 
-#[server(Verify, prefix="/api", endpoint="runs/verify", input=PostUrl)]
-pub async fn verify(id: i32) -> Result<(), ApiError> {
-    use self::ssr::*;
-
-    let auth = auth()?;
-    let pool = pool()?;
-
-    let u = auth.current_user.ok_or(ApiError::Unauthenticated)?;
-    if !u.has(&Permissions::Verify) {
-        return Err(ApiError::Unauthorized);
-    }
-
-    sqlx::query(
-        r#"UPDATE run
-        SET verified = TRUE
-        WHERE id = $1;"#,
-    )
-    .bind(id)
-    .execute(&pool)
-    .await
-    .or(Err(ApiError::NotFound))?;
-    Ok(())
-}
-
 #[server(Delete, prefix="/api", endpoint="runs/delete", input=PostUrl)]
 pub async fn delete(id: i32, redirect: Option<String>) -> Result<(), ApiError> {
     use self::ssr::*;
@@ -437,9 +413,7 @@ pub async fn delete(id: i32, redirect: Option<String>) -> Result<(), ApiError> {
     let pool = pool()?;
 
     let u = auth.current_user.ok_or(ApiError::Unauthenticated)?;
-    if !u.has(&Permissions::Delete) {
-        return Err(ApiError::Unauthorized);
-    }
+    u.has(&Permissions::Delete).ok_or(ApiError::Unauthorized)?;
 
     let num = sqlx::query(
         r#"DELETE FROM run

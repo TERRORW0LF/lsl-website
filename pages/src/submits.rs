@@ -1,6 +1,6 @@
 use chrono::{Local, NaiveDateTime, TimeZone};
 use components::{Collapsible, Filter, Pager, Select, Table, TableLine};
-use leptos::{either::Either, prelude::*};
+use leptos::prelude::*;
 use leptos_router::hooks::use_query_map;
 use server::api::{get_maps, get_runs};
 use types::api::RunFilters;

@@ -1,9 +1,9 @@
 use leptos::prelude::*;
-use server_fn::codec::GetUrl;
+use server_fn::codec::PostUrl;
 use types::api::{ApiError, Permissions};
 
 // TODO: Move rank and title updates into rating update trigger tied to rank table
-#[server(RecalculateRankings, prefix="/api", endpoint="ranking/recalculate", input=GetUrl)]
+#[server(RecalculateRankings, prefix="/api", endpoint="ranking/recalculate", input=PostUrl)]
 pub async fn recalculate_ranks(layout: Option<String>, category: Option<String>) -> Result<(), ApiError> {
     use crate::auth::ssr::{auth, pool};
     use types::api::UserPermissions;
@@ -59,8 +59,8 @@ pub async fn recalculate_ranks(layout: Option<String>, category: Option<String>)
     Ok(())
 }
 
-#[server(RecalculateRuns, prefix="/api", endpoint="runs/recalculate", input=GetUrl)]
-pub async fn recalculate_runs(layout: String, category: String, map: String) -> Result<(), ApiError> {
+#[server(RecalculateRuns, prefix="/api", endpoint="runs/recalculate", input=PostUrl)]
+pub async fn recalculate_runs(section_id: i32) -> Result<(), ApiError> {
     use crate::auth::ssr::{auth, pool};
     use types::api::UserPermissions;
 
@@ -74,13 +74,9 @@ pub async fn recalculate_runs(layout: String, category: String, map: String) -> 
             / (SELECT time 
                FROM run r
                WHERE run.section_id = r.section_id AND r.is_wr = true;)::double precision
-            , 0.0)
-        FROM section s
-        WHERE section_id = s.id AND patch = '2.13' AND layout = $1 AND category = $2 AND map = $3;"#,
+            , 0.0);"#,
     )
-    .bind(layout)
-    .bind(category)
-    .bind(map)
+    .bind(section_id)
     .execute(&pool)
     .await
     .map_err(|_| ApiError::ServerError("Database update failed".into()))?;
@@ -88,7 +84,7 @@ pub async fn recalculate_runs(layout: String, category: String, map: String) -> 
     Ok(())
 }
 
-#[server(AddSection, prefix="/api", endpoint="section/add", input=GetUrl)]
+#[server(AddSection, prefix="/api", endpoint="section/add", input=PostUrl)]
 pub async fn add_section(
     layout: String,
     category: String,
@@ -119,7 +115,7 @@ pub async fn add_section(
     Ok(())
 }
 
-#[server(UpdateSetion, prefix="/api", endpoint="section/update", input=GetUrl)]
+#[server(UpdateSetion, prefix="/api", endpoint="section/update", input=PostUrl)]
 pub async fn update_section(id: i32, submittable: Option<bool>, name: Option<String>) -> Result<(), ApiError> {
     use crate::auth::ssr::{auth, pool};
     use types::api::UserPermissions;
@@ -151,6 +147,43 @@ pub async fn update_section(id: i32, submittable: Option<bool>, name: Option<Str
         .execute(&pool)
         .await
         .map_err(|_| ApiError::ServerError("Database update failed".into()))?;
+
+    Ok(())
+}
+
+#[server(UpdateRun, prefix="/api", endpoint="run/update", input=PostUrl)]
+pub async fn update_run(id: i32, verified: Option<bool>, section_id: Option<i32>) -> Result<(), ApiError> {
+    use crate::auth::ssr::{auth, pool};
+    use types::api::UserPermissions;
+
+    let user = auth()?.current_user.ok_or(ApiError::Unauthenticated)?;
+    let pool = pool()?;
+
+    let mut update = false;
+    let mut query = sqlx::QueryBuilder::new(
+        r#"UPDATE run
+        SET"#,
+    );
+    let mut set = query.separated(", ");
+    if let Some(verified) = verified {
+        user.has(&Permissions::Verify).ok_or(ApiError::Unauthorized)?;
+        update = true;
+        set.push(" verified = ").push_bind_unseparated(verified);
+    }
+    if let Some(section_id) = section_id {
+        user.has(&Permissions::ManageRuns).ok_or(ApiError::Unauthorized)?;
+        update = true;
+        set.push(" section_id = ").push_bind_unseparated(section_id);
+    }
+    update.ok_or(ApiError::InvalidInput)?;
+    let _ = query
+        .push(" WHERE id = ")
+        .push_bind(id)
+        .build()
+        .persistent(false)
+        .execute(&pool)
+        .await
+        .map_err(|_| ApiError::ServerError("Database udpate failed".into()))?;
 
     Ok(())
 }
