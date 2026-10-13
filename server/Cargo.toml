@@ -25,6 +25,7 @@ oauth2 = { workspace = true, optional = true }
 rand = { workspace = true, optional = true }
 reqwest = { workspace = true, optional = true }
 sqlx = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true }
 
 [features]
 default = [ "ssr" ]
@@ -37,6 +38,7 @@ ssr = [
     "dep:rand",
     "dep:reqwest",
     "dep:sqlx",
+	"dep:tokio",
     "leptos/ssr",
     "leptos_meta/ssr", 
     "leptos_router/ssr",

@@ -1,7 +1,7 @@
 use chrono::{Local, NaiveDateTime, TimeZone};
-use components::{Collapsible, Filter, Select};
+use components::{Collapsible, Filter, Pager, Select, Table};
 use leptos::prelude::*;
-use leptos_router::{components::A, hooks::use_query_map};
+use leptos_router::hooks::use_query_map;
 use server::api::get_activity;
 use types::api::ActivityFilters;
 
@@ -36,14 +36,11 @@ pub fn Activity() -> impl IntoView {
         })
     });
     let offset = Signal::derive(move || params.get().get("page").unwrap_or(String::from("0")).parse::<i32>().unwrap());
-    let activities =
-        Resource::new(move || (filters.get(), offset.get()), move |f| async move { get_activity(f.0, f.1 * 50).await });
+    let activities = Resource::new(move || (filters.get(), offset.get()), move |f| get_activity(f.0, f.1 * 50));
     let last = Signal::derive(move || {
         let mut last = true;
         activities.map(|res| {
-            let _ = res.as_ref().inspect(|v| {
-                last = v.len() < 50;
-            });
+            let _ = res.as_ref().inspect(|v| last = v.len() < 50);
         });
         last
     });
@@ -113,88 +110,61 @@ pub fn Activity() -> impl IntoView {
             />
           </Filter>
         </Collapsible>
-        <div class="grid">
-          <span class="heading">"date"</span>
-          <span class="heading">"user"</span>
-          <span class="heading">"patch"</span>
-          <span class="heading">"layout"</span>
-          <span class="heading">"category"</span>
-          <span class="heading">"old title"</span>
-          <span class="heading">"new title"</span>
-          <span class="heading">"old rank"</span>
-          <span class="heading">"new rank"</span>
-          <div class="divider header"></div>
-          <Suspense fallback=|| { "Fetching Runs" }>
-            <ErrorBoundary fallback=|_| {
-              view! { <div class="error-display">"You are not logged in"</div> }
-            }>
-              {move || {
-                activities
-                  .and_then(|runs| {
-                    let runs = runs.clone();
-                    runs
-                      .into_iter()
-                      .map(|r| {
-                        view! {
-                          <span>{format!("{}", r.created_at.format("%d/%m/%Y %H:%M"))}</span>
-                          <span>{r.user.username}</span>
-                          <span>{r.patch.map(|v| format!("Patch {v}")).unwrap_or("-".into())}</span>
-                          <span>{r.layout.map(|v| format!("Layout {v}")).unwrap_or("-".into())}</span>
-                          <span>{r.category.unwrap_or("-".into())}</span>
-                          <span class=format!(
-                            "{} color",
-                            r.title_old.map(|v| v.to_string()).unwrap_or_default(),
-                          )>{r.title_old.clone().map(|v| v.to_string()).unwrap_or("-".into())}</span>
-                          <span class=format!(
-                            "{} color",
-                            r.title_new.map(|v| v.to_string()).unwrap_or_default(),
-                          )>{r.title_new.clone().map(|v| v.to_string()).unwrap_or("-".into())}</span>
-                          <span class=format!(
-                            "rank-{} color",
-                            r.rank_old.map(|v| v.to_string()).unwrap_or_default(),
-                          )>{r.rank_old.map(|v| format!("#{v}")).unwrap_or("-".into())}</span>
-                          <span class=format!(
-                            "rank-{} color",
-                            r.rank_new.map(|v| v.to_string()).unwrap_or_default(),
-                          )>{r.rank_new.map(|v| format!("#{v}")).unwrap_or("-".into())}</span>
-                          <div class="divider"></div>
-                        }
-                      })
-                      .collect::<Vec<_>>()
-                  })
-              }}
-            </ErrorBoundary>
-          </Suspense>
-        </div>
-        <div class="pages row">
-          <Show when=move || offset.read() != 0 fallback=|| view! { <div class="arrow disabled">"<"</div> }>
-            <A
-              class:arrow=true
-              href=move || {
-                let mut map = params.get();
-                map.replace("page", (offset.get() - 1).to_string());
-                map.to_query_string()
-              }
-            >
-              "<"
-            </A>
-          </Show>
-          <div class="page">{move || offset.get() + 1}</div>
-          <Suspense fallback=|| view! { <div class="arrow disabled">">"</div> }>
-            <Show when=move || !*last.read() fallback=|| view! { <div class="arrow disabled">">"</div> }>
-              <A
-                class:arrow=true
-                href=move || {
-                  let mut map = params.get();
-                  map.replace("page", (offset.get() + 1).to_string());
-                  map.to_query_string()
-                }
-              >
-                ">"
-              </A>
-            </Show>
-          </Suspense>
-        </div>
+        <Suspense fallback=|| { "Fetching Activities" }>
+          <ErrorBoundary fallback=|_| {
+            view! { <div class="error-display">"Failed to load activities"</div> }
+          }>
+            {move || {
+              activities
+                .and_then(|activity| {
+                  let activity = activity.clone();
+                  view! {
+                    <Table headers=vec![
+                      "date".into(),
+                      "user".into(),
+                      "patch".into(),
+                      "layout".into(),
+                      "category".into(),
+                      "old title".into(),
+                      "new title".into(),
+                      "old rank".into(),
+                      "new rank".into(),
+                    ]>
+                      {activity
+                        .into_iter()
+                        .map(|r| {
+                          view! {
+                            <span>{format!("{}", r.created_at.format("%d/%m/%Y %H:%M"))}</span>
+                            <span>{r.user.username}</span>
+                            <span>{r.patch.map(|v| format!("Patch {v}")).unwrap_or("-".into())}</span>
+                            <span>{r.layout.map(|v| format!("Layout {v}")).unwrap_or("-".into())}</span>
+                            <span>{r.category.unwrap_or("-".into())}</span>
+                            <span class=format!(
+                              "{} color",
+                              r.title_old.map(|v| v.to_string()).unwrap_or_default(),
+                            )>{r.title_old.clone().map(|v| v.to_string()).unwrap_or("-".into())}</span>
+                            <span class=format!(
+                              "{} color",
+                              r.title_new.map(|v| v.to_string()).unwrap_or_default(),
+                            )>{r.title_new.clone().map(|v| v.to_string()).unwrap_or("-".into())}</span>
+                            <span class=format!(
+                              "rank-{} color",
+                              r.rank_old.map(|v| v.to_string()).unwrap_or_default(),
+                            )>{r.rank_old.map(|v| format!("#{v}")).unwrap_or("-".into())}</span>
+                            <span class=format!(
+                              "rank-{} color",
+                              r.rank_new.map(|v| v.to_string()).unwrap_or_default(),
+                            )>{r.rank_new.map(|v| format!("#{v}")).unwrap_or("-".into())}</span>
+                          }
+                        })
+                        .collect::<Vec<_>>()}
+                    </Table>
+                  }
+                })
+            }}
+          </ErrorBoundary>
+        </Suspense>
+        <Pager name="page" last />
       </section>
     }
 }

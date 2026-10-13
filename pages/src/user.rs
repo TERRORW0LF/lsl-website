@@ -1,6 +1,6 @@
 use chrono::{Local, NaiveDateTime, TimeZone};
 use components::{Collapsible, Filter, Pager, Select, Table, TableLine};
-use leptos::{either::Either, prelude::*};
+use leptos::prelude::*;
 use leptos_router::{
     components::{A, Outlet},
     hooks::{use_params_map, use_query_map},
@@ -16,7 +16,7 @@ use types::{
 
 #[component]
 pub fn Profile(id: Signal<i64>) -> impl IntoView {
-    let user = Resource::new(id, |s| get_user(s));
+    let user = Resource::new(move || id(), |s| get_user(s));
     view! {
       <section id="profile">
         <Suspense fallback=|| {
@@ -53,6 +53,7 @@ pub fn ManageRuns() -> impl IntoView {
             layout: p.get("layout").filter(|v| !v.is_empty()),
             category: p.get("category").filter(|v| !v.is_empty()),
             map: p.get("map").filter(|v| !v.is_empty()),
+            status: p.get("status").filter(|v| !v.is_empty()),
             faster: p.get("faster").map(|s| s.parse().ok()).flatten(),
             slower: p.get("slower").map(|s| s.parse().ok()).flatten(),
             before: p
@@ -158,21 +159,24 @@ pub fn ManageRuns() -> impl IntoView {
               </label>
               <input class="select" list="maps" name="map" id="map" />
               <datalist id="maps">
-                <ErrorBoundary fallback=|_| ()>
-                  <Await future=get_maps() let:maps>
-                    {maps
-                      .clone()
-                      .map(|v| {
-                        v.into_iter()
-                          .map(|m| {
-                            view! { <option value=m.map.clone()>{m.map.clone()}</option> }
-                          })
-                          .collect_view()
-                      })}
-                  </Await>
-                </ErrorBoundary>
+                <Await future=get_maps("1".into(), "Standard".into()) let:maps>
+                  {maps
+                    .clone()
+                    .map(|v| {
+                      v.into_iter()
+                        .map(|m| {
+                          view! { <option value=m.map.clone()>{m.map.clone()}</option> }
+                        })
+                        .collect_view()
+                    })}
+                </Await>
               </datalist>
             </div>
+            <Select
+              name="status"
+              indicator="Status"
+              options=[("", "All"), ("verified", "Verified"), ("pb", "Personal Best"), ("wr", "World Record")]
+            />
           </Filter>
         </Collapsible>
         <Suspense fallback=|| { "Fetching Runs" }>

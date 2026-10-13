@@ -15,6 +15,7 @@ pub fn Submits() -> impl IntoView {
             layout: p.get("layout").filter(|v| !v.is_empty()),
             category: p.get("category").filter(|v| !v.is_empty()),
             map: p.get("map").filter(|v| !v.is_empty()),
+            status: p.get("status").filter(|v| !v.is_empty()),
             faster: p.get("faster").map(|s| s.parse().ok()).flatten(),
             slower: p.get("slower").map(|s| s.parse().ok()).flatten(),
             before: p
@@ -38,8 +39,7 @@ pub fn Submits() -> impl IntoView {
         })
     });
     let offset = Signal::derive(move || params.get().get("page").unwrap_or(String::from("0")).parse::<i32>().unwrap());
-    let runs =
-        Resource::new(move || (filters.get(), offset.get()), move |f| async move { get_runs(f.0, f.1 * 50).await });
+    let runs = Resource::new(move || (filters.get(), offset.get()), move |f| get_runs(f.0, f.1 * 50));
     let last = Signal::derive(move || {
         let mut last = true;
         runs.map(|res| {
@@ -128,23 +128,26 @@ pub fn Submits() -> impl IntoView {
               </label>
               <input class="select" list="maps" name="map" id="map" />
               <datalist id="maps">
-                <ErrorBoundary fallback=|_| ()>
-                  <Await future=get_maps() let:maps>
-                    {
-                      let maps = maps.clone();
-                      maps
-                        .map(|v| {
-                          v.into_iter()
-                            .map(|m| {
-                              view! { <option value=m.map.clone()>{m.map.clone()}</option> }
-                            })
-                            .collect_view()
-                        })
-                    }
-                  </Await>
-                </ErrorBoundary>
+                <Await future=get_maps("1".into(), "Standard".into()) let:maps>
+                  {
+                    let maps = maps.clone();
+                    maps
+                      .map(|v| {
+                        v.into_iter()
+                          .map(|m| {
+                            view! { <option value=m.map.clone()>{m.map.clone()}</option> }
+                          })
+                          .collect_view()
+                      })
+                  }
+                </Await>
               </datalist>
             </div>
+            <Select
+              name="status"
+              indicator="Status"
+              options=[("", "All"), ("verified", "Verified"), ("pb", "Personal Best"), ("wr", "World Record")]
+            />
           </Filter>
         </Collapsible>
         <Suspense fallback=|| { "Fetching Runs" }>

@@ -24,7 +24,7 @@ use types::{api::PartialRun, internal::Proof};
 
 #[component]
 pub fn Map(id: Signal<i32>) -> impl IntoView {
-    let map = Resource::new(id, |s| get_runs_id(s));
+    let map = Resource::new(move || id(), |s| get_runs_id(s));
 
     view! {
       <section id="map">

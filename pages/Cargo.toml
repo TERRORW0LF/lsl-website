@@ -26,7 +26,7 @@ web-sys.workspace = true
 leptos_axum = { workspace = true, optional = true }
 
 [features]
-default = [ "ssr" ]
+#default = [ "ssr" ]
 ssr = [
     "dep:leptos_axum",
     "leptos/ssr",

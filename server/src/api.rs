@@ -49,10 +49,7 @@ pub async fn get_runs_category(patch: String, layout: String, category: String) 
     .bind(category)
     .fetch_all(&pool)
     .await
-    .map_err(|e| {
-        leptos::logging::warn!("{e:?}");
-        ApiError::ServerError("Database lookup failed".into())
-    })?;
+    .map_err(|_| ApiError::ServerError("Database lookup failed".into()))?;
 
     res_opts.append_header(CACHE_CONTROL, HeaderValue::from_static("max-age=900"));
     Ok(runs)
@@ -92,6 +89,14 @@ pub async fn get_runs(filter: RunFilters, offset: i32) -> Result<Vec<Run>, ApiEr
     if let Some(map) = filter.map {
         query.push(" AND map = ").push_bind(map);
     }
+    if let Some(status) = filter.status {
+        match status.as_str() {
+            "verified" => query.push(" AND verified = true"),
+            "pb" => query.push(" AND is_pb = true"),
+            "wr" => query.push("AND is_wr = true"),
+            _ => &mut query,
+        };
+    }
     if let Some(faster) = filter.faster {
         query.push(" AND time <= ").push_bind(faster);
     }
@@ -120,15 +125,17 @@ pub async fn get_runs(filter: RunFilters, offset: i32) -> Result<Vec<Run>, ApiEr
 }
 
 #[server(GetMaps, prefix="/api", endpoint="maps", input=GetUrl)]
-pub async fn get_maps() -> Result<Vec<Section>, ApiError> {
+pub async fn get_maps(layout: String, category: String) -> Result<Vec<Section>, ApiError> {
     let pool = crate::auth::ssr::pool()?;
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let maps = sqlx::query_as::<_, Section>(
         r#"SELECT id, patch, layout, category, map, submittable, code, created_at
         FROM section
-        WHERE patch='2.13' AND layout='1' AND category='Standard'
+        WHERE patch='2.13' AND layout = $1 AND category = $2
         ORDER BY map ASC;"#,
     )
+    .bind(layout)
+    .bind(category)
     .fetch_all(&pool)
     .await
     .or(Err(ApiError::ServerError("Database lookup failed".to_string())))?;
@@ -166,10 +173,7 @@ pub async fn get_rankings(
     .bind(category)
     .fetch_all(&pool)
     .await
-    .or_else(|e| {
-        leptos::logging::log!("{e:?}");
-        Err(ApiError::NotFound)
-    })?;
+    .or_else(|_| Err(ApiError::NotFound))?;
 
     res_opts.append_header(CACHE_CONTROL, HeaderValue::from_static("max-age=900"));
     Ok(rankings)

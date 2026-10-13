@@ -127,7 +127,7 @@ pub async fn register(
     auth.login_user(user.id);
     auth.remember_user(remember.is_some());
 
-    leptos_axum::redirect("/");
+    leptos_axum::redirect("/", false);
 
     Ok(())
 }
@@ -151,8 +151,8 @@ pub async fn login(
     auth.login_user(user.id);
     auth.remember_user(remember.is_some());
     match HeaderValue::from_str(&format!("/{}", redirect.unwrap_or(String::new()))) {
-        Ok(r) => leptos_axum::redirect(r.to_str().unwrap_or("/")),
-        Err(_) => leptos_axum::redirect("/"),
+        Ok(r) => leptos_axum::redirect(r.to_str().unwrap_or("/"), false),
+        Err(_) => leptos_axum::redirect("/", false),
     };
     Ok(())
 }
@@ -213,7 +213,7 @@ pub async fn update_creds(
     }
     if let Some(red) = redirect {
         if let Some(re) = HeaderValue::from_str(&format!("/{}", red)).ok() {
-            leptos_axum::redirect(re.to_str().unwrap_or("/"));
+            leptos_axum::redirect(re.to_str().unwrap_or("/"), false);
         };
     }
     Ok(())
@@ -247,7 +247,7 @@ pub async fn update_bio(bio: Option<String>, redirect: Option<String>) -> Result
 
     if let Some(red) = redirect {
         if let Some(re) = HeaderValue::from_str(&format!("/{}", red)).ok() {
-            leptos_axum::redirect(re.to_str().unwrap_or("/"));
+            leptos_axum::redirect(re.to_str().unwrap_or("/"), false);
         };
     }
     Ok(())
@@ -335,7 +335,7 @@ pub async fn logout() -> Result<(), ApiError> {
     let auth = auth()?;
 
     auth.logout_user();
-    leptos_axum::redirect("/");
+    leptos_axum::redirect("/", false);
 
     Ok(())
 }
@@ -400,7 +400,7 @@ pub async fn submit(
         .await
         .map_err(|_| ApiError::ServerError("Database insert failed".into()))?;
 
-        leptos_axum::redirect(&format!("/leaderboard/map/{}", section_id.id));
+        leptos_axum::redirect(&format!("/leaderboard/map/{}", section_id.id), false);
         Ok(())
     }
 }
@@ -426,7 +426,7 @@ pub async fn delete(id: i32, redirect: Option<String>) -> Result<(), ApiError> {
     if num.is_ok_and(|r| r.rows_affected() != 0) {
         if let Some(red) = redirect {
             if let Some(re) = HeaderValue::from_str(&format!("/{}", red)).ok() {
-                leptos_axum::redirect(re.to_str().unwrap_or("/"));
+                leptos_axum::redirect(re.to_str().unwrap_or("/"), false);
             };
         }
         Ok(())
@@ -473,7 +473,7 @@ pub async fn discord_add() -> Result<(), ApiError> {
         .url();
 
     auth.session.set("csrf", csrf_token);
-    leptos_axum::redirect(auth_url.as_ref());
+    leptos_axum::redirect(auth_url.as_ref(), false);
     Ok(())
 }
 
@@ -482,7 +482,7 @@ pub async fn discord_auth(code: String, state: String) -> Result<(), ApiError> {
     use self::ssr::*;
     use oauth2::{AuthorizationCode, CsrfToken, TokenResponse, reqwest::ClientBuilder};
 
-    leptos_axum::redirect("/user/@me/dashboard");
+    leptos_axum::redirect("/user/@me/dashboard", false);
 
     let auth = auth()?;
     let user = auth.current_user.ok_or(ApiError::Unauthenticated)?;

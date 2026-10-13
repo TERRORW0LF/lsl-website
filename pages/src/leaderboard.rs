@@ -23,6 +23,7 @@ pub fn Section(
     let query = use_query_map();
 
     view! {
+      {leptos::logging::warn!("Hit Section View")}
       <Title text="Leaderboard" />
       <Header attr:id="lb_header">
         {move || {
@@ -116,12 +117,18 @@ pub fn Section(
 #[component]
 pub fn Leaderboard(patch: Signal<String>, layout: Signal<String>, category: Signal<String>) -> impl IntoView {
     let filter_key = Memo::new(|_| use_query_map().read().get("map_state").unwrap_or("submittable".into()));
-    let selection = Signal::derive(move || (patch.get(), layout.get(), category.get()));
-    let maps_res = Resource::new(selection, |mut s| {
-        get_runs_category(s.0, s.1, format!("{}{}", s.2.remove(0).to_uppercase(), s.2))
-    });
+    let maps_res = Resource::new(
+        move || (patch.get(), layout.get(), category.get()),
+        |mut s| {
+            leptos::logging::warn!("Hit Resource load");
+            get_runs_category(s.0, s.1, format!("{}{}", s.2.remove(0).to_uppercase(), s.2))
+        },
+    );
 
     view! {
+      {
+        leptos::logging::warn!("Hit Leaderboard View");
+      }
       <ErrorBoundary fallback=|e| {
         view! {
           <span class="error">

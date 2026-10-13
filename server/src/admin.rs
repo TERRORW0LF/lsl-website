@@ -51,10 +51,7 @@ pub async fn recalculate_ranks(layout: Option<String>, category: Option<String>)
     .bind(category)
     .execute(&pool)
     .await
-    .map_err(|e| {
-        leptos::logging::warn!("{e:?}");
-        ApiError::ServerError("Database update failed".into())
-    })?;
+    .map_err(|_| ApiError::ServerError("Database update failed".into()))?;
 
     Ok(())
 }
@@ -70,11 +67,47 @@ pub async fn recalculate_runs(section_id: i32) -> Result<(), ApiError> {
 
     let _ = sqlx::query(
         r#"UPDATE run
-        SET points = GREATEST(3.0 - 2.0 * time::double precision 
-            / (SELECT time 
-               FROM run r
-               WHERE run.section_id = r.section_id AND r.is_wr = true;)::double precision
-            , 0.0);"#,
+        SET points = CASE
+            WHEN is_pb
+            THEN GREATEST(3.0 - 2.0 * time::double precision 
+                / (SELECT time 
+                    FROM run r
+                    WHERE run.section_id = r.section_id AND r.is_wr = true)::double precision
+                , 0.0)
+            ELSE null
+        END
+        WHERE section_id = $1;"#,
+    )
+    .bind(section_id)
+    .execute(&pool)
+    .await
+    .map_err(|_| ApiError::ServerError("Database update failed".into()))?;
+
+    Ok(())
+}
+
+#[server(FixRuns, prefix="/api", endpoint="runs/fix", input=PostUrl)]
+pub async fn fix_runs(section_id: i32) -> Result<(), ApiError> {
+    use crate::auth::ssr::{auth, pool};
+    use types::api::UserPermissions;
+
+    let user = auth()?.current_user.ok_or(ApiError::Unauthenticated)?;
+    user.has(&Permissions::ManageRuns).ok_or(ApiError::Unauthorized)?;
+    let pool = pool()?;
+
+    let _ = sqlx::query(
+        r#"UPDATE run r1
+        SET is_wr = (r1.verified = true AND r1.id = (SELECT id 
+            FROM run r2 
+            WHERE r2.section_id = $1 AND r2.verified
+            ORDER BY r2.time ASC, r2.created_at ASC, r2.id ASC 
+            LIMIT 1)),
+        is_pb = (r1.verified = true AND r1.id = (SELECT id
+            FROM run r2
+            WHERE r2.section_id = $1 AND r2.user_id = r1.user_id AND r2.verified
+            ORDER BY r2.time ASC, r2.created_at ASC, r2.id ASC
+            LIMIT 1))
+        WHERE section_id = $1;"#,
     )
     .bind(section_id)
     .execute(&pool)

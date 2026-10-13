@@ -18,7 +18,10 @@ use pages::{
     ranking::RankingHeader,
     user::Delete,
 };
-use server::auth::{Login, Logout, Register, UpdateBio, UpdateCreds, get_current_user, update_pfp};
+use server::{
+    api::get_runs_id,
+    auth::{Login, Logout, Register, UpdateBio, UpdateCreds, get_current_user, update_pfp},
+};
 use types::{
     api::{Permissions, UserPermissions},
     leptos::UserResource,

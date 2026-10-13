@@ -329,7 +329,7 @@ pub fn Submit() -> impl IntoView {
             />
             <datalist id="maps">
               <ErrorBoundary fallback=|_| ()>
-                <Await future=get_maps() let:maps>
+                <Await future=get_maps("1".into(), "Standard".into()) let:maps>
                   {
                     let maps = maps.clone();
                     let maps = maps.map(|v| v.into_iter().filter(|m| m.submittable).collect());
