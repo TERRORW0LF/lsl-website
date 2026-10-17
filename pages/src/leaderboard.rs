@@ -23,7 +23,6 @@ pub fn Section(
     let query = use_query_map();
 
     view! {
-      {leptos::logging::warn!("Hit Section View")}
       <Title text="Leaderboard" />
       <Header attr:id="lb_header">
         {move || {
@@ -119,16 +118,16 @@ pub fn Leaderboard(patch: Signal<String>, layout: Signal<String>, category: Sign
     let filter_key = Memo::new(|_| use_query_map().read().get("map_state").unwrap_or("submittable".into()));
     let maps_res = Resource::new(
         move || (patch.get(), layout.get(), category.get()),
-        |mut s| {
-            leptos::logging::warn!("Hit Resource load");
-            get_runs_category(s.0, s.1, format!("{}{}", s.2.remove(0).to_uppercase(), s.2))
-        },
+        |mut s| get_runs_category(s.0, s.1, format!("{}{}", s.2.remove(0).to_uppercase(), s.2)),
     );
+    let maps = Signal::derive(move || {
+        maps_res.and_then(|vec| {
+            let vec = vec.clone();
+            vec.into_iter().filter(|map| map.section.submittable || *filter_key.read() == "all").collect::<Vec<_>>()
+        })
+    });
 
     view! {
-      {
-        leptos::logging::warn!("Hit Leaderboard View");
-      }
       <ErrorBoundary fallback=|e| {
         view! {
           <span class="error">
@@ -151,16 +150,6 @@ pub fn Leaderboard(patch: Signal<String>, layout: Signal<String>, category: Sign
           view! { <p>"Loading..."</p> }
         }>
           {move || {
-            let maps = Memo::new(move |_| {
-              maps_res
-                .and_then(|vec| {
-                  let vec = vec.clone();
-                  vec
-                    .into_iter()
-                    .filter(|map| map.section.submittable || *filter_key.read() == "all")
-                    .collect::<Vec<_>>()
-                })
-            });
             maps
               .get()
               .map(|data| {
