@@ -12,3 +12,13 @@ pub fn escape_regex(input: &str) -> String {
     }
     buf
 }
+
+pub trait OptResToBool {
+    fn opt_res_to_bool(&self) -> bool;
+}
+
+impl<E> OptResToBool for Option<Result<bool, E>> {
+    fn opt_res_to_bool(&self) -> bool {
+        self.as_ref().map(|r| r.as_ref().ok()).flatten().is_some_and(|b| *b)
+    }
+}

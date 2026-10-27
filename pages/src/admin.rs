@@ -11,12 +11,14 @@ use server::{
     auth::Delete,
 };
 use types::{
-    api::{ApiError, Run, RunFilters},
+    api::{ApiError, Permissions, Run, RunFilters, UserPermissions},
     leptos::UserResource,
 };
+use util::OptResToBool;
 
 #[component]
 pub fn Admin() -> impl IntoView {
+    let user = expect_context::<UserResource>();
     view! {
       <div class="sidebar-container">
         <div class="hamburger" class="sidebar-toggle">
@@ -30,12 +32,20 @@ pub fn Admin() -> impl IntoView {
             <li>
               <A href="runs">"Submits"</A>
             </li>
-            <li>
-              <A href="sections">"Sections"</A>
-            </li>
-            <li>
-              <A href="users">"Users"</A>
-            </li>
+            <Show when=move || {
+              user
+                .and_then(|u| u.has(&Permissions::ManageSections) || u.has(&Permissions::ManageRuns))
+                .opt_res_to_bool()
+            }>
+              <li>
+                <A href="sections">"Sections"</A>
+              </li>
+            </Show>
+            <Show when=move || { user.and_then(|u| u.has(&Permissions::ManageUsers)).opt_res_to_bool() }>
+              <li>
+                <A href="users">"Users"</A>
+              </li>
+            </Show>
           </ul>
         </nav>
         <main>
