@@ -17,7 +17,11 @@ pub fn Modal(children: Children) -> impl IntoView {
 }
 
 #[component]
-pub fn Dialogue<ServFn, OutputProtocol>(action: ServerAction<ServFn>, children: Children) -> impl IntoView
+pub fn Dialogue<ServFn, OutputProtocol>(
+    action: ServerAction<ServFn>,
+    #[prop(optional, into)] redirect: Option<Signal<String>>,
+    children: Children,
+) -> impl IntoView
 where
     ServFn: DeserializeOwned + ServerFn<Protocol = Http<PostUrl, OutputProtocol>> + Clone + Send + Sync + 'static,
     <<ServFn::Client as Client<ServFn::Error>>::Request as ClientReq<ServFn::Error>>::FormData: From<FormData>,
@@ -28,7 +32,14 @@ where
 {
     view! {
       <ActionForm action>
-        {children()} <div class="row">
+        {children()} <Show when=move || redirect.is_some()>
+          <input
+            type="text"
+            name="redirect"
+            hidden
+            value=move || format!("{}{}", redirect.read().unwrap(), use_query_map().get().to_query_string())
+          />
+        </Show> <div class="row">
           <A attr:class="button secondary" href=|| format!("../{}", use_query_map().get().to_query_string())>
             "Cancel"
           </A>

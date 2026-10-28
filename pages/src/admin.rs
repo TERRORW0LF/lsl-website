@@ -57,10 +57,24 @@ pub fn Admin() -> impl IntoView {
 
 #[component]
 pub fn ManageRuns() -> impl IntoView {
+    let user = expect_context::<UserResource>();
+    let perm = Signal::derive(move || {
+        user.and_then(|u| u.has(&Permissions::Verify) || u.has(&Permissions::ManageRuns)).opt_res_to_bool()
+    });
     let params = use_query_map();
+    let user_filter = Signal::derive(move || {
+        let id = params.read().get("user").map(|v| v.parse::<i64>().ok()).flatten();
+        let del_perm = user.and_then(|u| u.has(&Permissions::Delete)).opt_res_to_bool();
+        let u_id = if del_perm {
+            Some(user.read().as_ref().map(|r| r.as_ref().map(|u| u.id).ok()).flatten().unwrap_or(-1))
+        } else {
+            Some(-1)
+        };
+        if *perm.read() { id } else { u_id }
+    });
     let filters = Signal::derive(move || {
         params.with(|p| RunFilters {
-            user: None,
+            user: user_filter.get(),
             patch: Some("2.13".into()),
             layout: p.get("layout").filter(|v| !v.is_empty()),
             category: p.get("category").filter(|v| !v.is_empty()),
@@ -93,7 +107,6 @@ pub fn ManageRuns() -> impl IntoView {
     let update = ServerAction::<UpdateRun>::new();
     provide_context(delete);
     provide_context(update);
-    let user = expect_context::<UserResource>();
     let runs = Resource::new(
         move || (filters.get(), update.version().get(), delete.version().get(), offset.get()),
         move |mut f| async move {
@@ -150,6 +163,14 @@ pub fn ManageRuns() -> impl IntoView {
               </label>
               <input class="select" type="number" name="slower" id="slower" min="0" step="0.001" />
             </div>
+            <Show when=move || *perm.read()>
+              <div>
+                <label for="user" class="indicator">
+                  "User ID"
+                </label>
+                <input class="select" type="number" name="user" id="user" min="1" step="1" />
+              </div>
+            </Show>
             <Select
               name="layout"
               indicator="Layout"
@@ -204,19 +225,23 @@ pub fn ManageRuns() -> impl IntoView {
                 .and_then(|runs| {
                   let runs = runs.clone();
                   view! {
-                    <Table headers=vec![
-                      "id".into(),
-                      "date".into(),
-                      "layout".into(),
-                      "category".into(),
-                      "map".into(),
-                      "proof".into(),
-                      "time".into(),
-                      "".into(),
-                    ]>
+                    <Table
+                      attr:class="button-2"
+                      headers=vec![
+                        "id".into(),
+                        "date".into(),
+                        "layout".into(),
+                        "category".into(),
+                        "map".into(),
+                        "proof".into(),
+                        "time".into(),
+                        "".into(),
+                      ]
+                    >
                       {runs
                         .into_iter()
                         .map(|r| {
+                          let id = r.id;
                           view! {
                             <TableLine>
                               {r.id} {format!("{}", r.created_at.format("%d/%m/%Y %H:%M"))}
@@ -228,11 +253,18 @@ pub fn ManageRuns() -> impl IntoView {
                                 href=move || {
                                   let mut params = params.get();
                                   params.replace("run", serde_qs::to_string(&r).unwrap_or("".into()));
-                                  format!("{}{}", r.id.to_string(), params.to_query_string())
+                                  format!("edit{}", params.to_query_string())
                                 }
                               >
                                 <div></div>
                               </A>
+                              <A
+                                attr:class="delete"
+                                href=move || format!("{}{}", id.to_string(), params.get().to_query_string())
+                              >
+                                <div></div>
+                              </A>
+
                             </TableLine>
                           }
                         })
@@ -249,7 +281,7 @@ pub fn ManageRuns() -> impl IntoView {
 }
 
 #[component]
-pub fn Edit() -> impl IntoView {
+pub fn Edit(#[prop(into)] redirect: Signal<String>) -> impl IntoView {
     let run = Memo::new(|_| {
         use_params_map()
             .get()
@@ -296,7 +328,7 @@ pub fn Edit() -> impl IntoView {
         }>
           <div class="hidden">{result}</div>
         </ErrorBoundary>
-        <Dialogue action=update>
+        <Dialogue action=update redirect>
           <Select
             options=vec![("true", "Yes").into(), ("false", "No").into()]
             indicator="Verified"
@@ -321,12 +353,6 @@ pub fn Edit() -> impl IntoView {
               </Suspense>
             </datalist>
           </div>
-          <input
-            type="text"
-            name="redirect"
-            hidden
-            value=|| format!("user/@me/manage{}", use_query_map().get().to_query_string())
-          />
         </Dialogue>
       </Modal>
     }

@@ -111,8 +111,16 @@
 
     &.manage {
         .grid {
-            grid-template-columns: 1fr 1fr 1fr 1fr 1.5fr 0.5fr 11ch 2rem;
+            grid-template-columns: 1fr 1fr 1fr 1fr 1.5fr 0.5fr 11ch;
 
+            &.button-1 {
+              grid-template-columns: 1fr 1fr 1fr 1fr 1.5fr 0.5fr 11ch 2rem;
+            }
+
+            &.button-2 {
+              grid-template-columns: 1fr 1fr 1fr 1fr 1.5fr 0.5fr 11ch 2rem 2rem;
+            }
+            
             .delete {
                 display: inline-block;
                 cursor: pointer;
@@ -124,6 +132,19 @@
                     background-color: var(--error);
                 }
             }
+            
+            .edit {
+                display: inline-block;
+                cursor: pointer;
+
+                div {
+                    mask: url(/edit.svg) no-repeat center / contain;
+                    width: 2rem;
+                    height: 1.4rem;
+                    background-color: var(--grey-0);
+                }
+            }
+
         }
     }
 

@@ -1,5 +1,5 @@
 use chrono::{Local, NaiveDateTime, TimeZone};
-use components::{Collapsible, Filter, Pager, Select, Table, TableLine};
+use components::{Collapsible, Dialogue, Filter, Modal, Pager, Select, Table, TableLine};
 use leptos::prelude::*;
 use leptos_router::{
     components::{A, Outlet},
@@ -228,15 +228,12 @@ pub fn ManageRuns() -> impl IntoView {
 }
 
 #[component]
-pub fn Delete() -> impl IntoView {
+pub fn Delete(#[prop(into)] redirect: Signal<String>) -> impl IntoView {
     let id = Signal::derive(|| use_params_map().get().get("id").unwrap().parse::<i32>().unwrap_or(-1));
     let action = expect_context::<ServerAction<Delete>>();
     let result = Signal::derive(move || action.value().get());
     view! {
-      <A attr:class="toner" href="../">
-        <div />
-      </A>
-      <section id="box">
+      <Modal>
         <h1>"Delete Run"</h1>
         <p>"Please confirm your deletion of the run with id " {id}</p>
         <ErrorBoundary fallback=|e| {
@@ -261,21 +258,9 @@ pub fn Delete() -> impl IntoView {
         }>
           <div class="hidden">{result}</div>
         </ErrorBoundary>
-        <ActionForm action>
-          <input
-            type="text"
-            name="redirect"
-            hidden
-            value=|| format!("user/@me/manage{}", use_query_map().get().to_query_string())
-          />
+        <Dialogue action redirect>
           <input type="text" name="id" hidden value=id />
-          <div class="row">
-            <A attr:class="button secondary" href=|| format!("../{}", use_query_map().get().to_query_string())>
-              "Cancel"
-            </A>
-            <input type="submit" class="button danger" value="Delete" />
-          </div>
-        </ActionForm>
-      </section>
+        </Dialogue>
+      </Modal>
     }
 }
