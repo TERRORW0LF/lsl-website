@@ -1,3 +1,4 @@
+use components::{Button, ButtonType, Dialogue, Freeform, Modal, MultiLine, Redirect};
 use leptos::{either::Either, html::Input, prelude::*};
 use leptos_meta::Title;
 use leptos_router::components::{A, Outlet};
@@ -135,12 +136,8 @@ pub fn Dashboard() -> impl IntoView {
 pub fn Username() -> impl IntoView {
     let action = expect_context::<ServerAction<UpdateCreds>>();
     let result = Signal::derive(move || action.value().get());
-    let (username, set_username) = signal(String::new());
     view! {
-      <A attr:class="toner" href="../">
-        <div />
-      </A>
-      <section id="box">
+      <Modal>
         <h1>"Edit Username"</h1>
         <ErrorBoundary fallback=|e| {
           view! {
@@ -162,35 +159,26 @@ pub fn Username() -> impl IntoView {
         }>
           <div class="hidden">{result}</div>
         </ErrorBoundary>
-        <ActionForm action>
-          <input type="text" name="redirect" hidden value="user/@me/dashboard" />
-          <div class="input-box">
-            <input
-              type="text"
-              name="username"
-              id="username"
-              required
-              minlength="2"
-              maxlength="32"
-              pattern="[a-zA-Z0-9_\\-\\.]*"
-              value=username
-              on:input=move |e| set_username(event_target_value::<Event>(&e))
-            />
-            <label for="username" class="placeholder">
-              "Username"
-            </label>
-            <label for="username" class="error">
-              "Username must adhere to [a-zA-Z0-9_-.]{2,32}."
-            </label>
-          </div>
-          <div class="row">
-            <A attr:class="button secondary" href="../">
-              "Cancel"
-            </A>
-            <input type="submit" class="button primary" value="Save" />
-          </div>
-        </ActionForm>
-      </section>
+        <Dialogue action>
+          <Redirect slot redirect="user/@me/dashboard" />
+          {[
+            view! {
+              <Freeform
+                name="username"
+                indicator="Username"
+                error="Username must adhere to [a-zA-Z0-9_-.]{2,32}."
+                {..}
+                required=""
+                minlength="2"
+                maxlength="32"
+                pattern="[a-zA-Z0-9_\\-\\.]*"
+              />
+            },
+          ]}
+          <Button slot kind=ButtonType::Link("../".into()) text="Cancel" />
+          <Button slot kind=ButtonType::Primary text="Save" />
+        </Dialogue>
+      </Modal>
     }
 }
 
@@ -198,14 +186,9 @@ pub fn Username() -> impl IntoView {
 pub fn Password() -> impl IntoView {
     let action = expect_context::<ServerAction<UpdateCreds>>();
     let result = Signal::derive(move || action.value().get());
-    let (password, set_password) = signal(String::new());
     let (password_new, set_password_new) = signal(String::new());
-    let (password_rep, set_password_rep) = signal(String::new());
     view! {
-      <A attr:class="toner" href="../">
-        <div />
-      </A>
-      <section id="box">
+      <Modal>
         <h1>"Edit Password"</h1>
         <ErrorBoundary fallback=|e| {
           view! {
@@ -227,63 +210,33 @@ pub fn Password() -> impl IntoView {
         }>
           <div class="hidden">{result}</div>
         </ErrorBoundary>
-        <ActionForm action>
-          <input type="text" name="redirect" hidden value="user/@me/dashboard" />
-          <div class="input-box">
-            <input
-              type="password"
-              name="password[old]"
-              id="password"
-              required
-              value=password
-              on:input=move |e| set_password(event_target_value::<Event>(&e))
-            />
-            <label for="password" class="placeholder">
-              "Current Password"
-            </label>
-          </div>
-          <div class="input-box">
-            <input
-              type="password"
-              name="password[new]"
-              id="password"
-              required
-              minlength="8"
-              maxlength="256"
-              value=password_new
-              on:input=move |e| set_password_new(event_target_value::<Event>(&e))
-            />
-            <label for="password" class="placeholder">
-              "New Password"
-            </label>
-            <label for="password" class="error">
-              "Password must be between 8 and 256 characters long."
-            </label>
-          </div>
-          <div class="input-box">
-            <input
-              type="password"
-              id="password-repeat"
-              required
-              pattern=move || escape_regex(&password_new.read())
-              value=password_rep
-              on:input=move |e| set_password_rep(event_target_value::<Event>(&e))
-            />
-            <label for="password-repeat" class="placeholder">
-              "Repeat Password"
-            </label>
-            <label for="password-repeat" class="error">
-              "Passwords must match."
-            </label>
-          </div>
-          <div class="row">
-            <A attr:class="button secondary" href="../">
-              "Cancel"
-            </A>
-            <input type="submit" class="button primary" value="Save" />
-          </div>
-        </ActionForm>
-      </section>
+        <Dialogue action>
+          <Redirect slot redirect="user/@me/dashboard" />
+          <Freeform name="password[old]" indicator="Current Password" {..} type="password" required="" />
+          <Freeform
+            name="password[new]"
+            indicator="New Password"
+            error="Password must be between 8 and 256 characters long."
+            on:input=move |e| set_password_new(event_target_value::<Event>(&e))
+            {..}
+            type="password"
+            required=""
+            minlength="8"
+            maxlength="256"
+          />
+          <Freeform
+            name="password-repeat"
+            indicator="Repeat Password"
+            error="Passwords must match."
+            {..}
+            type="password"
+            required=""
+            pattern=move || escape_regex(&password_new.read())
+          />
+          <Button slot kind=ButtonType::Link("../".into()) text="Cancel" />
+          <Button slot kind=ButtonType::Primary text="Save" />
+        </Dialogue>
+      </Modal>
     }
 }
 
@@ -293,10 +246,7 @@ pub fn Bio() -> impl IntoView {
     let user = expect_context::<UserResource>();
     let result = Signal::derive(move || action.value().get());
     view! {
-      <A attr:class="toner" href="../">
-        <div />
-      </A>
-      <section id="box">
+      <Modal>
         <h1>"Edit About Me"</h1>
         <ErrorBoundary fallback=|e| {
           view! {
@@ -318,35 +268,26 @@ pub fn Bio() -> impl IntoView {
         }>
           <div class="hidden">{result}</div>
         </ErrorBoundary>
-        <ActionForm action>
-          <input type="text" name="redirect" hidden value="user/@me/dashboard" />
-          <div class="input-box">
-            <Suspense fallback=move || {
-              view! {
-                <textarea name="bio" id="bio" maxlength="512">
+        <Dialogue action>
+          <Redirect slot redirect="user/@me/dashboard" />
+          {[
+            view! {
+              <MultiLine
+                name="bio"
+                indicator="About Me"
+                error="About me must be under 512 characters."
+                attr:maxlength="512"
+              >
+                <Suspense fallback=move || {
                   "Loading..."
-                </textarea>
-              }
-            }>
-              <textarea name="bio" id="bio" maxlength="512">
-                {move || user.and_then(|u| u.bio.clone().unwrap_or(String::new()))}
-              </textarea>
-            </Suspense>
-            <label for="bio" class="indicator">
-              "About Me"
-            </label>
-            <label for="bio" class="error">
-              "About me must be under 512 characters."
-            </label>
-          </div>
-          <div class="row">
-            <A attr:class="button secondary" href="../">
-              "Cancel"
-            </A>
-            <input type="submit" class="button primary" value="Save" />
-          </div>
-        </ActionForm>
-      </section>
+                }>{move || user.and_then(|u| u.bio.clone().unwrap_or(String::new()))}</Suspense>
+              </MultiLine>
+            },
+          ]}
+          <Button slot kind=ButtonType::Link("../".into()) text="Cancel" />
+          <Button slot kind=ButtonType::Primary text="Save" />
+        </Dialogue>
+      </Modal>
     }
 }
 

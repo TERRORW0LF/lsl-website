@@ -1,9 +1,11 @@
 use chrono::{Local, NaiveDateTime, TimeZone};
-use components::{Collapsible, Dialogue, Filter, Modal, Pager, Select, Table, TableLine};
+use components::{
+    Button, ButtonType, Checkbox, Collapsible, Dialogue, Filter, Modal, Pager, Redirect, Select, Table, TableLine,
+};
 use leptos::prelude::*;
 use leptos_router::{
     components::{A, Outlet},
-    hooks::{use_params_map, use_query_map},
+    hooks::use_query_map,
 };
 use server::{
     admin::UpdateRun,
@@ -194,19 +196,17 @@ pub fn ManageRuns() -> impl IntoView {
               </label>
               <input class="select" list="maps" name="map" id="map" />
               <datalist id="maps">
-                <ErrorBoundary fallback=|_| ()>
-                  <Await future=get_maps("1".into(), "Standard".into()) let:maps>
-                    {maps
-                      .clone()
-                      .map(|v| {
-                        v.into_iter()
-                          .map(|m| {
-                            view! { <option value=m.map.clone()>{m.map.clone()}</option> }
-                          })
-                          .collect_view()
-                      })}
-                  </Await>
-                </ErrorBoundary>
+                <Await future=get_maps("1".into(), "Standard".into()) let:maps>
+                  {maps
+                    .clone()
+                    .map(|v| {
+                      v.into_iter()
+                        .map(|m| {
+                          view! { <option value=m.map.clone()>{m.map.clone()}</option> }
+                        })
+                        .collect_view()
+                    })}
+                </Await>
               </datalist>
             </div>
             <Select
@@ -226,15 +226,17 @@ pub fn ManageRuns() -> impl IntoView {
                   let runs = runs.clone();
                   view! {
                     <Table
-                      attr:class="button-2"
+                      class:button-2=true
                       headers=vec![
                         "id".into(),
                         "date".into(),
                         "layout".into(),
                         "category".into(),
                         "map".into(),
+                        "user".into(),
                         "proof".into(),
                         "time".into(),
+                        "".into(),
                         "".into(),
                       ]
                     >
@@ -246,20 +248,21 @@ pub fn ManageRuns() -> impl IntoView {
                             <TableLine>
                               {r.id} {format!("{}", r.created_at.format("%d/%m/%Y %H:%M"))}
                               {format!("Layout {}", r.section.layout)} {r.section.category.clone()}
-                              {r.section.map.clone()} <a href=r.proof.clone()>"link"</a>
-                              {format!("{} sec", r.time.to_string())}
+                              {r.section.map.clone()}
+                              <a href=format!("/user/{}", r.user.user_id)>{r.user.username.clone()}</a>
+                              <a href=r.proof.clone()>"link"</a> {format!("{} sec", r.time.to_string())}
                               <A
-                                attr:class="edit"
+                                class:edit=true
                                 href=move || {
                                   let mut params = params.get();
-                                  params.replace("run", serde_qs::to_string(&r).unwrap_or("".into()));
+                                  params.replace_decoded("run", serde_qs::to_string(&r).unwrap_or("".into()));
                                   format!("edit{}", params.to_query_string())
                                 }
                               >
                                 <div></div>
                               </A>
                               <A
-                                attr:class="delete"
+                                class:delete=true
                                 href=move || format!("{}{}", id.to_string(), params.get().to_query_string())
                               >
                                 <div></div>
@@ -283,7 +286,7 @@ pub fn ManageRuns() -> impl IntoView {
 #[component]
 pub fn Edit(#[prop(into)] redirect: Signal<String>) -> impl IntoView {
     let run = Memo::new(|_| {
-        use_params_map()
+        use_query_map()
             .get()
             .get("run")
             .map(|r| serde_qs::from_str::<Run>(&r).ok())
@@ -291,18 +294,15 @@ pub fn Edit(#[prop(into)] redirect: Signal<String>) -> impl IntoView {
             .ok_or(ApiError::InvalidInput)
     });
     let maps = Resource::new(
-        move || (run.get().map(|r| r.section.category), run.get().map(|r| r.section.category)),
-        move |_| async move {
-            if let Ok(run) = run.get() {
-                get_maps(run.section.layout, run.section.category).await
-            } else {
-                Err(ApiError::NotFound)
-            }
+        move || run.get().map(|r| (r.section.layout, r.section.category)),
+        move |combo| async move {
+            if let Ok(combo) = combo { get_maps(combo.0, combo.1).await } else { Err(ApiError::NotFound) }
         },
     );
     let delete = expect_context::<ServerAction<Delete>>();
     let update = expect_context::<ServerAction<UpdateRun>>();
     let result = Signal::derive(move || delete.value().get());
+    let cancel = Signal::derive(move || format!("../{}", use_query_map().read().to_query_string()));
     view! {
       <Modal>
         <h1>"Edit Run"</h1>
@@ -328,13 +328,11 @@ pub fn Edit(#[prop(into)] redirect: Signal<String>) -> impl IntoView {
         }>
           <div class="hidden">{result}</div>
         </ErrorBoundary>
-        <Dialogue action=update redirect>
-          <Select
-            options=vec![("true", "Yes").into(), ("false", "No").into()]
-            indicator="Verified"
-            name="verified"
-            selected=!run.read().as_ref().map(|r| r.verified).unwrap_or(false) as usize
-          />
+        <Dialogue action=update>
+          <Redirect slot redirect />
+          <Show when=move || { run.read().as_ref().map(|r| r.verified).is_ok_and(|v| v) }>
+            <Checkbox name="verify" indicator="Verify" />
+          </Show>
           <div>
             <label for="map" class="indicator">
               "Map"
@@ -342,17 +340,21 @@ pub fn Edit(#[prop(into)] redirect: Signal<String>) -> impl IntoView {
             <input class="select" list="maps" name="section_id" id="map" />
             <datalist id="maps">
               <Suspense>
-                {maps
-                  .and_then(|v| {
-                    v.into_iter()
-                      .map(|m| {
-                        view! { <option value=m.id>{m.map.clone()}</option> }
-                      })
-                      .collect_view()
-                  })}
+                {move || {
+                  maps
+                    .and_then(|v| {
+                      v.into_iter()
+                        .map(|m| {
+                          view! { <option value=m.id>{m.map.clone()}</option> }
+                        })
+                        .collect_view()
+                    })
+                }}
               </Suspense>
             </datalist>
           </div>
+          <Button slot kind=ButtonType::Link(cancel) text="Cancel" />
+          <Button slot kind=ButtonType::Primary text="Update" />
         </Dialogue>
       </Modal>
     }

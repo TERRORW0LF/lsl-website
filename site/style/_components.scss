@@ -24,6 +24,10 @@
     &.narrow {
         width: fit-content;
     }
+
+    &.top {
+        align-items: start;
+    }
 }
 
 .column {

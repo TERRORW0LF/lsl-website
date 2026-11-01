@@ -1,6 +1,6 @@
+use components::{Button, ButtonType, Checkbox, Dialogue, Freeform, Redirect, Select};
 use leptos::prelude::*;
 use leptos_meta::Title;
-use leptos_router::{components::A, hooks::use_query_map};
 use server::{
     api::get_maps,
     auth::{Login, Register, Submit},
@@ -13,8 +13,6 @@ use web_sys::Event;
 pub fn Login() -> impl IntoView {
     let action = expect_context::<ServerAction<Login>>();
     let result = Signal::derive(move || action.value().get().unwrap_or(Ok(())));
-    let (username, set_username) = signal(String::new());
-    let (password, set_password) = signal(String::new());
     view! {
       <Title text="Log In" />
       <section id="box">
@@ -39,51 +37,14 @@ pub fn Login() -> impl IntoView {
         }>
           <div class="hidden">{result}</div>
         </ErrorBoundary>
-        <ActionForm action=action>
-          <input
-            hidden
-            type="text"
-            name="redirect"
-            value=use_query_map().get().get("redirect")
-            prop:value=use_query_map().get().get("redirect")
-          />
-          <div class="input-box">
-            <input
-              type="text"
-              name="username"
-              id="username"
-              required
-              value=username
-              on:input=move |e| set_username(event_target_value::<Event>(&e))
-            />
-            <label for="username" class="placeholder">
-              "Username"
-            </label>
-          </div>
-          <div class="input-box">
-            <input
-              type="password"
-              name="password"
-              id="password"
-              required
-              value=password
-              on:input=move |e| set_password(event_target_value::<Event>(&e))
-            />
-            <label for="password" class="placeholder">
-              "Password"
-            </label>
-          </div>
-          <div class="remember">
-            <input type="checkbox" name="remember" id="remember" />
-            <label for="remember">"Remember me?"</label>
-          </div>
-          <div class="row">
-            <A href="/register" attr:class="link">
-              "Create account"
-            </A>
-            <input type="submit" class="button primary" value="Sign In" />
-          </div>
-        </ActionForm>
+        <Dialogue action>
+          <Redirect slot />
+          <Freeform name="username" indicator="Username" {..} required="" />
+          <Freeform name="password" indicator="Password" {..} type="password" required=""></Freeform>
+          <Checkbox name="remember" indicator="Remember me?" />
+          <Button slot kind=ButtonType::Link("/register".into()) text="Create Account" />
+          <Button slot kind=ButtonType::Primary text="Sign In" />
+        </Dialogue>
       </section>
     }
 }
@@ -92,9 +53,7 @@ pub fn Login() -> impl IntoView {
 pub fn Register() -> impl IntoView {
     let action = expect_context::<ServerAction<Register>>();
     let result = Signal::derive(move || action.value().get().unwrap_or(Ok(())));
-    let (username, set_username) = signal(String::new());
     let (password, set_password) = signal(String::new());
-    let (password_rep, set_password_rep) = signal(String::new());
     view! {
       <Title text="Sign Up" />
       <section id="box">
@@ -119,67 +78,41 @@ pub fn Register() -> impl IntoView {
         }>
           <div class="hidden">{result}</div>
         </ErrorBoundary>
-        <ActionForm action=action>
-          <div class="input-box">
-            <input
-              type="text"
-              name="username"
-              id="username"
-              required
-              minlength="2"
-              maxlength="32"
-              pattern="[a-zA-Z0-9_\\-\\.]*"
-              value=username
-              on:input=move |e| set_username(event_target_value::<Event>(&e))
-            />
-            <label for="username" class="placeholder">
-              "Username"
-            </label>
-            <label for="username" class="error">
-              "Username must adhere to [a-zA-Z0-9_-.]{2,32}."
-            </label>
-          </div>
-          <div class="input-box">
-            <input
-              type="password"
-              name="password"
-              id="password"
-              required
-              minlength="8"
-              maxlength="256"
-              value=password
-              on:input=move |e| set_password(event_target_value::<Event>(&e))
-            />
-            <label for="password" class="placeholder">
-              "Password"
-            </label>
-            <label for="password" class="error">
-              "Password must be between 8 and 256 characters long."
-            </label>
-          </div>
-          <div class="input-box">
-            <input
-              type="password"
-              name="password_confirm"
-              id="password-repeat"
-              required
-              pattern=move || escape_regex(&password.read())
-              value=password_rep
-              on:input=move |e| set_password_rep(event_target_value::<Event>(&e))
-            />
-            <label for="password-repeat" class="placeholder">
-              "Repeat password"
-            </label>
-            <label for="password-repeat" class="error">
-              "Passwords must match."
-            </label>
-          </div>
-          <div class="remember">
-            <input type="checkbox" name="remember" id="remember" />
-            <label for="remember">"Remember me?"</label>
-          </div>
-          <input type="submit" class="button primary" value="Sign Up" />
-        </ActionForm>
+        <Dialogue action>
+          <Freeform
+            name="username"
+            indicator="Username"
+            error="Username must adhere to [a-zA-Z0-9_-.]{2,32}."
+            {..}
+            type="text"
+            required=""
+            minlength="2"
+            maxlength="32"
+            pattern="[a-zA-Z0-9_\\-\\.]*"
+          />
+          <Freeform
+            name="password"
+            indicator="Password"
+            error="Password must be between 8 and 256 characters long."
+            on:input=move |e| set_password(event_target_value::<Event>(&e))
+            {..}
+            type="password"
+            required=""
+            minlength="8"
+            maxlength="256"
+          />
+          <Freeform
+            name="password_confirm"
+            indicator="Repeat password"
+            error="Passwords must match."
+            {..}
+            type="password"
+            required=""
+            pattern=move || escape_regex(&password.read())
+          />
+          <Checkbox name="remember" indicator="Remember me?" />
+          <Button slot kind=ButtonType::Primary text="Sign Up" />
+        </Dialogue>
       </section>
     }
 }
@@ -189,9 +122,6 @@ pub fn Submit() -> impl IntoView {
     let action = ServerAction::<Submit>::new();
     let result = Signal::derive(move || action.value().get().unwrap_or(Ok(())));
     let (code, set_code) = signal(String::new());
-    let (time, set_time) = signal(String::new());
-    let (map, set_map) = signal(String::new());
-    let (yt, set_yt) = signal(String::new());
     let (maps, set_maps) = signal::<Option<Vec<Section>>>(None);
     view! {
       <Title text="Submit" />
@@ -218,83 +148,50 @@ pub fn Submit() -> impl IntoView {
         }>
           <div class="hidden">{result}</div>
         </ErrorBoundary>
-        <ActionForm action=action>
-          <div class="row no-wrap">
+        <Dialogue action>
+          <div class="row no-wrap top">
             <div class="input-box">
-              <input
-                type="text"
-                id="code"
+              <Freeform
+                name="code"
+                indicator="Code *"
+                error="Invalid code."
+                on:input=move |e| set_code(event_target_value::<Event>(&e))
+                {..}
                 minlength="4"
                 maxlength="4"
                 pattern="[1-5][sgSG][a-zA-Z0-9]{2}"
-                value=code
-                on:input=move |e| {
-                  let c = event_target_value::<Event>(&e);
-                  match maps.get() {
-                    Some(ms) => {
-                      let id: String = c.chars().into_iter().skip(2).take(2).collect::<String>().to_ascii_uppercase();
-                      let m = ms.into_iter().find(|m| m.code[2..4] == id);
-                      match m {
-                        Some(m) => set_map(m.map),
-                        None => set_map(String::new()),
-                      };
-                    }
-                    None => {}
-                  };
-                  set_code(c)
-                }
               />
-              <label for="code" class="placeholder">
-                "Code ∗"
-              </label>
-              <label for="code" class="error">
-                "Invalid code."
-              </label>
             </div>
             <div class="input-box">
-              <input
-                required
-                type="number"
+              <Freeform
                 name="time"
-                id="time"
+                indicator="Time"
+                error="Invalid time."
+                {..}
+                required=""
+                type="number"
                 min="0"
                 step="0.001"
-                value=time
-                on:input=move |e| set_time(event_target_value::<Event>(&e))
               />
-              <label for="time" class="placeholder">
-                "Time"
-              </label>
-              <label for="time" class="error">
-                "Invalid time."
-              </label>
             </div>
           </div>
-          <div class="row no-wrap">
+          <div class="row no-wrap top">
             <div class="input-box">
-              <select
-                required
+              <Select
                 name="layout"
-                id="layout"
-                prop:selectedIndex=move || {
+                indicator="Layout"
+                options=[("1", "Layout 1"), ("2", "Layout 2"), ("3", "Layout 3"), ("4", "Layout 4"), ("5", "Layout 5")]
+                prop:sleectedIndex=move || {
                   code.get().chars().next().map_or(0, |c| c.to_digit(10).unwrap_or(0) as i32 - 1)
                 }
-              >
-                <option value="1">"Layout 1"</option>
-                <option value="2">"Layout 2"</option>
-                <option value="3">"Layout 3"</option>
-                <option value="4">"Layout 4"</option>
-                <option value="5">"Layout 5"</option>
-              </select>
-              <label for="layout" class="indicator">
-                "Layout"
-              </label>
+                attr:required=""
+              />
             </div>
             <div class="input-box">
-              <select
-                required
+              <Select
                 name="category"
-                id="category"
+                indicator="Category"
+                options=[("Standard", "Standard"), ("Gravspeed", "Gravspeed")]
                 prop:selectedIndex=move || {
                   code
                     .get()
@@ -309,69 +206,69 @@ pub fn Submit() -> impl IntoView {
                       },
                     )
                 }
-              >
-                <option value="Standard">"Standard"</option>
-                <option value="Gravspeed">"Gravspeed"</option>
-              </select>
-              <label for="category" class="indicator">
-                "Category"
-              </label>
+                attr:required=""
+              />
             </div>
           </div>
-          <div class="input-box">
+          <div>
             <input
               list="maps"
               name="map"
               id="map"
-              value=map
-              prop:value=map
-              on:input=move |e| set_map(event_target_value::<Event>(&e))
+              prop:value=move || {
+                match maps.get() {
+                  Some(ms) => {
+                    let id: String = code
+                      .read()
+                      .chars()
+                      .into_iter()
+                      .skip(2)
+                      .take(2)
+                      .collect::<String>()
+                      .to_ascii_uppercase();
+                    match ms.into_iter().find(|m| m.code[2..4] == id) {
+                      Some(m) => m.map,
+                      None => String::new(),
+                    }
+                  }
+                  None => String::new(),
+                }
+              }
             />
             <datalist id="maps">
-              <ErrorBoundary fallback=|_| ()>
-                <Await future=get_maps("1".into(), "Standard".into()) let:maps>
-                  {
-                    let maps = maps.clone();
-                    let maps = maps.map(|v| v.into_iter().filter(|m| m.submittable).collect());
-                    set_maps(maps.clone().ok());
-                    maps
-                      .map(|v| {
-                        v.into_iter()
-                          .map(|m| {
-                            view! { <option value=m.map.clone()>{m.map.clone()}</option> }
-                          })
-                          .collect_view()
-                      })
-                  }
-                </Await>
-              </ErrorBoundary>
+              <Await future=get_maps("1".into(), "Standard".into()) let:maps>
+                {
+                  let maps = maps.clone();
+                  let maps = maps.map(|v| v.into_iter().filter(|m| m.submittable).collect());
+                  set_maps(maps.clone().ok());
+                  maps
+                    .map(|v| {
+                      v.into_iter()
+                        .map(|m| {
+                          view! { <option value=m.map.clone()>{m.map.clone()}</option> }
+                        })
+                        .collect_view()
+                    })
+                }
+              </Await>
             </datalist>
             <label for="map" class="placeholder">
               "Map"
             </label>
           </div>
-          <div class="input-box">
-            <input
-              type="text"
-              name="yt_id"
-              id="yt_id"
-              required
-              minlength="11"
-              maxlength="11"
-              pattern="[a-zA-Z0-9_\\-]*"
-              value=yt
-              on:input=move |e| set_yt(event_target_value::<Event>(&e))
-            />
-            <label for="yt_id" class="placeholder">
-              "Video ID"
-            </label>
-            <label for="yt_id" class="error">
-              "Invalid video ID."
-            </label>
-          </div>
+          <Freeform
+            name="yt_id"
+            indicator="Video ID"
+            error="Invalid video ID."
+            {..}
+            required=""
+            minlength="11"
+            maxlength="11"
+            pattern="[a-zA-Z0-9_\\-]*"
+          />
           <div class="text">"∗ Fields are optional."</div>
-          <input type="submit" class="button primary" value="Submit" />
-        </ActionForm>
+          <Button slot kind=ButtonType::Primary text="Submit" />
+        </Dialogue>
       </section>
     }
 }

@@ -49,3 +49,50 @@ pub fn Select(
       </select>
     }
 }
+
+#[component]
+pub fn Freeform(
+    #[prop(into)] name: String,
+    #[prop(into)] indicator: String,
+    #[prop(optional, into)] error: Option<String>,
+) -> impl IntoView {
+    view! {
+      <input name=name.clone() id=name.clone() placeholder=" " />
+      <label for=name.clone() class="placeholder">
+        {indicator}
+      </label>
+      <label for=name class="error">
+        {error}
+      </label>
+    }
+}
+
+#[component]
+pub fn MultiLine(
+    #[prop(into)] name: String,
+    #[prop(into)] indicator: String,
+    #[prop(optional, into)] error: Option<String>,
+    children: Children,
+) -> impl IntoView {
+    view! {
+      <textarea name=name.clone() id=name.clone()>
+        {children()}
+      </textarea>
+      <label for=name.clone() class="indicator">
+        {indicator}
+      </label>
+      <label for=name class="error">
+        {error}
+      </label>
+    }
+}
+
+#[component]
+pub fn Checkbox(#[prop(into)] name: String, #[prop(into)] indicator: String) -> impl IntoView {
+    view! {
+      <label class="descriptor row">
+        <span>{indicator}</span>
+        <input type="checkbox" name=name />
+      </label>
+    }
+}

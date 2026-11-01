@@ -4,7 +4,7 @@ use leptos_router::{components::A, hooks::use_query_map};
 #[component]
 pub fn Table(#[prop(into)] headers: Signal<Vec<String>>, children: ChildrenFragment) -> impl IntoView {
     view! {
-      <div class="grid">
+      <div class:grid=true>
         {move || headers.get().into_iter().map(|v| view! { <span class="heading">{v}</span> }).collect_view()}
         <div class="divider header"></div>
         {children()

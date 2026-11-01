@@ -235,7 +235,7 @@ fn ModerationRouter() -> impl MatchNestedRoutes + Clone {
         >
           <Route path=path!("") view=() />
           <Route path=path!("edit") view=move || view! { <Edit redirect /> } />
-          <Route path=path!("delete") view=move || view! { <Delete redirect /> } />
+          <Route path=path!(":id") view=move || view! { <Delete redirect /> } />
         </ProtectedParentRoute>
         <ProtectedRoute
           path=path!("sections")

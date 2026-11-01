@@ -1,4 +1,5 @@
 use leptos::{
+    either::{Either, EitherOf4},
     prelude::*,
     server_fn::{Http, ServerFn, client::Client, codec::PostUrl, request::ClientReq},
 };
@@ -19,8 +20,9 @@ pub fn Modal(children: Children) -> impl IntoView {
 #[component]
 pub fn Dialogue<ServFn, OutputProtocol>(
     action: ServerAction<ServFn>,
-    #[prop(optional, into)] redirect: Option<Signal<String>>,
-    children: Children,
+    #[prop(optional)] redirect: Option<Redirect>,
+    #[prop(default=vec![])] button: Vec<Button>,
+    children: ChildrenFragment,
 ) -> impl IntoView
 where
     ServFn: DeserializeOwned + ServerFn<Protocol = Http<PostUrl, OutputProtocol>> + Clone + Send + Sync + 'static,
@@ -30,21 +32,75 @@ where
     ServFn::Error: Send + Sync + 'static,
     <ServFn as ServerFn>::Client: Client<<ServFn as ServerFn>::Error>,
 {
+    let len = button.len();
     view! {
       <ActionForm action>
-        {children()} <Show when=move || redirect.is_some()>
-          <input
-            type="text"
-            name="redirect"
-            hidden
-            value=move || format!("{}{}", redirect.read().unwrap(), use_query_map().get().to_query_string())
-          />
-        </Show> <div class="row">
-          <A attr:class="button secondary" href=|| format!("../{}", use_query_map().get().to_query_string())>
-            "Cancel"
-          </A>
-          <input type="submit" class="button primary" value="Submit" />
+        {children().nodes.into_iter().map(|v| view! { <div class="input-box">{v}</div> }).collect_view()}
+        {if let Some(redirect) = redirect {
+          Either::Right(move || {
+            view! {
+              <input
+                type="text"
+                name="redirect"
+                hidden
+                value=move || {
+                  if let Some(r) = redirect.redirect.read() {
+                    Some(format!("{}{}", r, use_query_map().get().to_query_string()))
+                  } else {
+                    use_query_map().read().get("redirect")
+                  }
+                }
+              />
+            }
+          })
+        } else {
+          Either::Left(())
+        }}
+        <div class:row=len
+          .gt(
+            &1,
+          )>
+          {button
+            .into_iter()
+            .map(|b| match b.kind {
+              ButtonType::Primary => EitherOf4::A(view! { <input type="submit" class="button primary" value=b.text /> }),
+              ButtonType::Secondary => {
+                EitherOf4::B(view! { <input type="submit" class="button secondary" value=b.text /> })
+              }
+              ButtonType::Danger => EitherOf4::C(view! { <input type="submit" class="button danger" value=b.text /> }),
+              ButtonType::Link(href) => {
+                EitherOf4::D(
+                  view! {
+                    <A attr:class="button secondary" href=move || href.get()>
+                      {b.text}
+                    </A>
+                  },
+                )
+              }
+            })
+            .collect_view()}
         </div>
       </ActionForm>
     }
+}
+
+#[slot]
+pub struct Redirect {
+    #[prop(optional, into)]
+    pub redirect: Option<Signal<String>>,
+}
+
+#[slot]
+pub struct Button {
+    #[prop(default = ButtonType::Primary)]
+    pub kind: ButtonType,
+    #[prop(into)]
+    pub text: String,
+}
+
+pub enum ButtonType {
+    Primary,
+    Secondary,
+    Danger,
+    Link(Signal<String>),
 }

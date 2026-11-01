@@ -111,14 +111,23 @@
 
     &.manage {
         .grid {
-            grid-template-columns: 1fr 1fr 1fr 1fr 1.5fr 0.5fr 11ch;
-
+            grid-template-columns: 8ch 20ch 1fr 1fr 1.5fr 32ch 6ch 11ch;
+            .divider {
+                grid-column: 1 / 9;
+            }
+            
             &.button-1 {
-              grid-template-columns: 1fr 1fr 1fr 1fr 1.5fr 0.5fr 11ch 2rem;
+              grid-template-columns: 8ch 20ch 1fr 1fr 1.5fr 32ch 6ch 11ch 2rem;
+              .divider {
+                grid-column: 1 / 10;
+              }
             }
 
             &.button-2 {
-              grid-template-columns: 1fr 1fr 1fr 1fr 1.5fr 0.5fr 11ch 2rem 2rem;
+              grid-template-columns: 8ch 20ch 1fr 1fr 1.5fr 32ch 6ch 11ch 2rem 2rem;
+              .divider {
+                grid-column: 1 / 11;
+              }
             }
             
             .delete {
@@ -157,7 +166,6 @@
     &.activity {
         .grid {
             grid-template-columns: 1fr 32ch 1fr 1fr 1fr 1fr 1fr 0.5fr 0.5fr;
-
             .divider {
                 grid-column: 1 / 10;
             }

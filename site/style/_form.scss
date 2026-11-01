@@ -39,6 +39,7 @@
         margin-bottom: 2rem;
 
         input,
+        label.descriptor,
         select,
         textarea {
             width: 100%;
@@ -50,11 +51,38 @@
             background: transparent;
         }
 
+        label.descriptor>span {
+            display: inline-block;
+        }
+
         textarea {
             height: 10lh;
             resize: none;
         }
 
+        input[type="checkbox"] {
+            position: relative;
+            width: 0.8rem;
+            height: 0.8rem;
+            appearance: none;
+            border: 1px solid var(--grey-200);
+
+            &:checked {
+              background-color: var(--primary-800);
+            }
+            &:checked::after {
+                content: "";
+                position: absolute;
+                top: 0;
+                left: 0.3rem;
+                width: 0.3rem;
+                height: 0.6rem;
+                border: solid var(--grey-0);
+                border-width: 0 3px 3px 0;
+                transform: rotate(45deg);
+            }
+        }
+    
         input[type="file"] {
             position: absolute;
             max-height: 0;
@@ -103,25 +131,29 @@
         }
 
         input:focus~.placeholder,
-        input:not([value=""])~.placeholder {
+        input:not(:placeholder-shown)~.placeholder {
             top: -0.4rem;
             padding: 0 0.2rem;
             margin-left: 0.5rem;
             font-size: 0.6rem;
-            color: var(--primary-800);
+            color: var(--grey-200);
             background-color: var(--grey-800);
         }
 
-        input:not(:focus, [value=""])~.placeholder {
-            color: var(--grey-200);
+        input:focus~.placeholder {
+            color: var(--primary-800);
         }
 
-        input:invalid:not([value=""], :focus) {
+        input:user-invalid, input:user-invalid:focus {
             outline: var(--error) solid 3px;
             border-color: transparent;
         }
 
-        input:invalid:not([value=""], :focus)~.error {
+        input:user-invalid~.placeholder, input:user-invalid:focus~.placeholder {
+            color: var(--error);
+        }
+        
+        input:user-invalid~.error {
             display: inline;
         }
 
@@ -155,10 +187,6 @@
         }
     }
 
-    .input-box:has(+.remember) {
-        margin-bottom: 0;
-    }
-
     .row>.input-box {
         margin-top: 0rem;
         margin-bottom: 0rem;
@@ -169,25 +197,10 @@
         margin-bottom: 2rem;
     }
 
-    .remember {
-        margin-top: 0.5rem;
-        margin-bottom: 1.5rem;
-        font-size: 0.8rem;
-
-        label {
-            padding-left: 0.5rem;
-            align-self: center;
-            cursor: pointer;
-        }
-    }
-
     input[type="submit"] {
         float: right;
     }
 
-    input[type="checkbox"] {
-        cursor: pointer;
-    }
 
     .link {
         align-self: center;

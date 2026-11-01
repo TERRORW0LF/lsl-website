@@ -1,5 +1,5 @@
 use chrono::{Local, NaiveDateTime, TimeZone};
-use components::{Collapsible, Dialogue, Filter, Modal, Pager, Select, Table, TableLine};
+use components::{Button, ButtonType, Collapsible, Dialogue, Filter, Modal, Pager, Redirect, Select, Table, TableLine};
 use leptos::prelude::*;
 use leptos_router::{
     components::{A, Outlet},
@@ -232,6 +232,7 @@ pub fn Delete(#[prop(into)] redirect: Signal<String>) -> impl IntoView {
     let id = Signal::derive(|| use_params_map().get().get("id").unwrap().parse::<i32>().unwrap_or(-1));
     let action = expect_context::<ServerAction<Delete>>();
     let result = Signal::derive(move || action.value().get());
+    let cancel = Signal::derive(move || format!("../{}", use_query_map().read().to_query_string()));
     view! {
       <Modal>
         <h1>"Delete Run"</h1>
@@ -258,8 +259,11 @@ pub fn Delete(#[prop(into)] redirect: Signal<String>) -> impl IntoView {
         }>
           <div class="hidden">{result}</div>
         </ErrorBoundary>
-        <Dialogue action redirect>
+        <Dialogue action>
+          <Redirect slot redirect />
           <input type="text" name="id" hidden value=id />
+          <Button slot kind=ButtonType::Link(cancel) text="Cancel" />
+          <Button slot kind=ButtonType::Danger text="Delete" />
         </Dialogue>
       </Modal>
     }
