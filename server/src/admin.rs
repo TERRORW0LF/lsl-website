@@ -1,5 +1,6 @@
 use leptos::prelude::*;
 use server_fn::codec::PostUrl;
+use sqlx::types::BitVec;
 use types::api::{ApiError, Permissions};
 
 // TODO: Move rank and title updates into rating update trigger tied to rank table
@@ -175,6 +176,7 @@ pub async fn update_section(id: i32, submittable: Option<bool>, name: Option<Str
     let _ = query
         .push(" WHERE id = ")
         .push_bind(id)
+        .push("AND id > 1092;")
         .build()
         .persistent(false)
         .execute(&pool)
@@ -185,7 +187,7 @@ pub async fn update_section(id: i32, submittable: Option<bool>, name: Option<Str
 }
 
 #[server(UpdateRun, prefix="/api", endpoint="run/update", input=PostUrl)]
-pub async fn update_run(id: i32, verified: Option<bool>, section_id: Option<i32>) -> Result<(), ApiError> {
+pub async fn update_run(id: i32, verified: Option<String>, section_id: Option<i32>) -> Result<(), ApiError> {
     use crate::auth::ssr::{auth, pool};
     use types::api::UserPermissions;
 
@@ -198,10 +200,10 @@ pub async fn update_run(id: i32, verified: Option<bool>, section_id: Option<i32>
         SET"#,
     );
     let mut set = query.separated(", ");
-    if let Some(verified) = verified {
+    if verified.is_some_and(|v| !v.is_empty()) {
         user.has(&Permissions::Verify).ok_or(ApiError::Unauthorized)?;
         update = true;
-        set.push(" verified = ").push_bind_unseparated(verified);
+        set.push(" verified = true");
     }
     if let Some(section_id) = section_id {
         user.has(&Permissions::ManageRuns).ok_or(ApiError::Unauthorized)?;
@@ -212,8 +214,35 @@ pub async fn update_run(id: i32, verified: Option<bool>, section_id: Option<i32>
     let _ = query
         .push(" WHERE id = ")
         .push_bind(id)
+        .push(" AND section_id > 1092;")
         .build()
         .persistent(false)
+        .execute(&pool)
+        .await
+        .map_err(|_| ApiError::ServerError("Database udpate failed".into()))?;
+
+    Ok(())
+}
+
+#[server(UpdateUser, prefix="/api", endpoint="user/update", input=PostUrl)]
+pub async fn update_user(id: i64, permissions: Vec<Permissions>) -> Result<(), ApiError> {
+    use crate::auth::ssr::{auth, pool};
+    use types::api::UserPermissions;
+
+    let user = auth()?.current_user.ok_or(ApiError::Unauthenticated)?;
+    user.has(&Permissions::ManageUsers).ok_or(ApiError::Unauthorized)?;
+    if permissions.len() == 0 {
+        return Ok(());
+    }
+    let mut perms = BitVec::from_elem(64, false);
+    for perm in permissions {
+        perms.set(perm as usize, true);
+    }
+    let pool = pool()?;
+
+    let _ = sqlx::query(r#"UPDATE "user" SET permission = $1 WHERE id = $2;"#)
+        .bind(perms)
+        .bind(id)
         .execute(&pool)
         .await
         .map_err(|_| ApiError::ServerError("Database udpate failed".into()))?;

@@ -417,7 +417,7 @@ pub async fn delete(id: i32, redirect: Option<String>) -> Result<(), ApiError> {
 
     let num = sqlx::query(
         r#"DELETE FROM run
-        WHERE id = $1 AND user_id = $2 AND section_id >= 1093;"#,
+        WHERE id = $1 AND user_id = $2 AND section_id > 1092;"#,
     )
     .bind(id)
     .bind(u.id)
