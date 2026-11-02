@@ -8,12 +8,12 @@ use leptos_router::{
     hooks::use_query_map,
 };
 use server::{
-    admin::UpdateRun,
-    api::{get_maps, get_runs},
+    admin::{DeleteSection, RecalculateRuns, UpdateRun, UpdateSection},
+    api::{get_maps, get_runs, get_sections},
     auth::Delete,
 };
 use types::{
-    api::{ApiError, Permissions, Run, RunFilters, UserPermissions},
+    api::{ApiError, Permissions, Run, RunFilters, Section, SectionFilters, UserPermissions},
     leptos::UserResource,
 };
 use util::OptResToBool;
@@ -284,7 +284,7 @@ pub fn ManageRuns() -> impl IntoView {
 }
 
 #[component]
-pub fn Edit(#[prop(into)] redirect: Signal<String>) -> impl IntoView {
+pub fn EditRun(#[prop(into)] redirect: Signal<String>) -> impl IntoView {
     let run = Memo::new(|_| {
         use_query_map()
             .get()
@@ -299,9 +299,8 @@ pub fn Edit(#[prop(into)] redirect: Signal<String>) -> impl IntoView {
             if let Ok(combo) = combo { get_maps(combo.0, combo.1).await } else { Err(ApiError::NotFound) }
         },
     );
-    let delete = expect_context::<ServerAction<Delete>>();
-    let update = expect_context::<ServerAction<UpdateRun>>();
-    let result = Signal::derive(move || delete.value().get());
+    let action = expect_context::<ServerAction<UpdateRun>>();
+    let result = Signal::derive(move || action.value().get());
     let cancel = Signal::derive(move || format!("../{}", use_query_map().read().to_query_string()));
     view! {
       <Modal>
@@ -328,7 +327,7 @@ pub fn Edit(#[prop(into)] redirect: Signal<String>) -> impl IntoView {
         }>
           <div class="hidden">{result}</div>
         </ErrorBoundary>
-        <Dialogue action=update>
+        <Dialogue action>
           <Redirect slot redirect />
           <Show when=move || { run.read().as_ref().map(|r| r.verified).is_ok_and(|v| v) }>
             <Checkbox name="verify" indicator="Verify" />
@@ -362,7 +361,223 @@ pub fn Edit(#[prop(into)] redirect: Signal<String>) -> impl IntoView {
 
 #[component]
 pub fn ManageSections() -> impl IntoView {
-    view! { <h1>"Placeholder"</h1> }
+    let params = use_query_map();
+    let filters = Signal::derive(move || {
+        params.with(|p| SectionFilters {
+            patch: Some("2.13".into()),
+            layout: p.get("layout").filter(|v| !v.is_empty()),
+            category: p.get("category").filter(|v| !v.is_empty()),
+            map: p.get("map").filter(|v| !v.is_empty()),
+            status: p.get("status").filter(|v| !v.is_empty()),
+            sort: p.get("sort").filter(|v| !v.is_empty()).unwrap_or("date".into()),
+            ascending: !p.get("order").filter(|v| !v.is_empty()).is_none_or(|s| s == "desc"),
+        })
+    });
+    let offset = Signal::derive(move || params.get().get("page").unwrap_or(String::from("0")).parse::<i32>().unwrap());
+    let delete = ServerAction::<DeleteSection>::new();
+    let update = ServerAction::<UpdateSection>::new();
+    provide_context(delete);
+    provide_context(update);
+    let sections = Resource::new(
+        move || (filters.get(), update.version().get(), delete.version().get(), offset.get()),
+        move |f| get_sections(f.0, f.3 * 50),
+    );
+    let last = Signal::derive(move || {
+        let mut last = true;
+        sections.map(|res| {
+            let _ = res.as_ref().inspect(|v| last = v.len() < 50);
+        });
+        last
+    });
+
+    view! {
+      <section id="filter-list" class="manage">
+        <Outlet />
+        <div class="row">
+          <A href="fix" attr:class="button secondary">
+            "Fix Ranks"
+          </A>
+          <A href="add" attr:class="button primary">
+            "Add Section"
+          </A>
+        </div>
+        <Collapsible id="filter" class="filter" header=|| "Show Filters">
+          <Filter attr:class="filter">
+            <Select
+              name="sort"
+              indicator="Sort By"
+              options=[("layout", "Layout"), ("category", "Category"), ("map", "Map")]
+            />
+            <Select
+              name="order"
+              indicator="Order By"
+              selected=1
+              options=[("asc", "Ascending"), ("desc", "Descending")]
+            />
+            <Select
+              name="layout"
+              indicator="Layout"
+              options=[
+                ("", "All"),
+                ("1", "Layout 1"),
+                ("2", "Layout 2"),
+                ("3", "Layout 3"),
+                ("4", "Layout 4"),
+                ("5", "Layout 5"),
+              ]
+            />
+            <Select
+              name="category"
+              indicator="Category"
+              options=[("", "All"), ("Standard", "Standard"), ("Gravspeed", "Gravspeed")]
+            />
+            <div>
+              <label for="map" class="indicator">
+                "Map"
+              </label>
+              <input class="select" list="maps" name="map" id="map" />
+              <datalist id="maps">
+                <Await future=get_maps("1".into(), "Standard".into()) let:maps>
+                  {maps
+                    .clone()
+                    .map(|v| {
+                      v.into_iter()
+                        .map(|m| {
+                          view! { <option value=m.map.clone()>{m.map.clone()}</option> }
+                        })
+                        .collect_view()
+                    })}
+                </Await>
+              </datalist>
+            </div>
+            <Select
+              name="status"
+              indicator="Status"
+              options=[("", "All"), ("submittable", "Submittable"), ("closed", "Closed")]
+            />
+          </Filter>
+        </Collapsible>
+        <Suspense fallback=|| { "Fetching Sections" }>
+          <ErrorBoundary fallback=|_| {
+            view! { <div class="error-display">"You are not logged in"</div> }
+          }>
+            {move || {
+              sections
+                .and_then(|sections| {
+                  let sections = sections.clone();
+                  view! {
+                    <Table
+                      class:button-2=true
+                      headers=vec![
+                        "id".into(),
+                        "date".into(),
+                        "layout".into(),
+                        "category".into(),
+                        "map".into(),
+                        "user".into(),
+                        "proof".into(),
+                        "time".into(),
+                        "".into(),
+                        "".into(),
+                      ]
+                    >
+                      {sections
+                        .into_iter()
+                        .map(|s| {
+                          let id = s.id;
+                          view! {
+                            <TableLine>
+                              {s.id} {format!("Layout {}", s.layout)} {s.category.clone()} {s.map.clone()}
+                              <A
+                                class:edit=true
+                                href=move || {
+                                  let mut params = params.get();
+                                  params.replace_decoded("section", serde_qs::to_string(&s).unwrap_or("".into()));
+                                  format!("edit{}", params.to_query_string())
+                                }
+                              >
+                                <div></div>
+                              </A>
+                              <A
+                                class:delete=true
+                                href=move || format!("{}{}", id.to_string(), params.get().to_query_string())
+                              >
+                                <div></div>
+                              </A>
+
+                            </TableLine>
+                          }
+                        })
+                        .collect::<Vec<_>>()}
+                    </Table>
+                  }
+                })
+            }}
+          </ErrorBoundary>
+        </Suspense>
+        <Pager name="page" last />
+      </section>
+    }
+}
+
+#[component]
+pub fn EditSection(#[prop(into)] redirect: Signal<String>) -> impl IntoView {
+    let section = Memo::new(|_| {
+        use_query_map()
+            .get()
+            .get("section")
+            .map(|r| serde_qs::from_str::<Section>(&r).ok())
+            .flatten()
+            .ok_or(ApiError::InvalidInput)
+    });
+    let action = expect_context::<ServerAction<UpdateSection>>();
+    let run_fix = ServerAction::<RecalculateRuns>::new();
+    let result =
+        Signal::derive(move || action.value().read().as_ref().map(|r| r.as_ref().map(|_| ()).map_err(|e| e.clone())));
+    let cancel = Signal::derive(move || format!("../{}", use_query_map().read().to_query_string()));
+    let checked = Signal::derive(move || section.read().as_ref().map(|s| s.submittable).unwrap_or(false));
+
+    view! {
+      <Modal>
+        <h1>"Edit Run"</h1>
+        <ErrorBoundary fallback=|e| {
+          view! {
+            <span class="error">
+              {move || {
+                let e = e.get().into_iter().next().unwrap().1;
+                if e.is::<ApiError>() {
+                  let e = e.downcast_ref::<ApiError>().unwrap();
+                  match e {
+                    ApiError::Unauthenticated => "🛈 Please log in",
+                    ApiError::Unauthorized => "🛈 Missing permission",
+                    ApiError::NotFound => "🛈 Invalid section",
+                    _ => "🛈 Something went wrong. Try again",
+                  }
+                } else {
+                  "🛈 Something went wrong. Try again"
+                }
+              }}
+            </span>
+          }
+        }>
+          <div class="hidden">{result}</div>
+          <div class="hidden">{move || section.read().as_ref().map(|_| ()).map_err(|e| e.clone())}</div>
+        </ErrorBoundary>
+        <Dialogue action=run_fix>
+          <Redirect slot redirect />
+          <div class="row">
+            <span>"Fix points, wr and pb flags"</span>
+            <Button slot kind=ButtonType::Primary text="Fix" />
+          </div>
+        </Dialogue>
+        <Dialogue action>
+          <Redirect slot redirect />
+          {[view! { <Checkbox name="submittable" indicator="Submittable" checked /> }]}
+          <Button slot kind=ButtonType::Link(cancel) text="Cancel" />
+          <Button slot kind=ButtonType::Primary text="Update" />
+        </Dialogue>
+      </Modal>
+    }
 }
 
 #[component]

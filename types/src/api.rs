@@ -141,6 +141,23 @@ impl Default for ActivityFilters {
     }
 }
 
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
+pub struct SectionFilters {
+    pub patch: Option<String>,
+    pub layout: Option<String>,
+    pub category: Option<String>,
+    pub map: Option<String>,
+    pub status: Option<String>,
+    pub sort: String,
+    pub ascending: bool,
+}
+
+impl Default for SectionFilters {
+    fn default() -> Self {
+        Self { patch: None, layout: None, category: None, map: None, status: None, sort: "map".into(), ascending: true }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
 pub struct PartialSection {

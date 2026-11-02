@@ -88,11 +88,15 @@ pub fn MultiLine(
 }
 
 #[component]
-pub fn Checkbox(#[prop(into)] name: String, #[prop(into)] indicator: String) -> impl IntoView {
+pub fn Checkbox(
+    #[prop(into)] name: String,
+    #[prop(into)] indicator: String,
+    #[prop(optional)] checked: Signal<bool>,
+) -> impl IntoView {
     view! {
       <label class="descriptor row">
         <span>{indicator}</span>
-        <input type="checkbox" name=name />
+        <input type="checkbox" name=name checked=checked />
       </label>
     }
 }

@@ -11,7 +11,7 @@ use leptos_router::{
 use pages::{
     Activity, Admin, ComboRanking, Dashboard, ErrorTemplate, FAQ, HomePage, Leaderboard, Login, ManageRuns, Map,
     Profile, Register, Submit, Submits, UserRanking,
-    admin::{Edit, ManageSections, ManageUsers},
+    admin::{EditRun, ManageSections, ManageUsers},
     dash::{Avatar, Bio, DiscordList, Password, Username},
     error_template::AppError,
     leaderboard::Section,
@@ -234,7 +234,7 @@ fn ModerationRouter() -> impl MatchNestedRoutes + Clone {
           view=pages::admin::ManageRuns
         >
           <Route path=path!("") view=() />
-          <Route path=path!("edit") view=move || view! { <Edit redirect /> } />
+          <Route path=path!("edit") view=move || view! { <EditRun redirect /> } />
           <Route path=path!(":id") view=move || view! { <Delete redirect /> } />
         </ProtectedParentRoute>
         <ProtectedRoute

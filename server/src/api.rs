@@ -124,6 +124,57 @@ pub async fn get_runs(filter: RunFilters, offset: i32) -> Result<Vec<Run>, ApiEr
         .or(Err(ApiError::ServerError("Database lookup failed".to_string())))
 }
 
+#[server(GetSections, prefix="/api", endpoint="sections", input=GetUrl)]
+pub async fn get_sections(filter: SectionFilters, offset: i32) -> Result<Vec<Section>, ApiError> {
+    use sqlx::{Postgres, QueryBuilder};
+
+    let pool = crate::auth::ssr::pool()?;
+    let mut query = QueryBuilder::<Postgres>::new(
+        r#"SELECT id, created_at, patch, layout, category, map, code, submittable
+        FROM section
+        WHERE 1 = 1"#,
+    );
+    if let Some(patch) = filter.patch {
+        query.push(" AND patch = ").push_bind(patch);
+    }
+    if let Some(layout) = filter.layout {
+        query.push(" AND layout = ").push_bind(layout);
+    }
+    if let Some(category) = filter.category {
+        query.push(" AND category = ").push_bind(category);
+    }
+    if let Some(map) = filter.map {
+        query.push(" AND map = ").push_bind(map);
+    }
+    if let Some(status) = filter.status {
+        match status.as_str() {
+            "submittable" => query.push(" AND submittable = true"),
+            "closed" => query.push(" AND submittable = false"),
+            _ => &mut query,
+        };
+    }
+    let asc = match filter.ascending {
+        true => "ASC",
+        false => "DESC",
+    };
+    query
+        .push(" ORDER BY ")
+        .push(match filter.sort.as_str() {
+            "layout" => format!("layout {asc}, category {asc}, patch {asc}, map {asc}"),
+            "category" => format!("category {asc}, patch {asc}, layout {asc}, map {asc}"),
+            "map" => format!("map {asc}, patch {asc}, layout {asc}, category {asc}"),
+            _ => format!("patch {asc}, layout {asc}, category {asc}, map {asc}"),
+        })
+        .push(" LIMIT 50 OFFSET ")
+        .push_bind(offset)
+        .push(";");
+    query
+        .build_query_as::<Section>()
+        .fetch_all(&pool)
+        .await
+        .or(Err(ApiError::ServerError("Database lookup failed".to_string())))
+}
+
 #[server(GetMaps, prefix="/api", endpoint="maps", input=GetUrl)]
 pub async fn get_maps(layout: String, category: String) -> Result<Vec<Section>, ApiError> {
     let pool = crate::auth::ssr::pool()?;
