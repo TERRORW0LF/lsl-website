@@ -297,10 +297,7 @@ pub fn Avatar() -> impl IntoView {
     let result = Signal::derive(move || action.value().get());
     let input_ref = NodeRef::<Input>::new();
     view! {
-      <A attr:class="toner" href="../">
-        <div />
-      </A>
-      <section id="box">
+      <Modal>
         <h1>"Change Avatar"</h1>
         <ErrorBoundary fallback=|e| {
           view! {
@@ -357,7 +354,7 @@ pub fn Avatar() -> impl IntoView {
             <input type="submit" class="button primary" value="Save" />
           </div>
         </form>
-      </section>
+      </Modal>
     }
 }
 
@@ -368,10 +365,7 @@ pub fn DiscordList() -> impl IntoView {
     let discord_list =
         Resource::new(move || (discord_del.version().get(), discord_add.version().get()), |_| discord_list());
     view! {
-      <A attr:class="toner" href="../">
-        <div />
-      </A>
-      <section id="box">
+      <Modal>
         <h1>"Discord"</h1>
         <Transition fallback=move || {
           view! { <p>"Loading..."</p> }
@@ -425,6 +419,6 @@ pub fn DiscordList() -> impl IntoView {
             "Save"
           </A>
         </div>
-      </section>
+      </Modal>
     }
 }

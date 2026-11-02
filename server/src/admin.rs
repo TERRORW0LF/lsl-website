@@ -67,7 +67,20 @@ pub async fn recalculate_runs(section_id: i32) -> Result<(), ApiError> {
     let pool = pool()?;
 
     let _ = sqlx::query(
-        r#"UPDATE run
+        r#"UPDATE run r1
+        SET is_wr = (r1.verified = true AND r1.id = (SELECT id 
+            FROM run r2 
+            WHERE r2.section_id = $1 AND r2.verified
+            ORDER BY r2.time ASC, r2.created_at ASC, r2.id ASC 
+            LIMIT 1)),
+        is_pb = (r1.verified = true AND r1.id = (SELECT id
+            FROM run r2
+            WHERE r2.section_id = $1 AND r2.user_id = r1.user_id AND r2.verified
+            ORDER BY r2.time ASC, r2.created_at ASC, r2.id ASC
+            LIMIT 1))
+        WHERE section_id = $1;
+
+        UPDATE run
         SET points = CASE
             WHEN is_pb
             THEN GREATEST(3.0 - 2.0 * time::double precision 
@@ -87,37 +100,6 @@ pub async fn recalculate_runs(section_id: i32) -> Result<(), ApiError> {
     Ok(())
 }
 
-#[server(FixRuns, prefix="/api", endpoint="runs/fix", input=PostUrl)]
-pub async fn fix_runs(section_id: i32) -> Result<(), ApiError> {
-    use crate::auth::ssr::{auth, pool};
-    use types::api::UserPermissions;
-
-    let user = auth()?.current_user.ok_or(ApiError::Unauthenticated)?;
-    user.has(&Permissions::ManageRuns).ok_or(ApiError::Unauthorized)?;
-    let pool = pool()?;
-
-    let _ = sqlx::query(
-        r#"UPDATE run r1
-        SET is_wr = (r1.verified = true AND r1.id = (SELECT id 
-            FROM run r2 
-            WHERE r2.section_id = $1 AND r2.verified
-            ORDER BY r2.time ASC, r2.created_at ASC, r2.id ASC 
-            LIMIT 1)),
-        is_pb = (r1.verified = true AND r1.id = (SELECT id
-            FROM run r2
-            WHERE r2.section_id = $1 AND r2.user_id = r1.user_id AND r2.verified
-            ORDER BY r2.time ASC, r2.created_at ASC, r2.id ASC
-            LIMIT 1))
-        WHERE section_id = $1;"#,
-    )
-    .bind(section_id)
-    .execute(&pool)
-    .await
-    .map_err(|_| ApiError::ServerError("Database update failed".into()))?;
-
-    Ok(())
-}
-
 #[server(AddSection, prefix="/api", endpoint="section/add", input=PostUrl)]
 pub async fn add_section(
     layout: String,
@@ -126,6 +108,7 @@ pub async fn add_section(
     code: String,
     submittable: bool,
 ) -> Result<(), ApiError> {
+    // TODO: add file uploads for map images
     use crate::auth::ssr::{auth, pool};
     use types::api::UserPermissions;
 
@@ -168,6 +151,7 @@ pub async fn update_section(id: i32, submittable: Option<bool>, name: Option<Str
         update = true;
         set.push(" submittable = ").push_bind_unseparated(submit);
     }
+    // TODO: Tie image to map in db
     if let Some(name) = name {
         update = true;
         set.push(" map = ").push_bind_unseparated(name);
@@ -228,6 +212,8 @@ pub async fn update_run(id: i32, verified: Option<String>, section_id: Option<i3
 pub async fn update_user(id: i64, permissions: Vec<Permissions>) -> Result<(), ApiError> {
     use crate::auth::ssr::{auth, pool};
     use types::api::UserPermissions;
+
+    return Err(ApiError::Unauthorized);
 
     let user = auth()?.current_user.ok_or(ApiError::Unauthenticated)?;
     user.has(&Permissions::ManageUsers).ok_or(ApiError::Unauthorized)?;
