@@ -4,3 +4,12 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+http = { workspace = true, optional = true }
+leptos_axum = { workspace = true, optional = true }
+
+[features]
+default = [ "ssr" ]
+ssr = [
+	"dep:http",
+	"dep:leptos_axum",
+]

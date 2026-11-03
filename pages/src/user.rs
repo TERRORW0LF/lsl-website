@@ -1,18 +1,16 @@
 use chrono::{Local, NaiveDateTime, TimeZone};
-use components::{Button, ButtonType, Collapsible, Dialogue, Filter, Modal, Pager, Redirect, Select, Table, TableLine};
+use components::{Collapsible, Filter, Pager, Select, Table, TableLine};
 use leptos::prelude::*;
 use leptos_router::{
     components::{A, Outlet},
-    hooks::{use_params_map, use_query_map},
+    hooks::use_query_map,
 };
 use server::{
     api::{get_maps, get_runs, get_user},
     auth::Delete,
 };
-use types::{
-    api::{ApiError, RunFilters},
-    leptos::UserResource,
-};
+use types::api::ApiError;
+use types::{api::RunFilters, leptos::UserResource};
 
 #[component]
 pub fn Profile(id: Signal<i64>) -> impl IntoView {
@@ -224,47 +222,5 @@ pub fn ManageRuns() -> impl IntoView {
         </Suspense>
         <Pager name="page" last />
       </section>
-    }
-}
-
-#[component]
-pub fn Delete(#[prop(into)] redirect: Signal<String>) -> impl IntoView {
-    let id = Signal::derive(|| use_params_map().get().get("id").unwrap().parse::<i32>().unwrap_or(-1));
-    let action = expect_context::<ServerAction<Delete>>();
-    let result = Signal::derive(move || action.value().get());
-    let cancel = Signal::derive(move || format!("../{}", use_query_map().read().to_query_string()));
-    view! {
-      <Modal>
-        <h1>"Delete Run"</h1>
-        <p>"Please confirm your deletion of the run with id " {id}</p>
-        <ErrorBoundary fallback=|e| {
-          view! {
-            <span class="error">
-              {move || {
-                let e = e.get().into_iter().next().unwrap().1;
-                if e.is::<ApiError>() {
-                  let e = e.downcast_ref::<ApiError>().unwrap();
-                  match e {
-                    ApiError::Unauthenticated => "🛈 Please log in",
-                    ApiError::Unauthorized => "🛈 Missing permission",
-                    ApiError::NotFound => "🛈 Invalid run",
-                    _ => "🛈 Something went wrong. Try again",
-                  }
-                } else {
-                  "🛈 Something went wrong. Try again"
-                }
-              }}
-            </span>
-          }
-        }>
-          <div class="hidden">{result}</div>
-        </ErrorBoundary>
-        <Dialogue action>
-          <Redirect slot redirect />
-          <input type="text" name="id" hidden value=id />
-          <Button slot kind=ButtonType::Link(cancel) text="Cancel" />
-          <Button slot kind=ButtonType::Danger text="Delete" />
-        </Dialogue>
-      </Modal>
     }
 }

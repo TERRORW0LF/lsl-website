@@ -11,12 +11,11 @@ use leptos_router::{
 use pages::{
     Activity, Admin, ComboRanking, Dashboard, ErrorTemplate, FAQ, HomePage, Leaderboard, Login, ManageRuns, Map,
     Profile, Register, Submit, Submits, UserRanking,
-    admin::{EditRun, ManageSections, ManageUsers},
+    admin::{DeleteRun, DeleteSection, EditRun, EditSection, ManageSections, ManageUsers},
     dash::{Avatar, Bio, DiscordList, Password, Username},
     error_template::AppError,
     leaderboard::Section,
     ranking::RankingHeader,
-    user::Delete,
 };
 use server::auth::{Login, Logout, Register, UpdateBio, UpdateCreds, get_current_user, update_pfp};
 use types::{
@@ -209,7 +208,9 @@ fn AppRouter() -> impl IntoView {
 #[component(transparent)]
 fn ModerationRouter() -> impl MatchNestedRoutes + Clone {
     let user = expect_context::<UserResource>();
-    let redirect = Signal::derive(move || format!("moderation/runs{}", use_query_map().get().to_query_string()));
+    let redirect_run = Signal::derive(move || format!("/moderation/runs{}", use_query_map().get().to_query_string()));
+    let redirect_section =
+        Signal::derive(move || format!("/moderation/sections{}", use_query_map().get().to_query_string()));
     view! {
       <ProtectedParentRoute
         path=path!("moderation")
@@ -234,15 +235,19 @@ fn ModerationRouter() -> impl MatchNestedRoutes + Clone {
           view=pages::admin::ManageRuns
         >
           <Route path=path!("") view=() />
-          <Route path=path!("edit") view=move || view! { <EditRun redirect /> } />
-          <Route path=path!(":id") view=move || view! { <Delete redirect /> } />
+          <Route path=path!("edit") view=move || view! { <EditRun redirect=redirect_run /> } />
+          <Route path=path!(":id") view=move || view! { <DeleteRun redirect=redirect_run /> } />
         </ProtectedParentRoute>
-        <ProtectedRoute
+        <ProtectedParentRoute
           path=path!("sections")
           condition=move || { user.get().map(|n| n.is_ok_and(|u| u.has(&Permissions::ManageSections))) }
           redirect_path=|| "/login?redirect=moderation/sections"
           view=ManageSections
-        />
+        >
+          <Route path=path!("") view=() />
+          <Route path=path!("edit") view=move || view! { <EditSection redirect=redirect_section /> } />
+          <Route path=path!(":id") view=move || view! { <DeleteSection redirect=redirect_section /> } />
+        </ProtectedParentRoute>
         <ProtectedRoute
           path=path!("users")
           condition=move || { user.get().map(|n| n.is_ok_and(|u| u.has(&Permissions::ManageUsers))) }
@@ -258,7 +263,7 @@ fn ModerationRouter() -> impl MatchNestedRoutes + Clone {
 #[component(transparent)]
 fn UserRouter() -> impl MatchNestedRoutes + Clone {
     let user = expect_context::<UserResource>();
-    let redirect = Signal::derive(move || format!("user/@me/manage{}", use_query_map().get().to_query_string()));
+    let redirect = Signal::derive(move || format!("/user/@me/manage{}", use_query_map().get().to_query_string()));
     view! {
       <ProtectedParentRoute
         path=path!("user/@me/dashboard")
@@ -280,7 +285,7 @@ fn UserRouter() -> impl MatchNestedRoutes + Clone {
         view=ManageRuns
       >
         <Route path=path!("") view=() />
-        <Route path=path!(":id") view=move || view! { <Delete redirect /> } />
+        <Route path=path!(":id") view=move || view! { <DeleteRun redirect /> } />
       </ProtectedParentRoute>
       <ProtectedRoute
         path=path!("user/@me/submit")

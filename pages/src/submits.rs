@@ -49,7 +49,7 @@ pub fn Submits() -> impl IntoView {
     });
 
     view! {
-      <section id="filter-list" class="runs">
+      <section id="filter-list">
         <Collapsible id="filter" class="filter" header=|| "Show Filters">
           <Filter attr:class="filter">
             <Select
@@ -159,16 +159,19 @@ pub fn Submits() -> impl IntoView {
                 .and_then(|runs| {
                   let runs = runs.clone();
                   view! {
-                    <Table headers=vec![
-                      "date".into(),
-                      "user".into(),
-                      "patch".into(),
-                      "layout".into(),
-                      "category".into(),
-                      "map".into(),
-                      "proof".into(),
-                      "time".into(),
-                    ]>
+                    <Table
+                      class:submit=true
+                      headers=vec![
+                        "date".into(),
+                        "user".into(),
+                        "patch".into(),
+                        "layout".into(),
+                        "category".into(),
+                        "map".into(),
+                        "proof".into(),
+                        "time".into(),
+                      ]
+                    >
                       {runs
                         .into_iter()
                         .map(|r| {
@@ -176,7 +179,9 @@ pub fn Submits() -> impl IntoView {
                             <TableLine>
                               {format!("{}", r.created_at.format("%d/%m/%Y %H:%M"))} {r.user.username}
                               {format!("Patch {}", r.section.patch)} {format!("Layout {}", r.section.layout)}
-                              {r.section.category} {r.section.map} <a href=r.proof>"link"</a> {r.time.to_string()}
+                              {r.section.category} {r.section.map} <a href=r.proof target="_blank">
+                                "link"
+                              </a> {r.time.to_string()}
                             </TableLine>
                           }
                         })

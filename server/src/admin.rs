@@ -1,12 +1,16 @@
+use bit_vec::BitVec;
 use http::HeaderValue;
 use leptos::prelude::*;
 use server_fn::codec::PostUrl;
-use sqlx::types::BitVec;
 use types::api::{ApiError, Permissions, UserPermissions};
 
 // TODO: Move rank and title updates into rating update trigger tied to rank table
 #[server(RecalculateRankings, prefix="/api", endpoint="ranking/recalculate", input=PostUrl)]
-pub async fn recalculate_ranks(layout: Option<String>, category: Option<String>) -> Result<(), ApiError> {
+pub async fn recalculate_ranks(
+    layout: Option<String>,
+    category: Option<String>,
+    redirect: Option<String>,
+) -> Result<(), ApiError> {
     use crate::auth::ssr::{auth, pool};
 
     let user = auth()?.current_user.ok_or(ApiError::Unauthenticated)?;
@@ -54,17 +58,19 @@ pub async fn recalculate_ranks(layout: Option<String>, category: Option<String>)
     .await
     .map_err(|_| ApiError::ServerError("Database update failed".into()))?;
 
+    util::ssr::redirect(redirect);
     Ok(())
 }
 
 #[server(RecalculateRuns, prefix="/api", endpoint="runs/recalculate", input=PostUrl)]
-pub async fn recalculate_runs(section_id: i32) -> Result<(), ApiError> {
+pub async fn recalculate_runs(section_id: i32, redirect: Option<String>) -> Result<(), ApiError> {
     use crate::auth::ssr::{auth, pool};
 
     let user = auth()?.current_user.ok_or(ApiError::Unauthenticated)?;
     user.has(&Permissions::ManageRuns).ok_or(ApiError::Unauthorized)?;
     let pool = pool()?;
 
+    let mut tx = pool.begin().await.map_err(|_| ApiError::ServerError("Failed to start transaction.".into()))?;
     let _ = sqlx::query(
         r#"UPDATE run r1
         SET is_wr = (r1.verified = true AND r1.id = (SELECT id 
@@ -77,9 +83,18 @@ pub async fn recalculate_runs(section_id: i32) -> Result<(), ApiError> {
             WHERE r2.section_id = $1 AND r2.user_id = r1.user_id AND r2.verified
             ORDER BY r2.time ASC, r2.created_at ASC, r2.id ASC
             LIMIT 1))
-        WHERE section_id = $1;
+        WHERE section_id = $1;"#,
+    )
+    .bind(section_id)
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| {
+        leptos::logging::warn!("{e:?}");
+        ApiError::ServerError("Database update failed".into())
+    })?;
 
-        UPDATE run
+    let _ = sqlx::query(
+        r#"UPDATE run
         SET points = CASE
             WHEN is_pb
             THEN GREATEST(3.0 - 2.0 * time::double precision 
@@ -92,10 +107,16 @@ pub async fn recalculate_runs(section_id: i32) -> Result<(), ApiError> {
         WHERE section_id = $1;"#,
     )
     .bind(section_id)
-    .execute(&pool)
+    .execute(&mut *tx)
     .await
-    .map_err(|_| ApiError::ServerError("Database update failed".into()))?;
+    .map_err(|e| {
+        leptos::logging::warn!("{e:?}");
+        ApiError::ServerError("Database update failed".into())
+    })?;
 
+    tx.commit().await.map_err(|_| ApiError::ServerError("Failed to commit transaction.".into()))?;
+
+    util::ssr::redirect(redirect);
     Ok(())
 }
 
@@ -106,15 +127,16 @@ pub async fn add_section(
     map: String,
     code: String,
     submittable: bool,
+    redirect: Option<String>,
 ) -> Result<(), ApiError> {
     // TODO: add file uploads for map images
     use crate::auth::ssr::{auth, pool};
 
     let user = auth()?.current_user.ok_or(ApiError::Unauthenticated)?;
-    user.has(&Permissions::Administrator).ok_or(ApiError::Unauthorized)?;
+    user.has(&Permissions::ManageSections).ok_or(ApiError::Unauthorized)?;
     let pool = pool()?;
 
-    let _ = sqlx::query(
+    let num = sqlx::query(
         r#"INSERT INTO section (patch, layout, category, map, code, submittable)
         VALUES ('2.13', $1, $2, $3, $4, $5);"#,
     )
@@ -127,11 +149,22 @@ pub async fn add_section(
     .await
     .map_err(|_| ApiError::ServerError("Database insert failed".into()))?;
 
-    Ok(())
+    if num.rows_affected() != 0 {
+        util::ssr::redirect(redirect);
+        Ok(())
+    } else {
+        Err(ApiError::NotFound)
+    }
 }
 
 #[server(UpdateSection, prefix="/api", endpoint="section/update", input=PostUrl)]
-pub async fn update_section(id: i32, submittable: Option<bool>, name: Option<String>) -> Result<(), ApiError> {
+pub async fn update_section(
+    id: i32,
+    submittable: Option<bool>,
+    name: Option<String>,
+    code: Option<String>,
+    redirect: Option<String>,
+) -> Result<(), ApiError> {
     use crate::auth::ssr::{auth, pool};
 
     let user = auth()?.current_user.ok_or(ApiError::Unauthenticated)?;
@@ -149,12 +182,14 @@ pub async fn update_section(id: i32, submittable: Option<bool>, name: Option<Str
         set.push(" submittable = ").push_bind_unseparated(submit);
     }
     // TODO: Tie image to map in db
-    if let Some(name) = name {
+    if let Some(name) = name
+        && let Some(code) = code
+    {
         update = true;
-        set.push(" map = ").push_bind_unseparated(name);
+        set.push(" map = ").push_bind_unseparated(name).push(" code = ").push_bind_unseparated(code);
     }
     update.ok_or(ApiError::InvalidInput)?;
-    let _ = query
+    let num = query
         .push(" WHERE id = ")
         .push_bind(id)
         .push("AND id > 1092;")
@@ -164,7 +199,12 @@ pub async fn update_section(id: i32, submittable: Option<bool>, name: Option<Str
         .await
         .map_err(|_| ApiError::ServerError("Database update failed".into()))?;
 
-    Ok(())
+    if num.rows_affected() != 0 {
+        util::ssr::redirect(redirect);
+        Ok(())
+    } else {
+        Err(ApiError::NotFound)
+    }
 }
 
 #[server(DeleteSection, prefix="/api", endpoint="section/delete", input=PostUrl)]
@@ -186,11 +226,7 @@ pub async fn delete_section(id: i32, redirect: Option<String>) -> Result<(), Api
     .await
     .map_err(|_| ApiError::ServerError("Database update failed".into()))?;
     if num.rows_affected() != 0 {
-        if let Some(red) = redirect {
-            if let Some(re) = HeaderValue::from_str(&format!("/{}", red)).ok() {
-                leptos_axum::redirect(re.to_str().unwrap_or("/"), false);
-            };
-        }
+        util::ssr::redirect(redirect);
         Ok(())
     } else {
         Err(ApiError::NotFound)
@@ -237,11 +273,7 @@ pub async fn update_run(
         .map_err(|_| ApiError::ServerError("Database udpate failed".into()))?;
 
     if num.rows_affected() != 0 {
-        if let Some(red) = redirect {
-            if let Some(re) = HeaderValue::from_str(&format!("/{}", red)).ok() {
-                leptos_axum::redirect(re.to_str().unwrap_or("/"), false);
-            };
-        }
+        util::ssr::redirect(redirect);
         Ok(())
     } else {
         Err(ApiError::NotFound)
@@ -249,7 +281,7 @@ pub async fn update_run(
 }
 
 #[server(UpdateUser, prefix="/api", endpoint="user/update", input=PostUrl)]
-pub async fn update_user(id: i64, permissions: Vec<Permissions>) -> Result<(), ApiError> {
+pub async fn update_user(id: i64, permissions: Vec<Permissions>, redirect: Option<String>) -> Result<(), ApiError> {
     use crate::auth::ssr::{auth, pool};
 
     return Err(ApiError::Unauthorized);
@@ -265,12 +297,17 @@ pub async fn update_user(id: i64, permissions: Vec<Permissions>) -> Result<(), A
     }
     let pool = pool()?;
 
-    let _ = sqlx::query(r#"UPDATE "user" SET permission = $1 WHERE id = $2;"#)
+    let num = sqlx::query(r#"UPDATE "user" SET permission = $1 WHERE id = $2;"#)
         .bind(perms)
         .bind(id)
         .execute(&pool)
         .await
         .map_err(|_| ApiError::ServerError("Database udpate failed".into()))?;
 
-    Ok(())
+    if num.rows_affected() != 0 {
+        util::ssr::redirect(redirect);
+        Ok(())
+    } else {
+        Err(ApiError::NotFound)
+    }
 }

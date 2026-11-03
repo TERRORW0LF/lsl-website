@@ -211,11 +211,7 @@ pub async fn update_creds(
         .map_err(|_| ApiError::ServerError("Database update failed".into()))?;
         auth.cache_clear_user(curr_user.id);
     }
-    if let Some(red) = redirect {
-        if let Some(re) = HeaderValue::from_str(&format!("/{}", red)).ok() {
-            leptos_axum::redirect(re.to_str().unwrap_or("/"), false);
-        };
-    }
+    util::ssr::redirect(redirect);
     Ok(())
 }
 
@@ -245,11 +241,7 @@ pub async fn update_bio(bio: Option<String>, redirect: Option<String>) -> Result
     .or(Err(ApiError::InvalidCredentials))?;
     auth.cache_clear_user(curr_user.id);
 
-    if let Some(red) = redirect {
-        if let Some(re) = HeaderValue::from_str(&format!("/{}", red)).ok() {
-            leptos_axum::redirect(re.to_str().unwrap_or("/"), false);
-        };
-    }
+    util::ssr::redirect(redirect);
     Ok(())
 }
 
@@ -424,11 +416,7 @@ pub async fn delete(id: i32, redirect: Option<String>) -> Result<(), ApiError> {
     .execute(&pool)
     .await;
     if num.is_ok_and(|r| r.rows_affected() != 0) {
-        if let Some(red) = redirect {
-            if let Some(re) = HeaderValue::from_str(&format!("/{}", red)).ok() {
-                leptos_axum::redirect(re.to_str().unwrap_or("/"), false);
-            };
-        }
+        util::ssr::redirect(redirect);
         Ok(())
     } else {
         Err(ApiError::NotFound)

@@ -8,9 +8,9 @@ use serde::de::DeserializeOwned;
 use web_sys::FormData;
 
 #[component]
-pub fn Modal(children: Children) -> impl IntoView {
+pub fn Modal(#[prop(into)] redirect: Signal<String>, children: Children) -> impl IntoView {
     view! {
-      <A attr:class="toner" href=|| format!("../{}", use_query_map().get().to_query_string())>
+      <A attr:class="toner" href=move || redirect.get()>
         <div />
       </A>
       <section id="box">{children()}</section>

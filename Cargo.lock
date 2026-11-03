@@ -3585,6 +3585,7 @@ dependencies = [
  "argon2",
  "axum_session_auth",
  "axum_session_sqlx",
+ "bit-vec",
  "chrono",
  "http",
  "leptos",
@@ -3602,6 +3603,7 @@ dependencies = [
  "thiserror 2.0.21",
  "tokio",
  "types",
+ "util",
 ]
 
 [[package]]
@@ -4651,6 +4653,10 @@ checksum = "3a3b425286980a367278453f3b6d28cdcb134b574e5a35824a6ff5eebad50bb6"
 [[package]]
 name = "util"
 version = "0.1.0"
+dependencies = [
+ "http",
+ "leptos_axum",
+]
 
 [[package]]
 name = "uuid"

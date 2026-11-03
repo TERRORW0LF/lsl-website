@@ -1,11 +1,12 @@
 use chrono::{Local, NaiveDateTime, TimeZone};
 use components::{
-    Button, ButtonType, Checkbox, Collapsible, Dialogue, Filter, Modal, Pager, Redirect, Select, Table, TableLine,
+    Button, ButtonType, Checkbox, Collapsible, Dialogue, Filter, Freeform, Modal, Pager, Redirect, Select, Table,
+    TableLine,
 };
 use leptos::prelude::*;
 use leptos_router::{
     components::{A, Outlet},
-    hooks::use_query_map,
+    hooks::{use_params_map, use_query_map},
 };
 use server::{
     admin::{DeleteSection, RecalculateRuns, UpdateRun, UpdateSection},
@@ -126,7 +127,7 @@ pub fn ManageRuns() -> impl IntoView {
     });
 
     view! {
-      <section id="filter-list" class="manage">
+      <section id="filter-list">
         <Outlet />
         <Collapsible id="filter" class="filter" header=|| "Show Filters">
           <Filter attr:class="filter">
@@ -227,6 +228,7 @@ pub fn ManageRuns() -> impl IntoView {
                   view! {
                     <Table
                       class:button-2=true
+                      class:run=true
                       headers=vec![
                         "id".into(),
                         "date".into(),
@@ -250,7 +252,9 @@ pub fn ManageRuns() -> impl IntoView {
                               {format!("Layout {}", r.section.layout)} {r.section.category.clone()}
                               {r.section.map.clone()}
                               <a href=format!("/user/{}", r.user.user_id)>{r.user.username.clone()}</a>
-                              <a href=r.proof.clone()>"link"</a> {format!("{} sec", r.time.to_string())}
+                              <a href=r.proof.clone() target="_blank">
+                                "link"
+                              </a> {format!("{} sec", r.time.to_string())}
                               <A
                                 class:edit=true
                                 href=move || {
@@ -301,9 +305,8 @@ pub fn EditRun(#[prop(into)] redirect: Signal<String>) -> impl IntoView {
     );
     let action = expect_context::<ServerAction<UpdateRun>>();
     let result = Signal::derive(move || action.value().get());
-    let cancel = Signal::derive(move || format!("../{}", use_query_map().read().to_query_string()));
     view! {
-      <Modal>
+      <Modal redirect>
         <h1>"Edit Run"</h1>
         <ErrorBoundary fallback=|e| {
           view! {
@@ -329,7 +332,7 @@ pub fn EditRun(#[prop(into)] redirect: Signal<String>) -> impl IntoView {
         </ErrorBoundary>
         <Dialogue action>
           <Redirect slot redirect />
-          <Show when=move || { run.read().as_ref().map(|r| r.verified).is_ok_and(|v| v) }>
+          <Show when=move || { run.read().as_ref().map(|r| r.verified).is_ok_and(|v| !v) }>
             <Checkbox name="verify" indicator="Verify" />
           </Show>
           <div>
@@ -352,8 +355,49 @@ pub fn EditRun(#[prop(into)] redirect: Signal<String>) -> impl IntoView {
               </Suspense>
             </datalist>
           </div>
-          <Button slot kind=ButtonType::Link(cancel) text="Cancel" />
+          <Button slot kind=ButtonType::Link(redirect) text="Cancel" />
           <Button slot kind=ButtonType::Primary text="Update" />
+        </Dialogue>
+      </Modal>
+    }
+}
+
+#[component]
+pub fn DeleteRun(#[prop(into)] redirect: Signal<String>) -> impl IntoView {
+    let id = Signal::derive(|| use_params_map().get().get("id").unwrap().parse::<i32>().unwrap_or(-1));
+    let action = expect_context::<ServerAction<Delete>>();
+    let result = Signal::derive(move || action.value().get());
+    view! {
+      <Modal redirect>
+        <h1>"Delete Run"</h1>
+        <p>"Please confirm your deletion of the run with id " {id}</p>
+        <ErrorBoundary fallback=|e| {
+          view! {
+            <span class="error">
+              {move || {
+                let e = e.get().into_iter().next().unwrap().1;
+                if e.is::<ApiError>() {
+                  let e = e.downcast_ref::<ApiError>().unwrap();
+                  match e {
+                    ApiError::Unauthenticated => "🛈 Please log in",
+                    ApiError::Unauthorized => "🛈 Missing permission",
+                    ApiError::NotFound => "🛈 Invalid run",
+                    _ => "🛈 Something went wrong. Try again",
+                  }
+                } else {
+                  "🛈 Something went wrong. Try again"
+                }
+              }}
+            </span>
+          }
+        }>
+          <div class="hidden">{result}</div>
+        </ErrorBoundary>
+        <Dialogue action>
+          <Redirect slot redirect />
+          <input type="text" name="id" hidden value=id />
+          <Button slot kind=ButtonType::Link(redirect) text="Cancel" />
+          <Button slot kind=ButtonType::Danger text="Delete" />
         </Dialogue>
       </Modal>
     }
@@ -369,8 +413,8 @@ pub fn ManageSections() -> impl IntoView {
             category: p.get("category").filter(|v| !v.is_empty()),
             map: p.get("map").filter(|v| !v.is_empty()),
             status: p.get("status").filter(|v| !v.is_empty()),
-            sort: p.get("sort").filter(|v| !v.is_empty()).unwrap_or("date".into()),
-            ascending: !p.get("order").filter(|v| !v.is_empty()).is_none_or(|s| s == "desc"),
+            sort: p.get("sort").filter(|v| !v.is_empty()).unwrap_or("patch".into()),
+            ascending: p.get("order").filter(|v| !v.is_empty()).is_none_or(|s| s == "asc"),
         })
     });
     let offset = Signal::derive(move || params.get().get("page").unwrap_or(String::from("0")).parse::<i32>().unwrap());
@@ -391,7 +435,7 @@ pub fn ManageSections() -> impl IntoView {
     });
 
     view! {
-      <section id="filter-list" class="manage">
+      <section id="filter-list">
         <Outlet />
         <div class="row">
           <A href="fix" attr:class="button secondary">
@@ -408,12 +452,7 @@ pub fn ManageSections() -> impl IntoView {
               indicator="Sort By"
               options=[("layout", "Layout"), ("category", "Category"), ("map", "Map")]
             />
-            <Select
-              name="order"
-              indicator="Order By"
-              selected=1
-              options=[("asc", "Ascending"), ("desc", "Descending")]
-            />
+            <Select name="order" indicator="Order By" options=[("asc", "Ascending"), ("desc", "Descending")] />
             <Select
               name="layout"
               indicator="Layout"
@@ -468,15 +507,13 @@ pub fn ManageSections() -> impl IntoView {
                   view! {
                     <Table
                       class:button-2=true
+                      class:section=true
                       headers=vec![
                         "id".into(),
-                        "date".into(),
                         "layout".into(),
                         "category".into(),
                         "map".into(),
-                        "user".into(),
-                        "proof".into(),
-                        "time".into(),
+                        "submittable".into(),
                         "".into(),
                         "".into(),
                       ]
@@ -488,6 +525,7 @@ pub fn ManageSections() -> impl IntoView {
                           view! {
                             <TableLine>
                               {s.id} {format!("Layout {}", s.layout)} {s.category.clone()} {s.map.clone()}
+                              {if s.submittable { "Yes" } else { "No" }}
                               <A
                                 class:edit=true
                                 href=move || {
@@ -528,18 +566,92 @@ pub fn EditSection(#[prop(into)] redirect: Signal<String>) -> impl IntoView {
             .get("section")
             .map(|r| serde_qs::from_str::<Section>(&r).ok())
             .flatten()
-            .ok_or(ApiError::InvalidInput)
+            .ok_or(ApiError::InvalidSection)
     });
     let action = expect_context::<ServerAction<UpdateSection>>();
     let run_fix = ServerAction::<RecalculateRuns>::new();
     let result =
         Signal::derive(move || action.value().read().as_ref().map(|r| r.as_ref().map(|_| ()).map_err(|e| e.clone())));
-    let cancel = Signal::derive(move || format!("../{}", use_query_map().read().to_query_string()));
-    let checked = Signal::derive(move || section.read().as_ref().map(|s| s.submittable).unwrap_or(false));
 
     view! {
-      <Modal>
-        <h1>"Edit Run"</h1>
+      <Modal redirect>
+        <h1>"Edit Section"</h1>
+        <ErrorBoundary fallback=|e| {
+          view! {
+            <span class="error">
+              {move || {
+                let e = e.get().into_iter().next().unwrap().1;
+                if e.is::<ApiError>() {
+                  let e = e.downcast_ref::<ApiError>().unwrap();
+                  match e {
+                    ApiError::Unauthenticated => "🛈 Please log in",
+                    ApiError::Unauthorized => "🛈 Missing permission",
+                    ApiError::NotFound | ApiError::InvalidSection => "🛈 Invalid section",
+                    ApiError::InvalidInput => "🛈 No updated parameters",
+                    _ => "🛈 Something went wrong. Try again",
+                  }
+                } else {
+                  "🛈 Something went wrong. Try again"
+                }
+              }}
+            </span>
+          }
+        }>
+          <div class="hidden">{result}</div>
+          <div class="hidden">{move || section.read().as_ref().map(|_| ()).map_err(|e| e.clone())}</div>
+        </ErrorBoundary>
+        <Dialogue action=run_fix class:row=true class:no-wrap=true>
+          <Redirect slot redirect />
+          <span>"Fix points, wr and pb flags"</span>
+          <input
+            type="text"
+            name="section_id"
+            hidden
+            value=move || section.read().as_ref().map(|s| s.id).unwrap_or(-1)
+          />
+          <Button slot kind=ButtonType::Primary text="Fix" />
+        </Dialogue>
+        <Dialogue action>
+          <Redirect slot redirect />
+          <Freeform
+            name="name"
+            indicator="Map Name"
+            error="Must be 4 to 32 alphanumeric characters"
+            {..}
+            minlength="4"
+            maxlength="32"
+            pattern="[a-zA-Z0-9 ]*"
+          />
+          <Freeform
+            name="code"
+            indicator="Code"
+            error="Must be 4 alphanumeric characters."
+            {..}
+            maxlength="4"
+            minlength="4"
+            pattern="[A-Z0-9]*"
+          />
+          <Select
+            name="submittable"
+            indicator="Submittanble"
+            options=[("", "Unchanged"), ("true", "Yes"), ("false", "No")]
+          />
+          <Button slot kind=ButtonType::Link(redirect) text="Cancel" />
+          <Button slot kind=ButtonType::Primary text="Update" />
+        </Dialogue>
+      </Modal>
+    }
+}
+
+#[component]
+pub fn DeleteSection(#[prop(into)] redirect: Signal<String>) -> impl IntoView {
+    let id = Signal::derive(|| use_params_map().get().get("id").unwrap().parse::<i32>().unwrap_or(-1));
+    let action = expect_context::<ServerAction<DeleteSection>>();
+    let result = Signal::derive(move || action.value().get());
+    view! {
+      <Modal redirect>
+        <h1>"Delete Section"</h1>
+        <p>"Please confirm your deletion of the section with id " {id}</p>
         <ErrorBoundary fallback=|e| {
           view! {
             <span class="error">
@@ -561,20 +673,12 @@ pub fn EditSection(#[prop(into)] redirect: Signal<String>) -> impl IntoView {
           }
         }>
           <div class="hidden">{result}</div>
-          <div class="hidden">{move || section.read().as_ref().map(|_| ()).map_err(|e| e.clone())}</div>
         </ErrorBoundary>
-        <Dialogue action=run_fix>
-          <Redirect slot redirect />
-          <div class="row">
-            <span>"Fix points, wr and pb flags"</span>
-            <Button slot kind=ButtonType::Primary text="Fix" />
-          </div>
-        </Dialogue>
         <Dialogue action>
           <Redirect slot redirect />
-          {[view! { <Checkbox name="submittable" indicator="Submittable" checked /> }]}
-          <Button slot kind=ButtonType::Link(cancel) text="Cancel" />
-          <Button slot kind=ButtonType::Primary text="Update" />
+          <input type="text" name="id" hidden value=id />
+          <Button slot kind=ButtonType::Link(redirect) text="Cancel" />
+          <Button slot kind=ButtonType::Danger text="Delete" />
         </Dialogue>
       </Modal>
     }

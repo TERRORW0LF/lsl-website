@@ -82,6 +82,7 @@
               mdbook-embedify
               binaryen
               dart-sass
+              vscode-css-languageserver
               leptosfmt
               gcc
             ];

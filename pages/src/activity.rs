@@ -46,7 +46,7 @@ pub fn Activity() -> impl IntoView {
     });
 
     view! {
-      <section id="filter-list" class="activity">
+      <section id="filter-list">
         <Collapsible id="filter" class="filter" header=|| "Show Filters">
           <Filter attr:class="filter">
             <Select name="sort" indicator="Sort By" options=[("date", "Date"), ("section", "Section")] />
@@ -119,17 +119,20 @@ pub fn Activity() -> impl IntoView {
                 .and_then(|activity| {
                   let activity = activity.clone();
                   view! {
-                    <Table headers=vec![
-                      "date".into(),
-                      "user".into(),
-                      "patch".into(),
-                      "layout".into(),
-                      "category".into(),
-                      "old title".into(),
-                      "new title".into(),
-                      "old rank".into(),
-                      "new rank".into(),
-                    ]>
+                    <Table
+                      class:activity=true
+                      headers=vec![
+                        "date".into(),
+                        "user".into(),
+                        "patch".into(),
+                        "layout".into(),
+                        "category".into(),
+                        "old title".into(),
+                        "new title".into(),
+                        "old rank".into(),
+                        "new rank".into(),
+                      ]
+                    >
                       {activity
                         .into_iter()
                         .map(|r| {

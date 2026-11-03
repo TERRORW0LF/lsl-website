@@ -4,9 +4,11 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-types = {path = "../types", default-features = false }
+types = { path = "../types", default-features = false }
+util = { path = "../util", default-features = false }
 
 anyhow.workspace = true
+bit-vec.workspace = true
 chrono.workspace = true
 http.workspace = true
 leptos.workspace = true
@@ -43,4 +45,5 @@ ssr = [
     "leptos_meta/ssr", 
     "leptos_router/ssr",
     "types/ssr",
+	"util/ssr",
 ]

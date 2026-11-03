@@ -137,7 +137,7 @@ pub fn Username() -> impl IntoView {
     let action = expect_context::<ServerAction<UpdateCreds>>();
     let result = Signal::derive(move || action.value().get());
     view! {
-      <Modal>
+      <Modal redirect="../">
         <h1>"Edit Username"</h1>
         <ErrorBoundary fallback=|e| {
           view! {
@@ -188,7 +188,7 @@ pub fn Password() -> impl IntoView {
     let result = Signal::derive(move || action.value().get());
     let (password_new, set_password_new) = signal(String::new());
     view! {
-      <Modal>
+      <Modal redirect="../">
         <h1>"Edit Password"</h1>
         <ErrorBoundary fallback=|e| {
           view! {
@@ -246,7 +246,7 @@ pub fn Bio() -> impl IntoView {
     let user = expect_context::<UserResource>();
     let result = Signal::derive(move || action.value().get());
     view! {
-      <Modal>
+      <Modal redirect="../">
         <h1>"Edit About Me"</h1>
         <ErrorBoundary fallback=|e| {
           view! {
@@ -297,7 +297,7 @@ pub fn Avatar() -> impl IntoView {
     let result = Signal::derive(move || action.value().get());
     let input_ref = NodeRef::<Input>::new();
     view! {
-      <Modal>
+      <Modal redirect="../">
         <h1>"Change Avatar"</h1>
         <ErrorBoundary fallback=|e| {
           view! {
@@ -365,7 +365,7 @@ pub fn DiscordList() -> impl IntoView {
     let discord_list =
         Resource::new(move || (discord_del.version().get(), discord_add.version().get()), |_| discord_list());
     view! {
-      <Modal>
+      <Modal redirect="../">
         <h1>"Discord"</h1>
         <Transition fallback=move || {
           view! { <p>"Loading..."</p> }
