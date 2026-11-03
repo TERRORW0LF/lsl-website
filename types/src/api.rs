@@ -357,12 +357,36 @@ impl Default for User {
 
 pub trait UserPermissions {
     fn has(&self, perm: &Permissions) -> bool;
+    fn has_any(&self, perms: &[Permissions]) -> bool;
+    fn has_all(&self, perms: &[Permissions]) -> bool;
 }
 
 impl UserPermissions for User {
     fn has(&self, perm: &Permissions) -> bool {
-        self.permissions.get(Permissions::Administrator as usize).is_some_and(|v| v == true)
+        self.permissions.get(Permissions::Administrator as usize).is_some_and(|v| v)
             || self.permissions.get(*perm as usize).is_some_and(|v| v == true)
+    }
+    fn has_any(&self, perms: &[Permissions]) -> bool {
+        if self.permissions.get(Permissions::Administrator as usize).is_some_and(|v| v) {
+            return true;
+        }
+        for perm in perms {
+            if self.permissions.get(*perm as usize).is_some_and(|v| v) {
+                return true;
+            }
+        }
+        return false;
+    }
+    fn has_all(&self, perms: &[Permissions]) -> bool {
+        if self.permissions.get(Permissions::Administrator as usize).is_some_and(|v| v) {
+            return true;
+        }
+        for perm in perms {
+            if self.permissions.get(*perm as usize).is_none_or(|v| !v) {
+                return false;
+            }
+        }
+        return true;
     }
 }
 

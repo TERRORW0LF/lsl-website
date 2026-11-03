@@ -9,9 +9,12 @@ use leptos_router::{
     path,
 };
 use pages::{
-    Activity, Admin, ComboRanking, Dashboard, ErrorTemplate, FAQ, HomePage, Leaderboard, Login, ManageRuns, Map,
-    Profile, Register, Submit, Submits, UserRanking,
-    admin::{DeleteRun, DeleteSection, EditRun, EditSection, ManageSections, ManageUsers},
+    Activity, Admin, ComboRanking, Dashboard, ErrorTemplate, FAQ, HomePage, Leaderboard, Login, Map, Profile, Register,
+    Submit, Submits, UserRanking,
+    admin::{
+        AddSection, DeleteRun, DeleteSection, EditRun, EditSection, FixRankings, ManageRuns, ManageSections,
+        ManageUsers,
+    },
     dash::{Avatar, Bio, DiscordList, Password, Username},
     error_template::AppError,
     leaderboard::Section,
@@ -146,10 +149,17 @@ pub fn App() -> impl IntoView {
                                 <A href="/user/@me/dashboard">"Dashboard"</A>
                                 <A href=format!("/user/{}/leaderboard", user.id)>"View Profile"</A>
                                 <A href="/user/@me/submit">"Submit"</A>
-                                <A href="/user/@me/manage">"Delete"</A>
                                 <Show when=move || {
-                                  user.has(&Permissions::Verify) || user.has(&Permissions::ManageUsers)
-                                    || user.has(&Permissions::ManageRuns) || user.has(&Permissions::ManageSections)
+                                  user
+                                    .has_any(
+                                      &[
+                                        Permissions::Delete,
+                                        Permissions::Verify,
+                                        Permissions::ManageUsers,
+                                        Permissions::ManageRuns,
+                                        Permissions::ManageSections,
+                                      ],
+                                    )
                                 }>
                                   <A href="/moderation">"Manage"</A>
                                 </Show>
@@ -219,8 +229,15 @@ fn ModerationRouter() -> impl MatchNestedRoutes + Clone {
             .get()
             .map(|n| {
               n.is_ok_and(|u| {
-                u.has(&Permissions::ManageRuns) || u.has(&Permissions::ManageSections)
-                  || u.has(&Permissions::ManageUsers)
+                u.has_any(
+                  &[
+                    Permissions::Delete,
+                    Permissions::Verify,
+                    Permissions::ManageRuns,
+                    Permissions::ManageSections,
+                    Permissions::ManageUsers,
+                  ],
+                )
               })
             })
         }
@@ -230,9 +247,13 @@ fn ModerationRouter() -> impl MatchNestedRoutes + Clone {
         <Route path=path!("") view=() />
         <ProtectedParentRoute
           path=path!("runs")
-          condition=move || { user.get().map(|n| n.is_ok_and(|u| u.has(&Permissions::ManageRuns))) }
+          condition=move || {
+            user
+              .get()
+              .map(|n| n.is_ok_and(|u| u.has_any(&[Permissions::Delete, Permissions::Verify, Permissions::ManageRuns])))
+          }
           redirect_path=|| "/login?redirect=moderation/runs"
-          view=pages::admin::ManageRuns
+          view=ManageRuns
         >
           <Route path=path!("") view=() />
           <Route path=path!("edit") view=move || view! { <EditRun redirect=redirect_run /> } />
@@ -246,6 +267,8 @@ fn ModerationRouter() -> impl MatchNestedRoutes + Clone {
         >
           <Route path=path!("") view=() />
           <Route path=path!("edit") view=move || view! { <EditSection redirect=redirect_section /> } />
+          <Route path=path!("add") view=move || view! { <AddSection redirect=redirect_section /> } />
+          <Route path=path!("fix") view=move || view! { <FixRankings redirect=redirect_section /> } />
           <Route path=path!(":id") view=move || view! { <DeleteSection redirect=redirect_section /> } />
         </ProtectedParentRoute>
         <ProtectedRoute
@@ -277,15 +300,6 @@ fn UserRouter() -> impl MatchNestedRoutes + Clone {
         <Route path=path!("bio") view=Bio />
         <Route path=path!("avatar") view=Avatar />
         <Route path=path!("discord") view=DiscordList />
-      </ProtectedParentRoute>
-      <ProtectedParentRoute
-        path=path!("user/@me/manage")
-        condition=move || user.get().map(|n| n.is_ok())
-        redirect_path=|| "/login?redirect=user/@me/manage"
-        view=ManageRuns
-      >
-        <Route path=path!("") view=() />
-        <Route path=path!(":id") view=move || view! { <DeleteRun redirect /> } />
       </ProtectedParentRoute>
       <ProtectedRoute
         path=path!("user/@me/submit")

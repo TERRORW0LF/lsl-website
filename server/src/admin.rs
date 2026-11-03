@@ -1,5 +1,4 @@
 use bit_vec::BitVec;
-use http::HeaderValue;
 use leptos::prelude::*;
 use server_fn::codec::PostUrl;
 use types::api::{ApiError, Permissions, UserPermissions};
@@ -14,7 +13,7 @@ pub async fn recalculate_ranks(
     use crate::auth::ssr::{auth, pool};
 
     let user = auth()?.current_user.ok_or(ApiError::Unauthenticated)?;
-    user.has(&Permissions::ManageRuns).ok_or(ApiError::Unauthorized)?;
+    user.has_all(&[Permissions::ManageRuns, Permissions::ManageSections]).ok_or(ApiError::Unauthorized)?;
     if layout.is_some() && category.is_none() || (layout.is_none() && category.is_some()) {
         return Err(ApiError::InvalidInput);
     }
@@ -126,7 +125,7 @@ pub async fn add_section(
     category: String,
     map: String,
     code: String,
-    submittable: bool,
+    submittable: Option<String>,
     redirect: Option<String>,
 ) -> Result<(), ApiError> {
     // TODO: add file uploads for map images
@@ -135,6 +134,8 @@ pub async fn add_section(
     let user = auth()?.current_user.ok_or(ApiError::Unauthenticated)?;
     user.has(&Permissions::ManageSections).ok_or(ApiError::Unauthorized)?;
     let pool = pool()?;
+
+    let submittable = submittable.is_some_and(|v| !v.is_empty());
 
     let num = sqlx::query(
         r#"INSERT INTO section (patch, layout, category, map, code, submittable)
@@ -153,7 +154,7 @@ pub async fn add_section(
         util::ssr::redirect(redirect);
         Ok(())
     } else {
-        Err(ApiError::NotFound)
+        Err(ApiError::AlreadyExists)
     }
 }
 

@@ -12,7 +12,6 @@ pub use map::Map;
 pub use ranking::ComboRanking;
 pub use ranking::UserRanking;
 pub use submits::Submits;
-pub use user::ManageRuns;
 pub use user::Profile;
 pub mod activity;
 pub mod admin;
