@@ -1,179 +1,179 @@
 #ranking {
-    margin: 2rem;
+  margin: 2rem;
 
-    #ranking-header {
-        top: 2.5rem;
-        color: var(--grey-0);
-        background-color: var(--grey-900);
-        z-index: 2;
+  #ranking-header {
+    top: 2.5rem;
+    color: var(--grey-0);
+    background-color: var(--grey-900);
+    z-index: 2;
 
-        .nav {
-            min-height: 2.5rem;
+    .nav {
+      min-height: 2.5rem;
 
-            [aria-current="page"]>span {
-                border-bottom: 3px solid var(--primary-200);
-            }
-        }
+      [aria-current="page"]>span {
+        border-bottom: 3px solid var(--primary-200);
+      }
     }
+  }
 
-    section.ranking {
-        font-size: 1rem;
+  section.ranking {
+    font-size: 1rem;
 
-        .ranking {
+    .ranking {
+      width: 100%;
+      margin-top: 2rem;
+      margin-bottom: 4rem;
+      justify-self: center;
+
+      .category {
+        margin-left: 2.5rem;
+        margin-top: 8rem;
+        margin-bottom: 2rem;
+        color: var(--primary-300);
+      }
+
+      .legend {
+        margin-bottom: 1rem;
+        gap: 0;
+        font-size: 0.7rem;
+
+        .title {
+          display: inline-block;
+          padding: 0.2rem 0.5rem;
+          color: var(--grey-1000);
+          font-weight: 600;
+          text-transform: uppercase;
+        }
+
+        .tooltip {
+          font-size: 0.8rem;
+          font-weight: 600;
+        }
+      }
+
+      .content:has(~details:not([open])) .inner {
+        max-height: 10rem;
+      }
+
+      .inner {
+        columns: calc(2rem + 35ch) auto;
+        column-gap: 3rem;
+
+        .grid-row {
+          display: grid;
+          height: 2rem;
+          grid-template-columns: 2rem minmax(0, 1fr) 8ch;
+          column-gap: 0.5rem;
+          font-size: 1.2rem;
+          break-inside: avoid;
+
+          * {
+            align-self: center;
+          }
+
+          .narrow {
+            gap: 0;
+          }
+
+          a {
+            color: inherit;
+          }
+
+          h4 {
+            font-size: 1rem;
+          }
+
+          h5 {
+            font-size: 1rem;
+          }
+
+          h6 {
+            font-size: 0.6rem;
+          }
+
+          .rank {
+            display: flex;
             width: 100%;
-            margin-top: 2rem;
-            margin-bottom: 4rem;
-            justify-self: center;
+            height: 100%;
+            justify-content: center;
+            border-bottom: 1px solid var(--grey-800);
 
-            .category {
-                margin-left: 2.5rem;
-                margin-top: 8rem;
-                margin-bottom: 2rem;
-                color: var(--primary-300);
+            &.rank-1 {
+              background-color: var(--rank-1);
             }
 
-            .legend {
-                margin-bottom: 1rem;
-                gap: 0;
-                font-size: 0.7rem;
-
-                .title {
-                    display: inline-block;
-                    padding: 0.2rem 0.5rem;
-                    color: var(--grey-1000);
-                    font-weight: 600;
-                    text-transform: uppercase;
-                }
-
-                .tooltip {
-                    font-size: 0.8rem;
-                    font-weight: 600;
-                }
+            &.rank-2 {
+              background-color: var(--rank-2);
             }
 
-            .content:has(~details:not([open])) .inner {
-                max-height: 10rem;
+            &.rank-3 {
+              background-color: var(--rank-3);
+            }
+          }
+
+          .name {
+            font-weight: 300;
+            overflow-x: hidden;
+          }
+
+          .rating {
+            justify-self: right;
+
+            * {
+              align-self: last baseline;
             }
 
-            .inner {
-                columns: calc(2rem + 35ch) auto;
-                column-gap: 3rem;
-
-                .grid-row {
-                    display: grid;
-                    height: 2rem;
-                    grid-template-columns: 2rem minmax(0, 1fr) 8ch;
-                    column-gap: 0.5rem;
-                    font-size: 1.2rem;
-                    break-inside: avoid;
-
-                    * {
-                        align-self: center;
-                    }
-
-                    .narrow {
-                        gap: 0;
-                    }
-
-                    a {
-                        color: inherit;
-                    }
-
-                    h4 {
-                        font-size: 1rem;
-                    }
-
-                    h5 {
-                        font-size: 1rem;
-                    }
-
-                    h6 {
-                        font-size: 0.6rem;
-                    }
-
-                    .rank {
-                        display: flex;
-                        width: 100%;
-                        height: 100%;
-                        justify-content: center;
-                        border-bottom: 1px solid var(--grey-800);
-
-                        &.rank-1 {
-                            background-color: var(--rank-1);
-                        }
-
-                        &.rank-2 {
-                            background-color: var(--rank-2);
-                        }
-
-                        &.rank-3 {
-                            background-color: var(--rank-3);
-                        }
-                    }
-
-                    .name {
-                        font-weight: 300;
-                        overflow-x: hidden;
-                    }
-
-                    .rating {
-                        justify-self: right;
-
-                        * {
-                            align-self: last baseline;
-                        }
-
-                        h6 {
-                            color: var(--grey-300)
-                        }
-                    }
-                }
+            h6 {
+              color: var(--grey-300)
             }
-
-            details {
-                z-index: 3;
-                width: 100%;
-                height: 2.5rem;
-                margin-top: 1rem;
-                align-content: center;
-                font-size: 1rem;
-                font-weight: 600;
-
-                summary {
-                    display: block;
-                    width: 100%;
-
-                    span.icon {
-                        width: 100%;
-                        height: 2rem;
-                        justify-content: center;
-                    }
-
-                    span.icon:hover {
-                        cursor: pointer;
-                    }
-
-                    span.icon::before {
-                        font-size: 4rem;
-                        font-weight: 400;
-                        line-height: 1;
-                        color: var(--grey-200);
-                    }
-                }
-
-                summary::-webkit-details-marker,
-                summary::marker {
-                    display: none;
-                }
-            }
-
-            details[open] {
-                background: transparent;
-
-                span.icon::before {
-                    transform: rotate(90deg) scaleX(-1);
-                }
-            }
+          }
         }
+      }
+
+      details {
+        z-index: 3;
+        width: 100%;
+        height: 2.5rem;
+        margin-top: 1rem;
+        align-content: center;
+        font-size: 1rem;
+        font-weight: 600;
+
+        summary {
+          display: block;
+          width: 100%;
+
+          span.icon {
+            width: 100%;
+            height: 2rem;
+            justify-content: center;
+          }
+
+          span.icon:hover {
+            cursor: pointer;
+          }
+
+          span.icon::before {
+            font-size: 4rem;
+            font-weight: 400;
+            line-height: 1;
+            color: var(--grey-200);
+          }
+        }
+
+        summary::-webkit-details-marker,
+        summary::marker {
+          display: none;
+        }
+      }
+
+      details[open] {
+        background: transparent;
+
+        span.icon::before {
+          transform: rotate(90deg) scaleX(-1);
+        }
+      }
     }
+  }
 }

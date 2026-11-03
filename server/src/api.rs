@@ -8,7 +8,7 @@ pub async fn get_runs_id(id: i32) -> Result<SectionRuns, ApiError> {
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let runs = sqlx::query_as::<_, SectionRuns>(
         r#"SELECT s.id AS section_id, s.patch, s.layout, s.category, s.map, s.submittable,
-            COALESCE(NULLIF(ARRAY_AGG((r.id, r.section_id, (u.id, u."name"), r.time,
+            COALESCE(NULLIF(ARRAY_AGG((r.id, r.section_id, (r.user_id, u."name"), r.time,
                 r.proof, r.yt_id, r.verified, r.is_pb, r.is_wr, r.created_at)
             ORDER BY r.created_at ASC)
             FILTER(WHERE r.id IS NOT NULL), '{NULL}'), '{}') AS runs
@@ -21,7 +21,10 @@ pub async fn get_runs_id(id: i32) -> Result<SectionRuns, ApiError> {
     .bind(id)
     .fetch_one(&pool)
     .await
-    .or(Err(ApiError::InvalidSection))?;
+    .map_err(|e| {
+        leptos::logging::warn!("{e:?}");
+        ApiError::InvalidSection
+    })?;
 
     res_opts.append_header(CACHE_CONTROL, HeaderValue::from_static("max-age=900"));
     Ok(runs)

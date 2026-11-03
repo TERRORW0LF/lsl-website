@@ -64,6 +64,8 @@ pub fn ManageRuns() -> impl IntoView {
     let perm = Signal::derive(move || {
         user.and_then(|u| u.has_any(&[Permissions::Verify, Permissions::ManageRuns])).opt_res_to_bool()
     });
+    let user_id = Signal::derive(move || user.map(|r| r.as_ref().map(|u| u.id).ok()).flatten().unwrap_or(-1));
+    let del_perm = Signal::derive(move || user.and_then(|u| u.has(&Permissions::ManageRuns)).opt_res_to_bool());
     let params = use_query_map();
     let user_filter = Signal::derive(move || {
         let id = params.read().get("user").map(|v| v.parse::<i64>().ok()).flatten();
@@ -162,14 +164,6 @@ pub fn ManageRuns() -> impl IntoView {
               </label>
               <input class="select" type="number" name="slower" id="slower" min="0" step="0.001" />
             </div>
-            <Show when=move || *perm.read()>
-              <div>
-                <label for="user" class="indicator">
-                  "User ID"
-                </label>
-                <input class="select" type="number" name="user" id="user" min="1" step="1" />
-              </div>
-            </Show>
             <Select
               name="layout"
               indicator="Layout"
@@ -211,6 +205,14 @@ pub fn ManageRuns() -> impl IntoView {
               indicator="Status"
               options=[("", "All"), ("verified", "Verified"), ("pb", "Personal Best"), ("wr", "World Record")]
             />
+            <Show when=move || *perm.read()>
+              <div>
+                <label for="user" class="indicator">
+                  "User ID"
+                </label>
+                <input class="select" type="number" name="user" id="user" min="1" step="1" />
+              </div>
+            </Show>
           </Filter>
         </Collapsible>
         <Suspense fallback=|| { "Fetching Runs" }>
@@ -225,28 +227,24 @@ pub fn ManageRuns() -> impl IntoView {
                     <Table
                       class:button-2=true
                       class:run=true
-                      headers=move || {
-                        let mut v = vec![
-                          "id".into(),
-                          "date".into(),
-                          "layout".into(),
-                          "category".into(),
-                          "map".into(),
-                          "user".into(),
-                          "proof".into(),
-                          "time".into(),
-                          "".into(),
-                        ];
-                        if perm.get() {
-                          v.push("".into());
-                        }
-                        v
-                      }
+                      headers=vec![
+                        "id".into(),
+                        "date".into(),
+                        "layout".into(),
+                        "category".into(),
+                        "map".into(),
+                        "user".into(),
+                        "proof".into(),
+                        "time".into(),
+                        "".into(),
+                        "".into(),
+                      ]
                     >
                       {runs
                         .into_iter()
                         .map(|r| {
                           let id = r.id;
+                          let u_id = r.user.user_id;
                           view! {
                             <TableLine>
                               {r.id} {format!("{}", r.created_at.format("%d/%m/%Y %H:%M"))}
@@ -274,14 +272,14 @@ pub fn ManageRuns() -> impl IntoView {
                                     </A>
                                   }
                                 }
+                              </Show> <Show when=move || del_perm.get() || user_id.get() == u_id>
+                                <A
+                                  class:delete=true
+                                  href=move || format!("{}{}", id.to_string(), params.get().to_query_string())
+                                >
+                                  <div></div>
+                                </A>
                               </Show>
-                              <A
-                                class:delete=true
-                                href=move || format!("{}{}", id.to_string(), params.get().to_query_string())
-                              >
-                                <div></div>
-                              </A>
-
                             </TableLine>
                           }
                         })
@@ -299,6 +297,7 @@ pub fn ManageRuns() -> impl IntoView {
 
 #[component]
 pub fn EditRun(#[prop(into)] redirect: Signal<String>) -> impl IntoView {
+    let user = expect_context::<UserResource>();
     let run = Memo::new(|_| {
         use_query_map()
             .get()
@@ -343,28 +342,31 @@ pub fn EditRun(#[prop(into)] redirect: Signal<String>) -> impl IntoView {
         <Dialogue action>
           <Redirect slot redirect />
           <Show when=move || { run.read().as_ref().map(|r| r.verified).is_ok_and(|v| !v) }>
-            <Checkbox name="verify" indicator="Verify" />
+            <Checkbox name="verified" indicator="Verify" />
           </Show>
-          <div>
-            <label for="map" class="indicator">
-              "Map"
-            </label>
-            <input class="select" list="maps" name="section_id" id="map" />
-            <datalist id="maps">
-              <Suspense>
-                {move || {
-                  maps
-                    .and_then(|v| {
-                      v.into_iter()
-                        .map(|m| {
-                          view! { <option value=m.id>{m.map.clone()}</option> }
-                        })
-                        .collect_view()
-                    })
-                }}
-              </Suspense>
-            </datalist>
-          </div>
+          <Show when=move || user.and_then(|u| u.has(&Permissions::ManageRuns)).opt_res_to_bool()>
+            <div>
+              <label for="map" class="indicator">
+                "Map"
+              </label>
+              <input class="select" list="maps" name="section_id" id="map" />
+              <datalist id="maps">
+                <Suspense>
+                  {move || {
+                    maps
+                      .and_then(|v| {
+                        v.into_iter()
+                          .map(|m| {
+                            view! { <option value=m.id>{m.map.clone()}</option> }
+                          })
+                          .collect_view()
+                      })
+                  }}
+                </Suspense>
+              </datalist>
+            </div>
+          </Show>
+          <input name="id" hidden value=move || run.read().as_ref().map(|r| r.id).unwrap_or(-1) />
           <Button slot kind=ButtonType::Link(redirect) text="Cancel" />
           <Button slot kind=ButtonType::Primary text="Update" />
         </Dialogue>
@@ -449,7 +451,7 @@ pub fn ManageSections() -> impl IntoView {
     view! {
       <section id="filter-list">
         <Outlet />
-        <div class="row">
+        <div class="row padding">
           <A href="fix" attr:class="button secondary">
             "Fix Rankings"
           </A>
@@ -525,6 +527,7 @@ pub fn ManageSections() -> impl IntoView {
                         "layout".into(),
                         "category".into(),
                         "map".into(),
+                        "code".into(),
                         "submittable".into(),
                         "".into(),
                         "".into(),
@@ -537,7 +540,7 @@ pub fn ManageSections() -> impl IntoView {
                           view! {
                             <TableLine>
                               {s.id} {format!("Layout {}", s.layout)} {s.category.clone()} {s.map.clone()}
-                              {if s.submittable { "Yes" } else { "No" }}
+                              {s.code.clone()} {if s.submittable { "Yes" } else { "No" }}
                               <A
                                 class:edit=true
                                 href=move || {
@@ -647,6 +650,7 @@ pub fn EditSection(#[prop(into)] redirect: Signal<String>) -> impl IntoView {
             indicator="Submittable"
             options=[("", "Unchanged"), ("true", "Yes"), ("false", "No")]
           />
+          <input name="id" hidden value=move || section.read().as_ref().map(|s| s.id).unwrap_or(-1) />
           <Button slot kind=ButtonType::Link(redirect) text="Cancel" />
           <Button slot kind=ButtonType::Primary text="Update" />
         </Dialogue>

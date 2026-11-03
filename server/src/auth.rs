@@ -405,17 +405,20 @@ pub async fn delete(id: i32, redirect: Option<String>) -> Result<(), ApiError> {
     let pool = pool()?;
 
     let u = auth.current_user.ok_or(ApiError::Unauthenticated)?;
-    u.has(&Permissions::Delete).ok_or(ApiError::Unauthorized)?;
+    u.has_any(&[Permissions::Delete, Permissions::ManageRuns]).ok_or(ApiError::Unauthorized)?;
 
-    let num = sqlx::query(
+    let mut query = sqlx::QueryBuilder::<sqlx::Postgres>::new(
         r#"DELETE FROM run
-        WHERE id = $1 AND user_id = $2 AND section_id > 1092;"#,
-    )
-    .bind(id)
-    .bind(u.id)
-    .execute(&pool)
-    .await;
-    if num.is_ok_and(|r| r.rows_affected() != 0) {
+        WHERE id = "#,
+    );
+    query.push_bind(id);
+    if !u.has(&Permissions::ManageRuns) {
+        query.push(" AND user_id = ").push_bind(u.id);
+    }
+    query.push(" AND section_id > 1092;");
+    let num =
+        query.build().execute(&pool).await.map_err(|_| ApiError::ServerError("Database lookup failed.".into()))?;
+    if num.rows_affected() != 0 {
         util::ssr::redirect(redirect);
         Ok(())
     } else {

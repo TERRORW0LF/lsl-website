@@ -8,209 +8,209 @@
 @use 'ranking';
 
 * {
-	margin: 0;
-	padding: 0;
-	box-sizing: border-box;
-	border: none;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  border: none;
 }
 
 a {
-	text-decoration: none;
-	color: var(--primary-600);
-	cursor: pointer;
+  text-decoration: none;
+  color: var(--primary-600);
+  cursor: pointer;
 }
 
 b,
 strong {
-	font-weight: 700;
+  font-weight: 700;
 }
 
 li {
-	list-style-position: inside;
+  list-style-position: inside;
 
-	&::marker {
-		color: var(--primary-600);
-	}
+  &::marker {
+    color: var(--primary-600);
+  }
 }
 
 :root.dark {
-	--primary-50: hsl(143, 100%, 95%);
-	--primary-100: hsl(143, 100%, 90%);
-	--primary-200: hsl(143, 100%, 80%);
-	--primary-300: hsl(143, 100%, 70%);
-	--primary-400: hsl(143, 100%, 60%);
-	--primary-500: hsl(143, 100%, 50%);
-	--primary-600: hsl(143, 100%, 40%);
-	--primary-700: hsl(143, 100%, 30%);
-	--primary-800: hsl(143, 100%, 20%);
-	--primary-900: hsl(143, 100%, 10%);
-	--primary-950: hsl(143, 100%, 7%);
-	--primary-990: hsl(143, 100%, 5%);
-	--on-primary-500: hsl(102, 100%, 88%);
-	--grey-0: hsl(0, 0%, 100%);
-	--grey-100: hsl(0, 0%, 90%);
-	--grey-200: hsl(0, 0%, 80%);
-	--grey-300: hsl(0, 0%, 70%);
-	--grey-500: hsl(0, 0%, 50%);
-	--grey-700: hsl(0, 0%, 15%);
-	--grey-800: hsl(0, 0%, 11.5%);
-	--grey-900: hsl(0, 0%, 10%);
-	--grey-1000: hsl(0, 0%, 0%);
-	--success: hsl(128, 100%, 50%);
-	--info: hsl(205, 100%, 50%);
-	--warn: hsl(47, 100%, 50%);
-	--error: hsl(0, 100%, 33%);
-	--black: hsl(0, 0%, 0%);
-	--white: hsl(0, 0%, 100%);
-	--rank-1: hsl(49, 100%, 45%);
-	--rank-2: hsl(197, 8%, 56%);
-	--rank-3: hsl(24, 69%, 34%);
+  --primary-50: hsl(143, 100%, 95%);
+  --primary-100: hsl(143, 100%, 90%);
+  --primary-200: hsl(143, 100%, 80%);
+  --primary-300: hsl(143, 100%, 70%);
+  --primary-400: hsl(143, 100%, 60%);
+  --primary-500: hsl(143, 100%, 50%);
+  --primary-600: hsl(143, 100%, 40%);
+  --primary-700: hsl(143, 100%, 30%);
+  --primary-800: hsl(143, 100%, 20%);
+  --primary-900: hsl(143, 100%, 10%);
+  --primary-950: hsl(143, 100%, 7%);
+  --primary-990: hsl(143, 100%, 5%);
+  --on-primary-500: hsl(102, 100%, 88%);
+  --grey-0: hsl(0, 0%, 100%);
+  --grey-100: hsl(0, 0%, 90%);
+  --grey-200: hsl(0, 0%, 80%);
+  --grey-300: hsl(0, 0%, 70%);
+  --grey-500: hsl(0, 0%, 50%);
+  --grey-700: hsl(0, 0%, 15%);
+  --grey-800: hsl(0, 0%, 11.5%);
+  --grey-900: hsl(0, 0%, 10%);
+  --grey-1000: hsl(0, 0%, 0%);
+  --success: hsl(128, 100%, 50%);
+  --info: hsl(205, 100%, 50%);
+  --warn: hsl(47, 100%, 50%);
+  --error: hsl(0, 100%, 33%);
+  --black: hsl(0, 0%, 0%);
+  --white: hsl(0, 0%, 100%);
+  --rank-1: hsl(49, 100%, 45%);
+  --rank-2: hsl(197, 8%, 56%);
+  --rank-3: hsl(24, 69%, 34%);
 }
 
 :root.light {
-	--primary-50: hsl(143, 100%, 10%);
-	--primary-100: hsl(143, 100%, 15%);
-	--primary-200: hsl(143, 100%, 20%);
-	--primary-300: hsl(143, 100%, 30%);
-	--primary-400: hsl(143, 100%, 40%);
-	--primary-500: hsl(143, 100%, 50%);
-	--primary-600: hsl(143, 100%, 60%);
-	--primary-700: hsl(143, 100%, 70%);
-	--primary-800: hsl(143, 100%, 80%);
-	--primary-900: hsl(143, 100%, 90%);
-	--primary-950: hsl(143, 100%, 95%);
-	--primary-990: hsl(143, 100%, 99%);
-	--on-primary-500: hsl(101, 80%, 20%);
-	--grey-0: hsl(0, 0%, 0%);
-	--grey-100: hsl(0, 0%, 10%);
-	--grey-200: hsl(0, 0%, 20%);
-	--grey-500: hsl(0, 0%, 50%);
-	--grey-800: hsl(0, 0%, 80%);
-	--grey-900: hsl(0, 0%, 90%);
-	--grey-1000: hsl(0, 0%, 100%);
-	--success: hsl(128, 100%, 50%);
-	--info: hsl(205, 100%, 50%);
-	--warn: hsl(47, 100%, 50%);
-	--error: hsl(0, 100%, 50%);
-	--black: hsl(0, 0%, 0%);
-	--white: hsl(0, 0%, 100%);
-	--rank-1: hsl(49, 100%, 45%);
-	--rank-2: hsl(197, 8%, 56%);
-	--rank-3: hsl(24, 69%, 34%);
+  --primary-50: hsl(143, 100%, 10%);
+  --primary-100: hsl(143, 100%, 15%);
+  --primary-200: hsl(143, 100%, 20%);
+  --primary-300: hsl(143, 100%, 30%);
+  --primary-400: hsl(143, 100%, 40%);
+  --primary-500: hsl(143, 100%, 50%);
+  --primary-600: hsl(143, 100%, 60%);
+  --primary-700: hsl(143, 100%, 70%);
+  --primary-800: hsl(143, 100%, 80%);
+  --primary-900: hsl(143, 100%, 90%);
+  --primary-950: hsl(143, 100%, 95%);
+  --primary-990: hsl(143, 100%, 99%);
+  --on-primary-500: hsl(101, 80%, 20%);
+  --grey-0: hsl(0, 0%, 0%);
+  --grey-100: hsl(0, 0%, 10%);
+  --grey-200: hsl(0, 0%, 20%);
+  --grey-500: hsl(0, 0%, 50%);
+  --grey-800: hsl(0, 0%, 80%);
+  --grey-900: hsl(0, 0%, 90%);
+  --grey-1000: hsl(0, 0%, 100%);
+  --success: hsl(128, 100%, 50%);
+  --info: hsl(205, 100%, 50%);
+  --warn: hsl(47, 100%, 50%);
+  --error: hsl(0, 100%, 50%);
+  --black: hsl(0, 0%, 0%);
+  --white: hsl(0, 0%, 100%);
+  --rank-1: hsl(49, 100%, 45%);
+  --rank-2: hsl(197, 8%, 56%);
+  --rank-3: hsl(24, 69%, 34%);
 }
 
 .Surfer {
-	&.color {
-		color: var(--primary-800);
-	}
+  &.color {
+    color: var(--primary-800);
+  }
 
-	&.bg {
-		background-color: var(--primary-800);
-	}
+  &.bg {
+    background-color: var(--primary-800);
+  }
 
-	&.Super {
-		&.color {
-			color: var(--primary-700);
-		}
+  &.Super {
+    &.color {
+      color: var(--primary-700);
+    }
 
-		&.bg {
-			background-color: var(--primary-700);
-		}
-	}
+    &.bg {
+      background-color: var(--primary-700);
+    }
+  }
 
-	&.Epic {
-		&.color {
-			color: var(--primary-600);
-		}
+  &.Epic {
+    &.color {
+      color: var(--primary-600);
+    }
 
-		&.bg {
-			background-color: var(--primary-600);
-		}
-	}
+    &.bg {
+      background-color: var(--primary-600);
+    }
+  }
 
-	&.Legendary {
-		&.color {
-			color: var(--primary-500);
-		}
+  &.Legendary {
+    &.color {
+      color: var(--primary-500);
+    }
 
-		&.bg {
-			background-color: var(--primary-500);
-		}
-	}
+    &.bg {
+      background-color: var(--primary-500);
+    }
+  }
 
-	&.Mythic {
-		&.color {
-			color: var(--primary-400);
-		}
+  &.Mythic {
+    &.color {
+      color: var(--primary-400);
+    }
 
-		&.bg {
-			background-color: var(--primary-400);
-		}
-	}
+    &.bg {
+      background-color: var(--primary-400);
+    }
+  }
 }
 
 .Rank {
-	&.color {
-		color: var(--primary-300);
-	}
+  &.color {
+    color: var(--primary-300);
+  }
 
-	&.bg {
-		background-color: var(--primary-300);
-	}
+  &.bg {
+    background-color: var(--primary-300);
+  }
 }
 
 .rank-1 {
-	&.color {
-		color: var(--rank-1);
-	}
+  &.color {
+    color: var(--rank-1);
+  }
 
-	&.bg {
-		background-color: var(--rank-1);
-	}
+  &.bg {
+    background-color: var(--rank-1);
+  }
 }
 
 .rank-2 {
-	&.color {
-		color: var(--rank-2);
-	}
+  &.color {
+    color: var(--rank-2);
+  }
 
-	&.bg {
-		background-color: var(--rank-2);
-	}
+  &.bg {
+    background-color: var(--rank-2);
+  }
 }
 
 .rank-3 {
-	&.color {
-		color: var(--rank-3);
-	}
+  &.color {
+    color: var(--rank-3);
+  }
 
-	&.bg {
-		background-color: var(--rank-3);
-	}
+  &.bg {
+    background-color: var(--rank-3);
+  }
 }
 
 html,
 body {
-	font-size: 1.2rem;
+  font-size: 1.2rem;
 }
 
 body {
-	font-family: Roboto Flex, sans-serif;
-	font-weight: 400;
-	color: var(--grey-0);
-	background-color: var(--grey-900);
-	line-height: normal;
+  font-family: Roboto Flex, sans-serif;
+  font-weight: 400;
+  color: var(--grey-0);
+  background-color: var(--grey-900);
+  line-height: normal;
 }
 
 p {
-	line-height: 1.5;
+  line-height: 1.5;
 }
 
 #main-nav {
-	padding-left: 2rem;
-	padding-right: 2rem;
+  padding-left: 2rem;
+  padding-right: 2rem;
 
-	.row.narrow {
-		gap: 0;
-	}
+  .row.narrow {
+    gap: 0;
+  }
 }

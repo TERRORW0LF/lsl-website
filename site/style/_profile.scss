@@ -110,26 +110,10 @@
 
   .grid {
     &.run {
-      grid-template-columns: 8ch 20ch 1fr 1fr 1.5fr 32ch 6ch 11ch;
+      grid-template-columns: 8ch 20ch 1fr 1fr 1.5fr 32ch 6ch 11ch 2rem 2rem;
 
       .divider {
-        grid-column: 1 / 9;
-      }
-
-      &.button-1 {
-        grid-template-columns: 8ch 20ch 1fr 1fr 1.5fr 32ch 6ch 11ch 2rem;
-
-        .divider {
-          grid-column: 1 / 10;
-        }
-      }
-
-      &.button-2 {
-        grid-template-columns: 8ch 20ch 1fr 1fr 1.5fr 32ch 6ch 11ch 2rem 2rem;
-
-        .divider {
-          grid-column: 1 / 11;
-        }
+        grid-column: 1 / 11;
       }
     }
 
@@ -150,10 +134,10 @@
     }
 
     &.section {
-      grid-template-columns: 8ch 1fr 1fr 1.5fr 15ch 2rem 2rem;
+      grid-template-columns: 8ch 1fr 1fr 1.5fr 8ch 15ch 2rem 2rem;
 
       .divider {
-        grid-column: 1 / 8;
+        grid-column: 1 / 9;
       }
     }
 

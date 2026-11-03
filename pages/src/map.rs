@@ -170,11 +170,11 @@ fn MapRunList(map: String, runs: Vec<PartialRun>) -> impl IntoView {
     let runs_disp = Signal::derive(move || {
         let mut old_time = Decimal::new(999999, 3);
         let mut old_times = HashMap::<i64, Decimal>::new();
-        let user_id = user.get().map(|u| u.parse::<i64>().ok().unwrap_or(-1));
+        let user_id = user.get().map(|u| u.parse::<i64>().ok());
         let mut runs: Vec<PartialRun> = runs
             .clone()
             .into_iter()
-            .filter(|r| user_id.map(|u| u == r.user.user_id).is_none_or(|b| b))
+            .filter(|r| user_id.map(|u| u == Some(r.user.user_id)).is_none_or(|b| b))
             .filter(|r| filter(r, filter_key.get(), &mut old_time, &mut old_times))
             .collect();
         runs.sort_unstable_by(sort(sort_key.get()));
@@ -182,7 +182,7 @@ fn MapRunList(map: String, runs: Vec<PartialRun>) -> impl IntoView {
     });
 
     view! {
-      <Show when=move || runs_disp.read().is_empty() fallback=|| view! { <h2>"No Runs Found"</h2> }>
+      <Show when=move || !runs_disp.read().is_empty() fallback=|| view! { <h2>"No Runs Found"</h2> }>
         {
           let map2 = map.clone();
           view! {

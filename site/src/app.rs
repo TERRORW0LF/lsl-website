@@ -286,7 +286,6 @@ fn ModerationRouter() -> impl MatchNestedRoutes + Clone {
 #[component(transparent)]
 fn UserRouter() -> impl MatchNestedRoutes + Clone {
     let user = expect_context::<UserResource>();
-    let redirect = Signal::derive(move || format!("/user/@me/manage{}", use_query_map().get().to_query_string()));
     view! {
       <ProtectedParentRoute
         path=path!("user/@me/dashboard")

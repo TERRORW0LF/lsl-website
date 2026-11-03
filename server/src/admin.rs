@@ -161,7 +161,7 @@ pub async fn add_section(
 #[server(UpdateSection, prefix="/api", endpoint="section/update", input=PostUrl)]
 pub async fn update_section(
     id: i32,
-    submittable: Option<bool>,
+    submittable: Option<String>,
     name: Option<String>,
     code: Option<String>,
     redirect: Option<String>,
@@ -180,11 +180,21 @@ pub async fn update_section(
     let mut set = query.separated(", ");
     if let Some(submit) = submittable {
         update = true;
-        set.push(" submittable = ").push_bind_unseparated(submit);
+        match submit.as_str() {
+            "true" => {
+                set.push(" submittable = true");
+            }
+            "false" => {
+                set.push(" submittable = false");
+            }
+            _ => Err(ApiError::InvalidInput)?,
+        }
     }
     // TODO: Tie image to map in db
     if let Some(name) = name
         && let Some(code) = code
+        && !name.is_empty()
+        && !code.is_empty()
     {
         update = true;
         set.push(" map = ").push_bind_unseparated(name).push(" code = ").push_bind_unseparated(code);
@@ -193,7 +203,7 @@ pub async fn update_section(
     let num = query
         .push(" WHERE id = ")
         .push_bind(id)
-        .push("AND id > 1092;")
+        .push(" AND id > 1092;")
         .build()
         .persistent(false)
         .execute(&pool)

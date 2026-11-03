@@ -96,7 +96,7 @@ pub fn Checkbox(
     view! {
       <label class="descriptor row">
         <span>{indicator}</span>
-        <input type="checkbox" name=name checked=checked />
+        <input type="checkbox" name=name checked=checked value="true" />
       </label>
     }
 }
