@@ -263,12 +263,33 @@ header {
   .sidebar-nav {
     position: sticky;
     top: 2.5rem;
-    padding: 1em 2em 1em 1em;
+    padding: 0 0.5rem;
     height: calc(100dvh - 2.5rem);
     border-right: 1px solid var(--grey-500);
 
     ul {
+      margin: 0.5rem 0;
       list-style: none;
+    }
+
+    li {
+      width: 100%;
+    }
+
+    a {
+      display: block;
+      width: 100%;
+      padding: 0.2rem;
+      color: var(--grey-200);
+      border-radius: 3px;
+      text-transform: uppercase;
+      font-size: 0.8rem;
+      font-weight: 700;
+
+      &[aria-current] {
+        background-color: var(--primary-200);
+        color: var(--grey-1000);
+      }
     }
   }
 }
