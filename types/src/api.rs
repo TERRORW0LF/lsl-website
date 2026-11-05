@@ -158,6 +158,21 @@ impl Default for SectionFilters {
     }
 }
 
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
+pub struct UserFilters {
+    pub id: Option<i64>,
+    pub name: Option<String>,
+    pub permission: Vec<Permissions>,
+    pub sort: String,
+    pub ascending: bool,
+}
+
+impl Default for UserFilters {
+    fn default() -> Self {
+        Self { id: None, name: None, permission: vec![], sort: "name".into(), ascending: true }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
 pub struct PartialSection {
@@ -237,6 +252,16 @@ impl sqlx::postgres::PgHasArrayType for PartialRanking {
     }
 }
 
+#[cfg(feature = "ssr")]
+impl sqlx::postgres::PgHasArrayType for Rank {
+    fn array_type_info() -> sqlx::postgres::PgTypeInfo {
+        sqlx::postgres::PgTypeInfo::with_name("_record")
+    }
+    fn array_compatible(_ty: &sqlx::postgres::PgTypeInfo) -> bool {
+        true
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
 pub struct SectionRuns {
@@ -303,7 +328,6 @@ pub struct Activity {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]
-#[cfg_attr(feature = "ssr", derive(sqlx::Type), sqlx(type_name = "permissions"))]
 pub enum Permissions {
     View = 0,
     Submit = 1,
@@ -317,7 +341,25 @@ pub enum Permissions {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
 pub struct User {
+    pub id: i64,
+    #[cfg_attr(feature = "ssr", sqlx(rename = "name"))]
+    pub username: String,
+    pub bio: Option<String>,
+    pub pfp: String,
+    pub ranks: Vec<Rank>,
+}
+
+impl From<RestrictedUser> for User {
+    fn from(value: RestrictedUser) -> Self {
+        Self { id: value.id, username: value.username, bio: value.bio, pfp: value.pfp, ranks: value.ranks }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
+pub struct RestrictedUser {
     pub id: i64,
     pub username: String,
     pub bio: Option<String>,
@@ -326,16 +368,27 @@ pub struct User {
     pub permissions: BitVec,
 }
 
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
+pub struct PartialRestrictedUser {
+    pub id: i64,
+    pub username: String,
+    pub bio: Option<String>,
+    pub pfp: String,
+    pub permissions: BitVec,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "ssr", derive(sqlx::FromRow), derive(sqlx::Type), sqlx(type_name = "RECORD"))]
+#[cfg_attr(feature = "ssr", derive(sqlx::FromRow, sqlx::Type), sqlx(type_name = "RECORD"))]
 pub struct PartialUser {
     pub user_id: i64,
     pub username: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
+#[cfg_attr(feature = "ssr", derive(sqlx::FromRow, sqlx::Type), sqlx(no_pg_array))]
 pub struct Rank {
+    pub id: i32,
     pub patch: String,
     pub layout: Option<String>,
     pub category: Option<String>,
@@ -343,11 +396,12 @@ pub struct Rank {
     pub rank: i32,
     pub rating: f64,
     pub percentage: f64,
+    pub points: f64,
     pub created_at: DateTime<Local>,
     pub updated_at: DateTime<Local>,
 }
 
-impl Default for User {
+impl Default for RestrictedUser {
     fn default() -> Self {
         let permissions = BitVec::from_bytes(&[0b10000000, 0b0, 0b0, 0b0]);
 
@@ -361,7 +415,7 @@ pub trait UserPermissions {
     fn has_all(&self, perms: &[Permissions]) -> bool;
 }
 
-impl UserPermissions for User {
+impl UserPermissions for RestrictedUser {
     fn has(&self, perm: &Permissions) -> bool {
         self.permissions.get(Permissions::Administrator as usize).is_some_and(|v| v)
             || self.permissions.get(*perm as usize).is_some_and(|v| v == true)

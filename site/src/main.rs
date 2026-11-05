@@ -18,7 +18,7 @@ use lsl_website::{app::*, state::{AppState, oauth_client}};
 use sqlx::PgPool;
 use tower::ServiceBuilder;
 use server::auth::ssr::connect_to_database;
-use types::{leptos::AuthSession, api::User};
+use types::{leptos::AuthSession, api::RestrictedUser};
 
 async fn leptos_handler(
     state: State<AppState>,
@@ -88,7 +88,7 @@ async fn main() {
         .leptos_routes_with_handler(routes.clone(), get(leptos_handler))
         .layer(ServiceBuilder::new()
             .layer(SessionLayer::new(session_store))
-            .layer(AuthSessionLayer::<User, i64, SessionPgPool, PgPool>::new(
+            .layer(AuthSessionLayer::<RestrictedUser, i64, SessionPgPool, PgPool>::new(
                 Some(pool.clone()),
             )
             .with_config(auth_config),

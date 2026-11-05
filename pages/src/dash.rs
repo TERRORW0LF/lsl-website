@@ -4,7 +4,7 @@ use leptos_meta::Title;
 use leptos_router::components::{A, Outlet};
 use server::auth::{DiscordAdd, DiscordDelete, Logout, UpdateBio, UpdateCreds, discord_list};
 use types::{
-    api::{ApiError, User},
+    api::{ApiError, RestrictedUser},
     leptos::{UpdatePfpAction, UserResource},
 };
 use util::escape_regex;
@@ -34,7 +34,7 @@ pub fn Dashboard() -> impl IntoView {
                       user
                         .read()
                         .as_ref()
-                        .map(|res| { res.as_ref().unwrap_or(&User::default()).pfp.clone() })
+                        .map(|res| { res.as_ref().unwrap_or(&RestrictedUser::default()).pfp.clone() })
                         .unwrap_or("default".into()),
                     )
                   }

@@ -32,7 +32,7 @@ pub mod ssr {
             Self: Sized;
     }
 
-    impl GetUser for User {
+    impl GetUser for RestrictedUser {
         async fn get_with_passhash(id: i64, pool: &PgPool) -> Option<(Self, UserPasshash)> {
             let pg_user = sqlx::query_as::<_, PgUser>("SELECT * FROM \"user\" WHERE id = $1")
                 .bind(id)
@@ -54,7 +54,7 @@ pub mod ssr {
         }
 
         async fn get(id: i64, pool: &PgPool) -> Option<Self> {
-            User::get_with_passhash(id, pool).await.map(|(user, _)| user)
+            RestrictedUser::get_with_passhash(id, pool).await.map(|(user, _)| user)
         }
 
         async fn get_from_username_with_passhash(name: String, pool: &PgPool) -> Option<(Self, UserPasshash)> {
@@ -81,16 +81,16 @@ pub mod ssr {
         }
 
         async fn get_from_username(name: String, pool: &PgPool) -> Option<Self> {
-            User::get_from_username_with_passhash(name, pool).await.map(|(user, _)| user)
+            RestrictedUser::get_from_username_with_passhash(name, pool).await.map(|(user, _)| user)
         }
     }
 
     #[async_trait]
-    impl Authentication<User, i64, PgPool> for User {
-        async fn load_user(userid: i64, pool: Option<&PgPool>) -> Result<User, anyhow::Error> {
+    impl Authentication<RestrictedUser, i64, PgPool> for RestrictedUser {
+        async fn load_user(userid: i64, pool: Option<&PgPool>) -> Result<RestrictedUser, anyhow::Error> {
             let pool = pool.unwrap();
 
-            User::get(userid, pool).await.ok_or_else(|| anyhow::anyhow!("Cannot get user"))
+            RestrictedUser::get(userid, pool).await.ok_or_else(|| anyhow::anyhow!("Cannot get user"))
         }
 
         fn is_authenticated(&self) -> bool {
@@ -127,9 +127,9 @@ pub mod ssr {
     }
 
     impl PgUser {
-        pub fn into_user(self, pg_user_ranks: Option<Vec<Rank>>) -> (User, UserPasshash) {
+        pub fn into_user(self, pg_user_ranks: Option<Vec<Rank>>) -> (RestrictedUser, UserPasshash) {
             (
-                User {
+                RestrictedUser {
                     id: self.id,
                     username: self.name,
                     bio: self.bio,

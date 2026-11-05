@@ -203,7 +203,20 @@ pub async fn get_user(id: i64) -> Result<User, ApiError> {
     use crate::auth::ssr::*;
 
     let pool = pool()?;
-    User::get(id, &pool).await.ok_or(ApiError::NotFound)
+    sqlx::query_as::<_, User>(
+        r#"SELECT u.id, name, bio, pfp, 
+            COALESCE(NULLIF(ARRAY_AGG((r.id, patch, layout, category, title, 
+                rank, rating, percentage, points, r.created_at, r.updated_at)) 
+            FILTER(r.id IS NOT NULL), '{NULL}'), '{}') AS ranks
+        FROM "user" u
+        JOIN rank r ON u.id = r.user_id
+        WHERE u.id = $1
+        GROUP BY u.id, name, bio, pfp;"#,
+    )
+    .bind(id)
+    .fetch_one(&pool)
+    .await
+    .or(Err(ApiError::NotFound))
 }
 
 #[server(GetRankings, prefix="/api", endpoint="ranking", input=GetUrl)]
@@ -215,8 +228,8 @@ pub async fn get_rankings(
     let pool = crate::auth::ssr::pool()?;
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let rankings = sqlx::query_as::<_, Ranking>(
-        r#"SELECT r.id, r.patch, r.layout, r.category, r.user_id, 
-            u.name AS username, r.title, r.rank, r.rating, r.created_at, r.updated_at, r.percentage, r.points
+        r#"SELECT r.id, r.patch, r.layout, r.category, r.user_id, u.name AS username, 
+            r.title, r.rank, r.rating, r.created_at, r.updated_at, r.percentage, r.points
         FROM rank r
         JOIN "user" u ON user_id = u.id
         WHERE r.patch = $1 AND r.layout IS NOT DISTINCT FROM $2 AND r.category IS NOT DISTINCT FROM $3
@@ -238,8 +251,8 @@ pub async fn get_rankings_user(id: i64) -> Result<Vec<Ranking>, ApiError> {
     let pool = crate::auth::ssr::pool()?;
 
     sqlx::query_as::<_, Ranking>(
-        r#"SELECT r.id, r.patch, r.layout, r.category, r.user_id, 
-            u.name AS username, r.title, r.rank, r.rating, r.created_at, r.updated_at, r.percentage, r.points
+        r#"SELECT r.id, r.patch, r.layout, r.category, r.user_id, u.name AS username, 
+            r.title, r.rank, r.rating, r.created_at, r.updated_at, r.percentage, r.points
         FROM rank r
         JOIN "user" u ON user_id = u.id
         WHERE user_id = $1;"#,
@@ -255,17 +268,20 @@ pub async fn get_rand_user() -> Result<User, ApiError> {
     use crate::auth::ssr::*;
 
     let pool = pool()?;
-    let id = sqlx::query_as::<_, UserId>(
-        r#"SELECT id
-        FROM "user"
+    sqlx::query_as::<_, User>(
+        r#"SELECT u.id, name, bio, pfp, 
+            ARRAY_AGG((r.id, patch, layout, category, title, rank, rating, 
+                percentage, points, r.created_at, r.updated_at)) AS ranks
+        FROM "user" u
+        JOIN rank r ON u.id = r.user_id
         WHERE bio IS NOT NULL
+        GROUP BY u.id, name, bio, pfp
         ORDER BY random()
         LIMIT 1;"#,
     )
     .fetch_one(&pool)
     .await
-    .or(Err(ApiError::NotFound))?;
-    User::get(id.id, &pool).await.ok_or(ApiError::NotFound)
+    .or(Err(ApiError::NotFound))
 }
 
 #[server(GetActivity, prefix="/api", endpoint="activity/get", input=GetUrl)]

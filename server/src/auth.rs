@@ -74,7 +74,7 @@ pub mod ssr {
 }
 
 #[server(GetCurrentUser, prefix="/api", endpoint="user/@me/get", input=PostUrl)]
-pub async fn get_current_user() -> Result<User, ApiError> {
+pub async fn get_current_user() -> Result<RestrictedUser, ApiError> {
     use self::ssr::*;
     auth()?.current_user.ok_or(ApiError::Unauthenticated)
 }
@@ -124,7 +124,7 @@ pub async fn login(
     let auth = auth()?;
 
     let (user, UserPasshash(expected_passhash)) =
-        User::get_from_username_with_passhash(username, &pool).await.ok_or(ApiError::InvalidCredentials)?;
+        RestrictedUser::get_from_username_with_passhash(username, &pool).await.ok_or(ApiError::InvalidCredentials)?;
     verify_password(&expected_passhash, &password)?;
 
     auth.login_user(user.id);
@@ -165,7 +165,7 @@ pub async fn update_creds(
     }
     if let Some(pw) = password {
         let (_, UserPasshash(expected_passhash)) =
-            User::get_from_username_with_passhash(curr_user.username.clone(), &pool)
+            RestrictedUser::get_from_username_with_passhash(curr_user.username.clone(), &pool)
                 .await
                 .ok_or(ApiError::InvalidCredentials)?;
         verify_password(&expected_passhash, &pw.old)?;

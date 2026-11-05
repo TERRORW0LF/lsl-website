@@ -9,12 +9,15 @@ use leptos_router::{
     hooks::{use_params_map, use_query_map},
 };
 use server::{
-    admin::{AddSection, DeleteSection, RecalculateRankings, RecalculateRuns, UpdateRun, UpdateSection},
+    admin::{
+        AddSection, DeleteSection, RecalculateRankings, RecalculateRuns, UpdateRun, UpdateSection, UpdateUser,
+        get_users,
+    },
     api::{get_maps, get_runs, get_sections},
     auth::Delete,
 };
 use types::{
-    api::{ApiError, Permissions, Run, RunFilters, Section, SectionFilters, UserPermissions},
+    api::{ApiError, Permissions, Run, RunFilters, Section, SectionFilters, UserFilters, UserPermissions},
     leptos::UserResource,
 };
 use util::OptResToBool;
@@ -829,6 +832,85 @@ pub fn FixRankings(#[prop(into)] redirect: Signal<String>) -> impl IntoView {
 }
 
 #[component]
-pub fn ManageUsers() -> impl IntoView {
-    view! { <h1>"Placeholder"</h1> }
+pub fn ManageUser() -> impl IntoView {
+    let params = use_query_map();
+    let filters = Signal::derive(move || {
+        params.with(|p| UserFilters {
+            id: p.get("id").filter(|v| !v.is_empty()).map(|v| v.parse::<i64>().ok()).flatten(),
+            name: p.get("name").filter(|v| !v.is_empty()),
+            permission: p
+                .get_all("permission")
+                .map(|v| v.iter().filter_map(|v| serde_qs::from_str::<Permissions>(v).ok()).collect())
+                .unwrap_or(vec![]),
+            sort: p.get("sort").filter(|v| !v.is_empty()).unwrap_or("name".into()),
+            ascending: p.get("order").filter(|v| !v.is_empty()).is_none_or(|s| s == "asc"),
+        })
+    });
+    let offset = Signal::derive(move || params.get().get("page").unwrap_or(String::from("0")).parse::<i32>().unwrap());
+    let update = ServerAction::<UpdateUser>::new();
+    provide_context(update);
+    let users =
+        Resource::new(move || (filters.get(), update.version().get(), offset.get()), move |f| get_users(f.0, f.2 * 50));
+    let last = Signal::derive(move || {
+        let mut last = true;
+        users.map(|res| {
+            let _ = res.as_ref().inspect(|v| last = v.len() < 50);
+        });
+        last
+    });
+
+    view! {
+      <section id="filter-list">
+        <Outlet />
+        <Collapsible id="filter" class="filter" header=|| "Show Filters">
+          <Filter attr:class="filter">
+            <Select name="sort" indicator="Sort By" options=[("name", "Name"), ("created_at", "Join Date")] />
+            <Select name="order" indicator="Order By" options=[("asc", "Ascending"), ("desc", "Descending")] />
+            <Freeform name="id" indicator="ID" {..} type="number" />
+            <Freeform name="name" indicator="Name" />
+          </Filter>
+        </Collapsible>
+        <Suspense fallback=|| { "Fetching Sections" }>
+          <ErrorBoundary fallback=|_| {
+            view! { <div class="error-display">"You are not logged in"</div> }
+          }>
+            {move || {
+              users
+                .and_then(|users| {
+                  let users = users.clone();
+                  view! {
+                    <Table
+                      class:user=true
+                      headers=vec!["id".into(), "name".into(), "join date".into(), "".into(), "".into()]
+                    >
+                      {users
+                        .into_iter()
+                        .map(|u| {
+                          let id = u.id;
+                          view! {
+                            <TableLine>
+                              {u.id} {u.username.clone()} {format!("{}", u.created_at.format("%d/%m/%Y %H:%M"))}
+                              <A
+                                class:edit=true
+                                href=move || {
+                                  let mut params = params.get();
+                                  params.replace_decoded("section", serde_qs::to_string(&u).unwrap_or("".into()));
+                                  format!("edit{}", params.to_query_string())
+                                }
+                              >
+                                <div></div>
+                              </A>
+                            </TableLine>
+                          }
+                        })
+                        .collect::<Vec<_>>()}
+                    </Table>
+                  }
+                })
+            }}
+          </ErrorBoundary>
+        </Suspense>
+        <Pager name="page" last />
+      </section>
+    }
 }

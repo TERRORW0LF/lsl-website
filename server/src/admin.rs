@@ -1,7 +1,7 @@
 use bit_vec::BitVec;
 use leptos::prelude::*;
 use server_fn::codec::PostUrl;
-use types::api::{ApiError, Permissions, UserPermissions};
+use types::api::{ApiError, PartialRestrictedUser, Permissions, RestrictedUser, UserFilters, UserPermissions};
 
 // TODO: Move rank and title updates into rating update trigger tied to rank table
 #[server(RecalculateRankings, prefix="/api", endpoint="ranking/recalculate", input=PostUrl)]
@@ -301,20 +301,65 @@ pub async fn update_run(
     }
 }
 
+#[server(GetUsers, prefix="/api", endpoint="users/get", input=PostUrl)]
+pub async fn get_users(filter: UserFilters, offset: i32) -> Result<Vec<PartialRestrictedUser>, ApiError> {
+    use crate::auth::ssr::{auth, pool};
+    use sqlx::{Postgres, QueryBuilder};
+
+    let user = auth()?.current_user.ok_or(ApiError::Unauthenticated)?;
+    user.has(&Permissions::ManageUsers).ok_or(ApiError::Unauthorized)?;
+    let mut perms = BitVec::from_elem(64, false);
+    for perm in filter.permission {
+        perms.set(perm as usize, true);
+    }
+    let pool = pool()?;
+
+    let mut query = QueryBuilder::<Postgres>::new(
+        r#"SELECT id, name, bio, pfp, permission
+        FROM "user"
+        WHERE 1 = 1 AND permission = permission | "#,
+    );
+    query.push_bind(perms);
+
+    if let Some(id) = filter.id {
+        query.push(" AND id = ").push_bind(id);
+    }
+    if let Some(name) = filter.name {
+        query.push(" AND name = ").push_bind(name);
+    }
+    let asc = match filter.ascending {
+        true => " ASC",
+        false => " DESC",
+    };
+    query
+        .push(" ORDER BY ")
+        .push(match filter.sort.as_str() {
+            "created_at" => format!("created_at {asc}"),
+            _ => format!("name {asc}"),
+        })
+        .push(" LIMIT 50 OFFSET ")
+        .push_bind(offset)
+        .push(";");
+
+    query
+        .build_query_as::<PartialRestrictedUser>()
+        .fetch_all(&pool)
+        .await
+        .map_err(|_| ApiError::ServerError("Database lookup failed.".into()))
+}
+
 #[server(UpdateUser, prefix="/api", endpoint="user/update", input=PostUrl)]
 pub async fn update_user(id: i64, permissions: Vec<Permissions>, redirect: Option<String>) -> Result<(), ApiError> {
     use crate::auth::ssr::{auth, pool};
 
-    return Err(ApiError::Unauthorized);
-
     let user = auth()?.current_user.ok_or(ApiError::Unauthenticated)?;
     user.has(&Permissions::ManageUsers).ok_or(ApiError::Unauthorized)?;
-    if permissions.len() == 0 {
-        return Ok(());
-    }
+    let max = user.permissions.iter().enumerate().filter_map(|(i, b)| b.then(|| i as i32)).last().unwrap_or(-1);
     let mut perms = BitVec::from_elem(64, false);
     for perm in permissions {
-        perms.set(perm as usize, true);
+        if user.has(&perm) && (perm as i32) < max {
+            perms.set(perm as usize, true);
+        }
     }
     let pool = pool()?;
 
@@ -327,6 +372,7 @@ pub async fn update_user(id: i64, permissions: Vec<Permissions>, redirect: Optio
 
     if num.rows_affected() != 0 {
         util::ssr::redirect(redirect);
+        auth()?.cache_clear_user(user.id);
         Ok(())
     } else {
         Err(ApiError::NotFound)

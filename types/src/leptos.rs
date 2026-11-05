@@ -74,11 +74,12 @@ where
     }
 }
 
-pub type UserResource = Resource<Result<User, ApiError>>;
+pub type UserResource = Resource<Result<RestrictedUser, ApiError>>;
 pub type UpdatePfpAction = Action<FormData, Result<(), ApiError>>;
 
 #[cfg(feature = "ssr")]
-pub type AuthSession = axum_session_auth::AuthSession<User, i64, axum_session_sqlx::SessionPgPool, sqlx::PgPool>;
+pub type AuthSession =
+    axum_session_auth::AuthSession<RestrictedUser, i64, axum_session_sqlx::SessionPgPool, sqlx::PgPool>;
 
 trait AsString {
     fn to_string(self) -> String;
@@ -138,56 +139,10 @@ tuples!((A, A2), (B, B2), (C, C2), (D, D2), (E, E2));
 tuples!((A, A2), (B, B2), (C, C2), (D, D2), (E, E2), (F, F2));
 tuples!((A, A2), (B, B2), (C, C2), (D, D2), (E, E2), (F, F2), (G, G2));
 tuples!((A, A2), (B, B2), (C, C2), (D, D2), (E, E2), (F, F2), (G, G2), (H, H2));
-tuples!(
-    (A, A2),
-    (B, B2),
-    (C, C2),
-    (D, D2),
-    (E, E2),
-    (F, F2),
-    (G, G2),
-    (H, H2),
-    (I, I2)
-);
-tuples!(
-    (A, A2),
-    (B, B2),
-    (C, C2),
-    (D, D2),
-    (E, E2),
-    (F, F2),
-    (G, G2),
-    (H, H2),
-    (I, I2),
-    (J, J2)
-);
-tuples!(
-    (A, A2),
-    (B, B2),
-    (C, C2),
-    (D, D2),
-    (E, E2),
-    (F, F2),
-    (G, G2),
-    (H, H2),
-    (I, I2),
-    (J, J2),
-    (K, K2)
-);
-tuples!(
-    (A, A2),
-    (B, B2),
-    (C, C2),
-    (D, D2),
-    (E, E2),
-    (F, F2),
-    (G, G2),
-    (H, H2),
-    (I, I2),
-    (J, J2),
-    (K, K2),
-    (L, L2)
-);
+tuples!((A, A2), (B, B2), (C, C2), (D, D2), (E, E2), (F, F2), (G, G2), (H, H2), (I, I2));
+tuples!((A, A2), (B, B2), (C, C2), (D, D2), (E, E2), (F, F2), (G, G2), (H, H2), (I, I2), (J, J2));
+tuples!((A, A2), (B, B2), (C, C2), (D, D2), (E, E2), (F, F2), (G, G2), (H, H2), (I, I2), (J, J2), (K, K2));
+tuples!((A, A2), (B, B2), (C, C2), (D, D2), (E, E2), (F, F2), (G, G2), (H, H2), (I, I2), (J, J2), (K, K2), (L, L2));
 tuples!(
     (A, A2),
     (B, B2),
