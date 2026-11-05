@@ -43,6 +43,7 @@ axum_session_sqlx = { version = "0.11", features = ["postgres", "tls-rustls"] }
 leptos_axum = { git = "https://github.com/leptos-rs/leptos.git" }
 oauth2 = "5.0.0"
 rand = "0.10.2"
+regex = "1.13.1"
 reqwest = { version = "0.13.4", features = ["json"] }
 sqlx = { version = "0.9", features = ["postgres", "runtime-tokio", "tls-rustls", "macros", "chrono", "rust_decimal",
 "bit-vec"] }

@@ -15,6 +15,7 @@ pub mod ssr {
     pub use axum_session_sqlx::SessionPgPool;
     pub use leptos::prelude::{server, use_context};
     use oauth2::{EndpointNotSet, EndpointSet, basic::BasicClient};
+    pub use regex::regex;
     pub use sqlx::{
         PgPool,
         postgres::{PgConnectOptions, PgPoolOptions},
@@ -68,9 +69,7 @@ pub mod ssr {
     }
 
     pub fn check_username(username: &String) -> bool {
-        username.len() >= 2
-            && username.len() <= 32
-            && username.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-' || c == '.')
+        regex!("^[[:word:]\\-\\.]{2,32}$").is_match(username)
     }
 }
 
@@ -89,42 +88,22 @@ pub async fn register(
 ) -> Result<(), ApiError> {
     use self::ssr::*;
 
-    if !check_password(&password) || !check_username(&username) {
-        Err(ApiError::InvalidCredentials)?;
-    }
-    if password != password_confirm {
-        Err(ApiError::InvalidCredentials)?;
-    }
+    (check_password(&password) && check_username(&username)).ok_or(ApiError::InvalidCredentials)?;
+    (password == password_confirm).ok_or(ApiError::InvalidCredentials)?;
 
     let pool = pool()?;
     let auth = auth()?;
 
     let pwd_hash = hash_password(&password)?;
 
-    sqlx::query("INSERT INTO \"user\" (name, password) VALUES ($1, $2);")
-        .bind(username.clone())
+    let id = sqlx::query_as::<_, UserId>("INSERT INTO \"user\" (name, password) VALUES ($1, $2) RETURNING id;")
+        .bind(username)
         .bind(pwd_hash)
-        .execute(&pool)
+        .fetch_one(&pool)
         .await
         .map_err(|_| ApiError::AlreadyExists)?;
 
-    let user = User::get_from_username(username, &pool)
-        .await
-        .ok_or_else(|| ApiError::ServerError("Signup failed: User does not exist.".into()))?;
-
-    let _ = sqlx::query(
-        r#"INSERT INTO permission (user_id, token) 
-            VALUES ($1, $2), ($1, $3), ($1, $4), ($1, $5);"#,
-    )
-    .bind(user.id)
-    .bind(Permissions::View)
-    .bind(Permissions::Submit)
-    .bind(Permissions::Trusted)
-    .bind(Permissions::Delete)
-    .execute(&pool)
-    .await;
-
-    auth.login_user(user.id);
+    auth.login_user(id.id);
     auth.remember_user(remember.is_some());
 
     leptos_axum::redirect("/", false);
@@ -166,16 +145,12 @@ pub async fn update_creds(
     use self::ssr::*;
 
     let auth = auth()?;
-    if !auth.current_user.is_some() {
-        Err(ApiError::Unauthenticated)?;
-    }
-    let curr_user = auth.current_user.as_ref().unwrap();
+    let curr_user = auth.current_user.as_ref().ok_or(ApiError::Unauthenticated)?;
     let pool = pool()?;
 
     if let Some(name) = username {
-        if !check_username(&name) {
-            Err(ApiError::InvalidCredentials)?;
-        }
+        check_username(&name).ok_or(ApiError::InvalidCredentials)?;
+
         sqlx::query(
             r#"UPDATE "user"
             SET name = $1
@@ -194,9 +169,7 @@ pub async fn update_creds(
                 .await
                 .ok_or(ApiError::InvalidCredentials)?;
         verify_password(&expected_passhash, &pw.old)?;
-        if !check_password(&pw.new) {
-            Err(ApiError::InvalidCredentials)?;
-        }
+        check_password(&pw.new).ok_or(ApiError::InvalidCredentials)?;
         let pwd_hash = hash_password(&pw.new)?;
 
         sqlx::query(
@@ -220,10 +193,7 @@ pub async fn update_bio(bio: Option<String>, redirect: Option<String>) -> Result
     use self::ssr::*;
 
     let auth = auth()?;
-    if !auth.current_user.is_some() {
-        Err(ApiError::Unauthenticated)?;
-    }
-    let curr_user = auth.current_user.as_ref().unwrap();
+    let curr_user = auth.current_user.as_ref().ok_or(ApiError::Unauthenticated)?;
     let pool = pool()?;
 
     if bio.clone().is_some_and(|b| b.len() > 512) {
@@ -253,12 +223,8 @@ pub async fn update_pfp(data: MultipartData) -> Result<(), ApiError> {
     use std::io::{BufWriter, Write};
 
     let auth = auth()?;
+    let user = auth.current_user.as_ref().ok_or(ApiError::Unauthenticated)?;
     let pool = pool()?;
-
-    if !auth.current_user.is_some() {
-        return Err(ApiError::Unauthenticated)?;
-    }
-    let user = auth.current_user.as_ref().unwrap();
 
     let mut data = data.into_inner().unwrap();
     let mut count = 0;
@@ -324,9 +290,7 @@ pub async fn update_pfp(data: MultipartData) -> Result<(), ApiError> {
 pub async fn logout() -> Result<(), ApiError> {
     use self::ssr::*;
 
-    let auth = auth()?;
-
-    auth.logout_user();
+    auth()?.logout_user();
     leptos_axum::redirect("/", false);
 
     Ok(())
@@ -348,12 +312,9 @@ pub async fn submit(
     use self::ssr::*;
 
     let auth = auth()?;
-    let pool = pool()?;
-
     let u = auth.current_user.ok_or(ApiError::Unauthenticated)?;
-    if !u.has(&Permissions::Submit) {
-        return Err(ApiError::Unauthorized);
-    }
+    u.has(&Permissions::Submit).ok_or(ApiError::Unauthorized)?;
+    let pool = pool()?;
 
     let section_id = sqlx::query_as::<_, SectionId>(
         r#"SELECT id
@@ -402,10 +363,9 @@ pub async fn delete(id: i32, redirect: Option<String>) -> Result<(), ApiError> {
     use self::ssr::*;
 
     let auth = auth()?;
-    let pool = pool()?;
-
     let u = auth.current_user.ok_or(ApiError::Unauthenticated)?;
     u.has_any(&[Permissions::Delete, Permissions::ManageRuns]).ok_or(ApiError::Unauthorized)?;
+    let pool = pool()?;
 
     let mut query = sqlx::QueryBuilder::<sqlx::Postgres>::new(
         r#"DELETE FROM run

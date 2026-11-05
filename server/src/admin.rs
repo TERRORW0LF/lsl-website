@@ -67,6 +67,7 @@ pub async fn recalculate_runs(section_id: i32, redirect: Option<String>) -> Resu
 
     let user = auth()?.current_user.ok_or(ApiError::Unauthenticated)?;
     user.has(&Permissions::ManageRuns).ok_or(ApiError::Unauthorized)?;
+    (section_id <= 1092).ok_or(ApiError::InvalidSection)?;
     let pool = pool()?;
 
     let mut tx = pool.begin().await.map_err(|_| ApiError::ServerError("Failed to start transaction.".into()))?;
@@ -130,9 +131,12 @@ pub async fn add_section(
 ) -> Result<(), ApiError> {
     // TODO: add file uploads for map images
     use crate::auth::ssr::{auth, pool};
+    use regex::regex;
 
     let user = auth()?.current_user.ok_or(ApiError::Unauthenticated)?;
     user.has(&Permissions::ManageSections).ok_or(ApiError::Unauthorized)?;
+    (regex!("^[[:alnum:]:\\-() ]{4,32}$").is_match(&map) && regex!("^[A-Z0-9]{4}$").is_match(&code))
+        .ok_or(ApiError::InvalidInput)?;
     let pool = pool()?;
 
     let submittable = submittable.is_some_and(|v| !v.is_empty());
@@ -167,9 +171,11 @@ pub async fn update_section(
     redirect: Option<String>,
 ) -> Result<(), ApiError> {
     use crate::auth::ssr::{auth, pool};
+    use regex::regex;
 
     let user = auth()?.current_user.ok_or(ApiError::Unauthenticated)?;
     user.has(&Permissions::ManageSections).ok_or(ApiError::Unauthorized)?;
+    (id <= 1092).ok_or(ApiError::InvalidSection)?;
     let pool = pool()?;
 
     let mut update = false;
@@ -196,6 +202,8 @@ pub async fn update_section(
         && !name.is_empty()
         && !code.is_empty()
     {
+        (regex!("^[[:alnum:]:\\-() ]{4,32}$").is_match(&name) && regex!("^[A-Z0-9]{4}$").is_match(&code))
+            .ok_or(ApiError::InvalidInput)?;
         update = true;
         set.push(" map = ").push_bind_unseparated(name).push(" code = ").push_bind_unseparated(code);
     }
@@ -203,7 +211,7 @@ pub async fn update_section(
     let num = query
         .push(" WHERE id = ")
         .push_bind(id)
-        .push(" AND id > 1092;")
+        .push(";")
         .build()
         .persistent(false)
         .execute(&pool)
@@ -227,6 +235,7 @@ pub async fn delete_section(id: i32, redirect: Option<String>) -> Result<(), Api
 
     let u = auth.current_user.ok_or(ApiError::Unauthenticated)?;
     u.has(&Permissions::ManageSections).ok_or(ApiError::Unauthorized)?;
+    (id <= 1092).ok_or(ApiError::InvalidSection)?;
 
     let num = sqlx::query(
         r#"DELETE FROM section
@@ -269,6 +278,7 @@ pub async fn update_run(
     }
     if let Some(section_id) = section_id {
         user.has(&Permissions::ManageRuns).ok_or(ApiError::Unauthorized)?;
+        (section_id <= 1092).ok_or(ApiError::InvalidSection)?;
         update = true;
         set.push(" section_id = ").push_bind_unseparated(section_id);
     }

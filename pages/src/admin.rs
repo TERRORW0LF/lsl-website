@@ -634,7 +634,7 @@ pub fn EditSection(#[prop(into)] redirect: Signal<String>) -> impl IntoView {
             {..}
             minlength="4"
             maxlength="32"
-            pattern="[a-zA-Z0-9 ]*"
+            pattern="[a-zA-Z0-9() ]*"
           />
           <Freeform
             name="code"
