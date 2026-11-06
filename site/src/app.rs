@@ -9,16 +9,9 @@ use leptos_router::{
     path,
 };
 use pages::{
-    Activity, Admin, ComboRanking, Dashboard, ErrorTemplate, FAQ, HomePage, Leaderboard, Login, Map, Profile, Register,
-    Submit, Submits, UserRanking,
-    admin::{
-        AddSection, DeleteRun, DeleteSection, EditRun, EditSection, FixRankings, ManageRuns, ManageSections,
-        ManageUsers,
-    },
-    dash::{Avatar, Bio, DiscordList, Password, Username},
-    error_template::AppError,
-    leaderboard::Section,
-    ranking::RankingHeader,
+    Activity, Admin, ComboRanking, Dashboard, ErrorTemplate, FAQ, HomePage, Leaderboard, Login, Map, Profile, Register, Submit, Submits, UserRanking, admin::{
+        AddSection, DeleteRun, DeleteSection, EditRun, EditSection, EditUser, FixRankings, ManageRuns, ManageSections, ManageUsers,
+    }, dash::{Avatar, Bio, DiscordList, Password, Username}, error_template::AppError, leaderboard::Section, ranking::RankingHeader,
 };
 use server::auth::{Login, Logout, Register, UpdateBio, UpdateCreds, get_current_user, update_pfp};
 use types::{
@@ -271,12 +264,15 @@ fn ModerationRouter() -> impl MatchNestedRoutes + Clone {
           <Route path=path!("fix") view=move || view! { <FixRankings redirect=redirect_section /> } />
           <Route path=path!(":id") view=move || view! { <DeleteSection redirect=redirect_section /> } />
         </ProtectedParentRoute>
-        <ProtectedRoute
+        <ProtectedParentRoute
           path=path!("users")
           condition=move || { user.get().map(|n| n.is_ok_and(|u| u.has(&Permissions::ManageUsers))) }
           redirect_path=|| "/login?redirect=moderation/users"
           view=ManageUsers
-        />
+        >
+          <Route path=path!("") view=() />
+          <Route path=path!("edit") view=move || view! { <EditUser redirect=redirect_section /> } />
+        </ProtectedParentRoute>
       </ProtectedParentRoute>
     }
     .into_inner()

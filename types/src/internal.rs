@@ -40,10 +40,11 @@ pub mod ssr {
                 .await
                 .ok()?;
             let pg_user_ranks = sqlx::query_as::<_, Rank>(
-                r#"SELECT patch, layout, category, title, rank, rating, percentage, created_at, updated_at
-                    FROM rank
-                    WHERE user_id = $1;
-                "#,
+                r#"SELECT id, patch, layout, category, 
+                    array_length(enum_range(NULL::Title, title), 1) AS title, 
+                    rank, rating, percentage, points, created_at, updated_at
+                FROM rank
+                WHERE user_id = $1;"#,
             )
             .bind(id)
             .fetch_all(pool)
@@ -59,7 +60,9 @@ pub mod ssr {
 
         async fn get_from_username_with_passhash(name: String, pool: &PgPool) -> Option<(Self, UserPasshash)> {
             let pg_user = sqlx::query_as::<_, PgUser>(
-                r#"SELECT id, "name", password, pfp, bio, permission, created_at FROM "user" WHERE "name" = $1;"#,
+                r#"SELECT id, "name", password, pfp, bio, permission, created_at 
+                FROM "user" 
+                WHERE "name" = $1;"#,
             )
             .bind(name)
             .fetch_one(pool)
@@ -67,10 +70,11 @@ pub mod ssr {
             .ok()?;
 
             let pg_user_ranks = sqlx::query_as::<_, Rank>(
-                r#"SELECT patch, layout, category, title, rank, rating, percentage, created_at, updated_at
-                    FROM rank
-                    WHERE user_id = $1;
-                "#,
+                r#"SELECT id, patch, layout, category, 
+                    array_length(enum_range(NULL::Title, title), 1) AS title, 
+                    rank, rating, percentage, points, created_at, updated_at
+                FROM rank
+                WHERE user_id = $1;"#,
             )
             .bind(pg_user.id)
             .fetch_all(pool)
@@ -136,6 +140,7 @@ pub mod ssr {
                     permissions: self.permission,
                     ranks: pg_user_ranks.unwrap_or_default(),
                     pfp: self.pfp,
+                    created_at: self.created_at,
                 },
                 UserPasshash(self.password),
             )

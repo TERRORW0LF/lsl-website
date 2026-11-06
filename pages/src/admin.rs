@@ -17,7 +17,10 @@ use server::{
     auth::Delete,
 };
 use types::{
-    api::{ApiError, Permissions, Run, RunFilters, Section, SectionFilters, UserFilters, UserPermissions},
+    api::{
+        ApiError, PartialRestrictedUser, Permissions, Run, RunFilters, Section, SectionFilters, UserFilters,
+        UserPermissions,
+    },
     leptos::UserResource,
 };
 use util::OptResToBool;
@@ -832,7 +835,7 @@ pub fn FixRankings(#[prop(into)] redirect: Signal<String>) -> impl IntoView {
 }
 
 #[component]
-pub fn ManageUser() -> impl IntoView {
+pub fn ManageUsers() -> impl IntoView {
     let params = use_query_map();
     let filters = Signal::derive(move || {
         params.with(|p| UserFilters {
@@ -853,7 +856,7 @@ pub fn ManageUser() -> impl IntoView {
         Resource::new(move || (filters.get(), update.version().get(), offset.get()), move |f| get_users(f.0, f.2 * 50));
     let last = Signal::derive(move || {
         let mut last = true;
-        users.map(|res| {
+        users.read().as_ref().inspect(|res| {
             let _ = res.as_ref().inspect(|v| last = v.len() < 50);
         });
         last
@@ -889,12 +892,13 @@ pub fn ManageUser() -> impl IntoView {
                           let id = u.id;
                           view! {
                             <TableLine>
-                              {u.id} {u.username.clone()} {format!("{}", u.created_at.format("%d/%m/%Y %H:%M"))}
+                              {u.id} <a href=format!("/user/{}", u.id)>{u.username.clone()}</a>
+                              {format!("{}", u.created_at.format("%d/%m/%Y %H:%M"))}
                               <A
                                 class:edit=true
                                 href=move || {
                                   let mut params = params.get();
-                                  params.replace_decoded("section", serde_qs::to_string(&u).unwrap_or("".into()));
+                                  params.replace_decoded("user", serde_qs::to_string(&u).unwrap_or("".into()));
                                   format!("edit{}", params.to_query_string())
                                 }
                               >
@@ -912,5 +916,110 @@ pub fn ManageUser() -> impl IntoView {
         </Suspense>
         <Pager name="page" last />
       </section>
+    }
+}
+
+#[component]
+pub fn EditUser(#[prop(into)] redirect: Signal<String>) -> impl IntoView {
+    let user = Memo::new(|_| {
+        use_query_map()
+            .get()
+            .get("user")
+            .map(|r| serde_qs::from_str::<PartialRestrictedUser>(&r).ok())
+            .flatten()
+            .ok_or(ApiError::InvalidSection)
+    });
+    let def_user = Signal::derive(move || user.get().unwrap_or_default());
+    let action = expect_context::<ServerAction<UpdateUser>>();
+    let result = Signal::derive(move || action.value().get());
+
+    view! {
+      <Modal redirect>
+        <h1>"Edit Section"</h1>
+        <ErrorBoundary fallback=|e| {
+          view! {
+            <span class="error">
+              {move || {
+                let e = e.get().into_iter().next().unwrap().1;
+                if e.is::<ApiError>() {
+                  let e = e.downcast_ref::<ApiError>().unwrap();
+                  match e {
+                    ApiError::Unauthenticated => "🛈 Please log in",
+                    ApiError::Unauthorized => "🛈 Missing permission",
+                    ApiError::NotFound | ApiError::InvalidSection => "🛈 Invalid section",
+                    ApiError::InvalidInput => "🛈 No updated parameters",
+                    _ => "🛈 Something went wrong. Try again",
+                  }
+                } else {
+                  "🛈 Something went wrong. Try again"
+                }
+              }}
+            </span>
+          }
+        }>
+          <div class="hidden">{result}</div>
+          <div class="hidden">{move || user.read().as_ref().map(|_| ()).map_err(|e| e.clone())}</div>
+        </ErrorBoundary>
+        <Dialogue action>
+          <Redirect slot redirect />
+          <Checkbox
+            name="permissions"
+            indicator="View"
+            checked=move || def_user.read().has(&Permissions::View)
+            attr:value=move || serde_qs::to_string(&Permissions::View).unwrap()
+          />
+          <Checkbox
+            name="permissions"
+            indicator="Submit"
+            checked=move || def_user.read().has(&Permissions::Submit)
+            attr:value=move || serde_qs::to_string(&Permissions::Submit).unwrap()
+          />
+          <Checkbox
+            name="permissions"
+            indicator="Delete"
+            checked=move || def_user.read().has(&Permissions::Delete)
+            attr:value=move || serde_qs::to_string(&Permissions::Delete).unwrap()
+          />
+          <Checkbox
+            name="permissions"
+            indicator="Trusted"
+            checked=move || def_user.read().has(&Permissions::Trusted)
+            attr:value=move || serde_qs::to_string(&Permissions::Trusted).unwrap()
+          />
+          <Checkbox
+            name="permissions"
+            indicator="Verify"
+            checked=move || def_user.read().has(&Permissions::Verify)
+            attr:value=move || serde_qs::to_string(&Permissions::Verify).unwrap()
+          />
+          <Checkbox
+            name="permissions"
+            indicator="Manage Runs"
+            checked=move || def_user.read().has(&Permissions::ManageRuns)
+            attr:value=move || serde_qs::to_string(&Permissions::ManageRuns).unwrap()
+          />
+          <Checkbox
+            name="permissions"
+            indicator="Manage Sections"
+            checked=move || def_user.read().has(&Permissions::ManageSections)
+            attr:value=move || serde_qs::to_string(&Permissions::ManageSections).unwrap()
+          />
+          <Checkbox
+            name="permissions"
+            indicator="Manage Users"
+            checked=move || def_user.read().has(&Permissions::ManageUsers)
+            attr:value=move || serde_qs::to_string(&Permissions::ManageUsers).unwrap()
+          />
+          <Checkbox
+            name="permissions"
+            indicator="Administrator"
+            checked=move || def_user.read().has(&Permissions::Administrator)
+            attr:value=move || serde_qs::to_string(&Permissions::Administrator).unwrap()
+          />
+          <input name="id" hidden value=move || user.read().as_ref().map(|s| s.id).unwrap_or(-1) />
+          <Button slot kind=ButtonType::Link(redirect) text="Cancel" />
+          <Button slot kind=ButtonType::Primary text="Update" />
+        </Dialogue>
+      </Modal>
     }
 }

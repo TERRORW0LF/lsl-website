@@ -315,7 +315,7 @@ pub async fn get_users(filter: UserFilters, offset: i32) -> Result<Vec<PartialRe
     let pool = pool()?;
 
     let mut query = QueryBuilder::<Postgres>::new(
-        r#"SELECT id, name, bio, pfp, permission
+        r#"SELECT id, name, bio, pfp, permission, created_at
         FROM "user"
         WHERE 1 = 1 AND permission = permission | "#,
     );
@@ -328,8 +328,8 @@ pub async fn get_users(filter: UserFilters, offset: i32) -> Result<Vec<PartialRe
         query.push(" AND name = ").push_bind(name);
     }
     let asc = match filter.ascending {
-        true => " ASC",
-        false => " DESC",
+        true => "ASC",
+        false => "DESC",
     };
     query
         .push(" ORDER BY ")

@@ -204,19 +204,23 @@ pub async fn get_user(id: i64) -> Result<User, ApiError> {
 
     let pool = pool()?;
     sqlx::query_as::<_, User>(
-        r#"SELECT u.id, name, bio, pfp, 
-            COALESCE(NULLIF(ARRAY_AGG((r.id, patch, layout, category, title, 
+        r#"SELECT u.id, name, bio, pfp, u.created_at,
+            COALESCE(NULLIF(ARRAY_AGG((r.id, patch, layout, category, 
+                array_length(enum_range(NULL::Title, title), 1), 
                 rank, rating, percentage, points, r.created_at, r.updated_at)) 
-            FILTER(r.id IS NOT NULL), '{NULL}'), '{}') AS ranks
+            FILTER(WHERE r.id IS NOT NULL), '{NULL}'), '{}') AS ranks
         FROM "user" u
         JOIN rank r ON u.id = r.user_id
         WHERE u.id = $1
-        GROUP BY u.id, name, bio, pfp;"#,
+        GROUP BY u.id, name, bio, pfp, u.created_at;"#,
     )
     .bind(id)
     .fetch_one(&pool)
     .await
-    .or(Err(ApiError::NotFound))
+    .map_err(|e| {
+        leptos::logging::warn!("{e:?}");
+        ApiError::NotFound
+    })
 }
 
 #[server(GetRankings, prefix="/api", endpoint="ranking", input=GetUrl)]
@@ -229,7 +233,8 @@ pub async fn get_rankings(
     let res_opts = expect_context::<leptos_axum::ResponseOptions>();
     let rankings = sqlx::query_as::<_, Ranking>(
         r#"SELECT r.id, r.patch, r.layout, r.category, r.user_id, u.name AS username, 
-            r.title, r.rank, r.rating, r.created_at, r.updated_at, r.percentage, r.points
+            array_length(enum_range(NULL::Title, title), 1) AS title, 
+            r.rank, r.rating, r.created_at, r.updated_at, r.percentage, r.points
         FROM rank r
         JOIN "user" u ON user_id = u.id
         WHERE r.patch = $1 AND r.layout IS NOT DISTINCT FROM $2 AND r.category IS NOT DISTINCT FROM $3
@@ -252,7 +257,8 @@ pub async fn get_rankings_user(id: i64) -> Result<Vec<Ranking>, ApiError> {
 
     sqlx::query_as::<_, Ranking>(
         r#"SELECT r.id, r.patch, r.layout, r.category, r.user_id, u.name AS username, 
-            r.title, r.rank, r.rating, r.created_at, r.updated_at, r.percentage, r.points
+            array_length(enum_range(NULL::Title, title), 1) AS title, 
+            r.rank, r.rating, r.created_at, r.updated_at, r.percentage, r.points
         FROM rank r
         JOIN "user" u ON user_id = u.id
         WHERE user_id = $1;"#,
@@ -269,13 +275,14 @@ pub async fn get_rand_user() -> Result<User, ApiError> {
 
     let pool = pool()?;
     sqlx::query_as::<_, User>(
-        r#"SELECT u.id, name, bio, pfp, 
-            ARRAY_AGG((r.id, patch, layout, category, title, rank, rating, 
-                percentage, points, r.created_at, r.updated_at)) AS ranks
+        r#"SELECT u.id, name, bio, pfp, u.created_at, 
+            ARRAY_AGG((r.id, patch, layout, category, 
+                array_length(enum_range(NULL::Title, title), 1), 
+                rank, rating, percentage, points, r.created_at, r.updated_at)) AS ranks
         FROM "user" u
         JOIN rank r ON u.id = r.user_id
         WHERE bio IS NOT NULL
-        GROUP BY u.id, name, bio, pfp
+        GROUP BY u.id, name, bio, pfp, u.created_at
         ORDER BY random()
         LIMIT 1;"#,
     )
@@ -291,11 +298,13 @@ pub async fn get_activity(filter: ActivityFilters, offset: i32) -> Result<Vec<Ac
     let pool = crate::auth::ssr::pool()?;
     let mut query = QueryBuilder::<Postgres>::new(
         r#"SELECT a.id, a.user_id, name AS username, rank_id, patch, layout, category, 
-                    title_old, title_new, rank_old, rank_new, a.created_at
-                FROM activity a
-                INNER JOIN "user" u ON a.user_id = u.id
-                LEFT JOIN rank r ON rank_id = r.id
-                WHERE 1 = 1"#,
+            (CASE WHEN title_old IS NULL THEN NULL ELSE array_length(enum_range(NULL::Title, title_old), 1) END) AS title_old, 
+            (CASE WHEN title_new IS NULL THEN NULL ELSE array_length(enum_range(NULL::Title, title_new), 1) END) AS title_new, 
+            rank_old, rank_new, a.created_at
+        FROM activity a
+        INNER JOIN "user" u ON a.user_id = u.id
+        LEFT JOIN rank r ON rank_id = r.id
+        WHERE 1 = 1"#,
     );
     if let Some(event) = filter.event {
         match event.as_str() {

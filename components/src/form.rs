@@ -91,7 +91,7 @@ pub fn MultiLine(
 pub fn Checkbox(
     #[prop(into)] name: String,
     #[prop(into)] indicator: String,
-    #[prop(optional)] checked: Signal<bool>,
+    #[prop(optional, into)] checked: Signal<bool>,
 ) -> impl IntoView {
     view! {
       <label class="descriptor row">

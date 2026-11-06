@@ -58,23 +58,24 @@ impl FromServerFnError for ApiError {
     }
 }
 
+// HORRIBLE HACK: sqlx does not allow custom types in records, so here we are.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Display, Serialize, Deserialize, Hash)]
-#[cfg_attr(feature = "ssr", derive(sqlx::Type), sqlx(type_name = "title"))]
+#[cfg_attr(feature = "ssr", derive(sqlx::Type), sqlx(type_name = "title"), repr(i32))]
 pub enum Title {
     #[strum(to_string = "No Title")]
-    None = 0,
+    None = 1,
     #[strum(to_string = "Surfer")]
-    Surfer = 1,
+    Surfer = 2,
     #[strum(to_string = "Super Surfer")]
-    SuperSurfer = 2,
+    SuperSurfer = 3,
     #[strum(to_string = "Epic Surfer")]
-    EpicSurfer = 3,
+    EpicSurfer = 4,
     #[strum(to_string = "Legendary Surfer")]
-    LegendarySurfer = 4,
+    LegendarySurfer = 5,
     #[strum(to_string = "Mythic Surfer")]
-    MythicSurfer = 5,
+    MythicSurfer = 6,
     #[strum(to_string = "Rank 1")]
-    TopOne = 6,
+    TopOne = 7,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
@@ -215,7 +216,7 @@ pub struct Run {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "ssr", derive(sqlx::Type), derive(sqlx::FromRow), sqlx(no_pg_array))]
+#[cfg_attr(feature = "ssr", derive(sqlx::FromRow, sqlx::Type), sqlx(no_pg_array))]
 pub struct PartialRun {
     pub id: i32,
     pub section_id: i32,
@@ -348,12 +349,33 @@ pub struct User {
     pub username: String,
     pub bio: Option<String>,
     pub pfp: String,
+    pub created_at: DateTime<Local>,
     pub ranks: Vec<Rank>,
+}
+
+impl Default for User {
+    fn default() -> Self {
+        Self {
+            id: -1,
+            username: "Guest".into(),
+            bio: None,
+            pfp: "default".into(),
+            ranks: vec![],
+            created_at: DateTime::default(),
+        }
+    }
 }
 
 impl From<RestrictedUser> for User {
     fn from(value: RestrictedUser) -> Self {
-        Self { id: value.id, username: value.username, bio: value.bio, pfp: value.pfp, ranks: value.ranks }
+        Self {
+            id: value.id,
+            username: value.username,
+            bio: value.bio,
+            pfp: value.pfp,
+            ranks: value.ranks,
+            created_at: value.created_at,
+        }
     }
 }
 
@@ -366,6 +388,7 @@ pub struct RestrictedUser {
     pub pfp: String,
     pub ranks: Vec<Rank>,
     pub permissions: BitVec,
+    pub created_at: DateTime<Local>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -376,6 +399,7 @@ pub struct PartialRestrictedUser {
     pub bio: Option<String>,
     pub pfp: String,
     pub permissions: BitVec,
+    pub created_at: DateTime<Local>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -403,10 +427,37 @@ pub struct Rank {
 
 impl Default for RestrictedUser {
     fn default() -> Self {
-        let permissions = BitVec::from_bytes(&[0b10000000, 0b0, 0b0, 0b0]);
+        let permissions = BitVec::from_elem(64, false);
 
-        Self { id: -1, username: "Guest".into(), bio: None, permissions, ranks: Vec::new(), pfp: "default".into() }
+        Self {
+            id: -1,
+            username: "Guest".into(),
+            bio: None,
+            permissions,
+            ranks: Vec::new(),
+            pfp: "default".into(),
+            created_at: DateTime::default(),
+        }
     }
+}
+
+impl Default for PartialRestrictedUser {
+    fn default() -> Self {
+        let permissions = BitVec::from_elem(64, false);
+
+        Self {
+            id: -1,
+            username: "Guest".into(),
+            bio: None,
+            permissions,
+            pfp: "default".into(),
+            created_at: DateTime::default(),
+        }
+    }
+}
+
+pub trait GetPermissions {
+    fn permissions(&self) -> &BitVec;
 }
 
 pub trait UserPermissions {
@@ -415,28 +466,40 @@ pub trait UserPermissions {
     fn has_all(&self, perms: &[Permissions]) -> bool;
 }
 
-impl UserPermissions for RestrictedUser {
+impl GetPermissions for PartialRestrictedUser {
+    fn permissions(&self) -> &BitVec {
+        &self.permissions
+    }
+}
+
+impl GetPermissions for RestrictedUser {
+    fn permissions(&self) -> &BitVec {
+        &self.permissions
+    }
+}
+
+impl<T: GetPermissions> UserPermissions for T {
     fn has(&self, perm: &Permissions) -> bool {
-        self.permissions.get(Permissions::Administrator as usize).is_some_and(|v| v)
-            || self.permissions.get(*perm as usize).is_some_and(|v| v == true)
+        self.permissions().get(Permissions::Administrator as usize).is_some_and(|v| v)
+            || self.permissions().get(*perm as usize).is_some_and(|v| v == true)
     }
     fn has_any(&self, perms: &[Permissions]) -> bool {
-        if self.permissions.get(Permissions::Administrator as usize).is_some_and(|v| v) {
+        if self.permissions().get(Permissions::Administrator as usize).is_some_and(|v| v) {
             return true;
         }
         for perm in perms {
-            if self.permissions.get(*perm as usize).is_some_and(|v| v) {
+            if self.permissions().get(*perm as usize).is_some_and(|v| v) {
                 return true;
             }
         }
         return false;
     }
     fn has_all(&self, perms: &[Permissions]) -> bool {
-        if self.permissions.get(Permissions::Administrator as usize).is_some_and(|v| v) {
+        if self.permissions().get(Permissions::Administrator as usize).is_some_and(|v| v) {
             return true;
         }
         for perm in perms {
-            if self.permissions.get(*perm as usize).is_none_or(|v| !v) {
+            if self.permissions().get(*perm as usize).is_none_or(|v| !v) {
                 return false;
             }
         }
