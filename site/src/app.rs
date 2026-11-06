@@ -9,9 +9,16 @@ use leptos_router::{
     path,
 };
 use pages::{
-    Activity, Admin, ComboRanking, Dashboard, ErrorTemplate, FAQ, HomePage, Leaderboard, Login, Map, Profile, Register, Submit, Submits, UserRanking, admin::{
-        AddSection, DeleteRun, DeleteSection, EditRun, EditSection, EditUser, FixRankings, ManageRuns, ManageSections, ManageUsers,
-    }, dash::{Avatar, Bio, DiscordList, Password, Username}, error_template::AppError, leaderboard::Section, ranking::RankingHeader,
+    Activity, Admin, ComboRanking, Dashboard, ErrorTemplate, FAQ, HomePage, Leaderboard, Login, Map, Profile, Register,
+    Submit, Submits, UserRanking,
+    admin::{
+        AddSection, DeleteRun, DeleteSection, EditRun, EditSection, EditUser, FixRankings, ManageRuns, ManageSections,
+        ManageUsers,
+    },
+    dash::{Avatar, Bio, DiscordList, Password, Username},
+    error_template::AppError,
+    leaderboard::Section,
+    ranking::RankingHeader,
 };
 use server::auth::{Login, Logout, Register, UpdateBio, UpdateCreds, get_current_user, update_pfp};
 use types::{
@@ -214,6 +221,7 @@ fn ModerationRouter() -> impl MatchNestedRoutes + Clone {
     let redirect_run = Signal::derive(move || format!("/moderation/runs{}", use_query_map().get().to_query_string()));
     let redirect_section =
         Signal::derive(move || format!("/moderation/sections{}", use_query_map().get().to_query_string()));
+    let redirect_user = Signal::derive(move || format!("/moderation/users{}", use_query_map().get().to_query_string()));
     view! {
       <ProtectedParentRoute
         path=path!("moderation")
@@ -271,7 +279,7 @@ fn ModerationRouter() -> impl MatchNestedRoutes + Clone {
           view=ManageUsers
         >
           <Route path=path!("") view=() />
-          <Route path=path!("edit") view=move || view! { <EditUser redirect=redirect_section /> } />
+          <Route path=path!("edit") view=move || view! { <EditUser redirect=redirect_user /> } />
         </ProtectedParentRoute>
       </ProtectedParentRoute>
     }

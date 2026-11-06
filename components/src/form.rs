@@ -51,6 +51,16 @@ pub fn Select(
 }
 
 #[component]
+pub fn FilterInput(#[prop(into)] name: String, #[prop(into)] indicator: String) -> impl IntoView {
+    view! {
+      <label for=name.clone() class="indicator">
+        {indicator}
+      </label>
+      <input class="select" name=name.clone() id=name.clone() />
+    }
+}
+
+#[component]
 pub fn Freeform(
     #[prop(into)] name: String,
     #[prop(into)] indicator: String,
@@ -92,11 +102,12 @@ pub fn Checkbox(
     #[prop(into)] name: String,
     #[prop(into)] indicator: String,
     #[prop(optional, into)] checked: Signal<bool>,
+    #[prop(default="on".into(), into)] value: Signal<String>,
 ) -> impl IntoView {
     view! {
       <label class="descriptor row">
         <span>{indicator}</span>
-        <input type="checkbox" name=name checked=checked value="true" />
+        <input type="checkbox" name=name checked=checked value=move || value() />
       </label>
     }
 }

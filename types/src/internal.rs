@@ -137,7 +137,7 @@ pub mod ssr {
                     id: self.id,
                     username: self.name,
                     bio: self.bio,
-                    permissions: self.permission,
+                    permission: self.permission,
                     ranks: pg_user_ranks.unwrap_or_default(),
                     pfp: self.pfp,
                     created_at: self.created_at,

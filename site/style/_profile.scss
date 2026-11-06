@@ -141,6 +141,14 @@
       }
     }
 
+    &.user {
+      grid-template-columns: 8ch 1fr 1fr 2rem;
+
+      .divider {
+        grid-column: 1 / 5;
+      }
+    }
+
     .delete {
       display: inline-block;
       cursor: pointer;

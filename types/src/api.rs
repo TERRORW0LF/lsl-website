@@ -383,11 +383,12 @@ impl From<RestrictedUser> for User {
 #[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
 pub struct RestrictedUser {
     pub id: i64,
+    #[cfg_attr(feature = "ssr", sqlx(rename = "name"))]
     pub username: String,
     pub bio: Option<String>,
     pub pfp: String,
     pub ranks: Vec<Rank>,
-    pub permissions: BitVec,
+    pub permission: BitVec,
     pub created_at: DateTime<Local>,
 }
 
@@ -395,10 +396,11 @@ pub struct RestrictedUser {
 #[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
 pub struct PartialRestrictedUser {
     pub id: i64,
+    #[cfg_attr(feature = "ssr", sqlx(rename = "name"))]
     pub username: String,
     pub bio: Option<String>,
     pub pfp: String,
-    pub permissions: BitVec,
+    pub permission: BitVec,
     pub created_at: DateTime<Local>,
 }
 
@@ -433,7 +435,7 @@ impl Default for RestrictedUser {
             id: -1,
             username: "Guest".into(),
             bio: None,
-            permissions,
+            permission: permissions,
             ranks: Vec::new(),
             pfp: "default".into(),
             created_at: DateTime::default(),
@@ -449,7 +451,7 @@ impl Default for PartialRestrictedUser {
             id: -1,
             username: "Guest".into(),
             bio: None,
-            permissions,
+            permission: permissions,
             pfp: "default".into(),
             created_at: DateTime::default(),
         }
@@ -468,13 +470,13 @@ pub trait UserPermissions {
 
 impl GetPermissions for PartialRestrictedUser {
     fn permissions(&self) -> &BitVec {
-        &self.permissions
+        &self.permission
     }
 }
 
 impl GetPermissions for RestrictedUser {
     fn permissions(&self) -> &BitVec {
-        &self.permissions
+        &self.permission
     }
 }
 

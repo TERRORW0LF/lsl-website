@@ -216,6 +216,7 @@ pub async fn update_bio(bio: Option<String>, redirect: Option<String>) -> Result
 }
 
 #[server(UpdatePfp, prefix="/api", endpoint="user/update/avatar", input=MultipartFormData)]
+#[middleware(axum::extract::DefaultBodyLimit::max(5 * 1024 * 1024))]
 pub async fn update_pfp(data: MultipartData) -> Result<(), ApiError> {
     use crate::auth::ssr::{auth, pool};
     use rand::{RngExt, distr::Alphanumeric, rng};

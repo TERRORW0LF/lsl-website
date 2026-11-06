@@ -1,7 +1,7 @@
 use chrono::{Local, NaiveDateTime, TimeZone};
 use components::{
-    Button, ButtonType, Checkbox, Collapsible, Dialogue, Filter, Freeform, Modal, Pager, Redirect, Select, Table,
-    TableLine,
+    Button, ButtonType, Checkbox, Collapsible, Dialogue, Filter, FilterInput, Freeform, Modal, Pager, Redirect, Select,
+    Table, TableLine,
 };
 use leptos::prelude::*;
 use leptos_router::{
@@ -146,30 +146,10 @@ pub fn ManageRuns() -> impl IntoView {
               selected=1
               options=[("asc", "Ascending"), ("desc", "Descending")]
             />
-            <div>
-              <label for="before" class="indicator">
-                "Before"
-              </label>
-              <input class="select" type="datetime-local" name="before" id="before" />
-            </div>
-            <div>
-              <label for="after" class="indicator">
-                "After"
-              </label>
-              <input class="select" type="datetime-local" name="after" id="after" />
-            </div>
-            <div>
-              <label for="faster" class="indicator">
-                "Faster Than"
-              </label>
-              <input class="select" type="number" name="faster" id="faster" min="0" step="0.001" />
-            </div>
-            <div>
-              <label for="slower" class="indicator">
-                "Slower Than"
-              </label>
-              <input class="select" type="number" name="slower" id="slower" min="0" step="0.001" />
-            </div>
+            <FilterInput name="before" indicator="Before" {..} type="datetime-local" />
+            <FilterInput name="after" indicator="After" {..} type="datetime-local" />
+            <FilterInput name="faster" indicator="Faster Than" {..} type="number" min="0" step="0.001" />
+            <FilterInput name="slower" indicator="Slower Than" {..} type="number" min="0" step="0.001" />
             <Select
               name="layout"
               indicator="Layout"
@@ -212,12 +192,7 @@ pub fn ManageRuns() -> impl IntoView {
               options=[("", "All"), ("verified", "Verified"), ("pb", "Personal Best"), ("wr", "World Record")]
             />
             <Show when=move || *perm.read()>
-              <div>
-                <label for="user" class="indicator">
-                  "User ID"
-                </label>
-                <input class="select" type="number" name="user" id="user" min="1" step="1" />
-              </div>
+              <FilterInput name="user" indicator="User ID" {..} type="number" min="1" step="1" />
             </Show>
           </Filter>
         </Collapsible>
@@ -869,8 +844,8 @@ pub fn ManageUsers() -> impl IntoView {
           <Filter attr:class="filter">
             <Select name="sort" indicator="Sort By" options=[("name", "Name"), ("created_at", "Join Date")] />
             <Select name="order" indicator="Order By" options=[("asc", "Ascending"), ("desc", "Descending")] />
-            <Freeform name="id" indicator="ID" {..} type="number" />
-            <Freeform name="name" indicator="Name" />
+            <FilterInput name="id" indicator="ID" {..} type="number" />
+            <FilterInput name="name" indicator="Name" />
           </Filter>
         </Collapsible>
         <Suspense fallback=|| { "Fetching Sections" }>
@@ -882,14 +857,10 @@ pub fn ManageUsers() -> impl IntoView {
                 .and_then(|users| {
                   let users = users.clone();
                   view! {
-                    <Table
-                      class:user=true
-                      headers=vec!["id".into(), "name".into(), "join date".into(), "".into(), "".into()]
-                    >
+                    <Table class:user=true headers=vec!["id".into(), "name".into(), "join date".into(), "".into()]>
                       {users
                         .into_iter()
                         .map(|u| {
-                          let id = u.id;
                           view! {
                             <TableLine>
                               {u.id} <a href=format!("/user/{}", u.id)>{u.username.clone()}</a>
@@ -925,7 +896,7 @@ pub fn EditUser(#[prop(into)] redirect: Signal<String>) -> impl IntoView {
         use_query_map()
             .get()
             .get("user")
-            .map(|r| serde_qs::from_str::<PartialRestrictedUser>(&r).ok())
+            .map(|u| serde_qs::from_str::<PartialRestrictedUser>(&u).ok())
             .flatten()
             .ok_or(ApiError::InvalidSection)
     });
@@ -966,55 +937,55 @@ pub fn EditUser(#[prop(into)] redirect: Signal<String>) -> impl IntoView {
             name="permissions"
             indicator="View"
             checked=move || def_user.read().has(&Permissions::View)
-            attr:value=move || serde_qs::to_string(&Permissions::View).unwrap()
+            value="View"
           />
           <Checkbox
             name="permissions"
             indicator="Submit"
             checked=move || def_user.read().has(&Permissions::Submit)
-            attr:value=move || serde_qs::to_string(&Permissions::Submit).unwrap()
+            value="Submit"
           />
           <Checkbox
             name="permissions"
             indicator="Delete"
             checked=move || def_user.read().has(&Permissions::Delete)
-            attr:value=move || serde_qs::to_string(&Permissions::Delete).unwrap()
+            value="Delete"
           />
           <Checkbox
             name="permissions"
             indicator="Trusted"
             checked=move || def_user.read().has(&Permissions::Trusted)
-            attr:value=move || serde_qs::to_string(&Permissions::Trusted).unwrap()
+            value="Trusted"
           />
           <Checkbox
             name="permissions"
             indicator="Verify"
             checked=move || def_user.read().has(&Permissions::Verify)
-            attr:value=move || serde_qs::to_string(&Permissions::Verify).unwrap()
+            value="Verify"
           />
           <Checkbox
             name="permissions"
             indicator="Manage Runs"
             checked=move || def_user.read().has(&Permissions::ManageRuns)
-            attr:value=move || serde_qs::to_string(&Permissions::ManageRuns).unwrap()
+            value="ManageRuns"
           />
           <Checkbox
             name="permissions"
             indicator="Manage Sections"
             checked=move || def_user.read().has(&Permissions::ManageSections)
-            attr:value=move || serde_qs::to_string(&Permissions::ManageSections).unwrap()
+            value="ManageSections"
           />
           <Checkbox
             name="permissions"
             indicator="Manage Users"
             checked=move || def_user.read().has(&Permissions::ManageUsers)
-            attr:value=move || serde_qs::to_string(&Permissions::ManageUsers).unwrap()
+            value="ManageUsers"
           />
           <Checkbox
             name="permissions"
             indicator="Administrator"
             checked=move || def_user.read().has(&Permissions::Administrator)
-            attr:value=move || serde_qs::to_string(&Permissions::Administrator).unwrap()
+            value="Administrator"
           />
           <input name="id" hidden value=move || user.read().as_ref().map(|s| s.id).unwrap_or(-1) />
           <Button slot kind=ButtonType::Link(redirect) text="Cancel" />

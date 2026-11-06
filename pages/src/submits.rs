@@ -1,5 +1,5 @@
 use chrono::{Local, NaiveDateTime, TimeZone};
-use components::{Collapsible, Filter, Pager, Select, Table, TableLine};
+use components::{Collapsible, Filter, FilterInput, Pager, Select, Table, TableLine};
 use leptos::prelude::*;
 use leptos_router::hooks::use_query_map;
 use server::api::{get_maps, get_runs};
@@ -63,36 +63,11 @@ pub fn Submits() -> impl IntoView {
               selected=1
               options=[("asc", "Ascending"), ("desc", "Descending")]
             />
-            <div>
-              <label for="before" class="indicator">
-                "Before"
-              </label>
-              <input class="select" type="datetime-local" name="before" id="before" />
-            </div>
-            <div>
-              <label for="after" class="indicator">
-                "After"
-              </label>
-              <input class="select" type="datetime-local" name="after" id="after" />
-            </div>
-            <div>
-              <label for="faster" class="indicator">
-                "Faster Than"
-              </label>
-              <input class="select" type="number" name="faster" id="faster" min="0" step="0.001" />
-            </div>
-            <div>
-              <label for="slower" class="indicator">
-                "Slower Than"
-              </label>
-              <input class="select" type="number" name="slower" id="slower" min="0" step="0.001" />
-            </div>
-            <div>
-              <label for="user" class="indicator">
-                "User ID"
-              </label>
-              <input class="select" type="number" name="user" id="user" min="1" step="1" />
-            </div>
+            <FilterInput name="before" indicator="Before" {..} type="datetime-local" />
+            <FilterInput name="after" indicator="After" {..} type="datetime-local" />
+            <FilterInput name="faster" indicator="Faster Than" {..} type="number" min="0" step="0.001" />
+            <FilterInput name="slower" indicator="Slower Than" {..} type="number" min="0" step="0.001" />
+            <FilterInput name="user" indicator="User ID" {..} type="number" min="1" step="1" />
             <Select
               name="patch"
               indicator="Patch"

@@ -321,10 +321,14 @@ pub async fn get_users(filter: UserFilters, offset: i32) -> Result<Vec<PartialRe
     );
     query.push_bind(perms);
 
-    if let Some(id) = filter.id {
+    if let Some(id) = filter.id
+        && id != 0
+    {
         query.push(" AND id = ").push_bind(id);
     }
-    if let Some(name) = filter.name {
+    if let Some(name) = filter.name
+        && !name.is_empty()
+    {
         query.push(" AND name = ").push_bind(name);
     }
     let asc = match filter.ascending {
@@ -341,11 +345,10 @@ pub async fn get_users(filter: UserFilters, offset: i32) -> Result<Vec<PartialRe
         .push_bind(offset)
         .push(";");
 
-    query
-        .build_query_as::<PartialRestrictedUser>()
-        .fetch_all(&pool)
-        .await
-        .map_err(|_| ApiError::ServerError("Database lookup failed.".into()))
+    query.build_query_as::<PartialRestrictedUser>().fetch_all(&pool).await.map_err(|e| {
+        leptos::logging::warn!("{e:?}");
+        ApiError::ServerError("Database lookup failed.".into())
+    })
 }
 
 #[server(UpdateUser, prefix="/api", endpoint="user/update", input=PostUrl)]
@@ -354,7 +357,7 @@ pub async fn update_user(id: i64, permissions: Vec<Permissions>, redirect: Optio
 
     let user = auth()?.current_user.ok_or(ApiError::Unauthenticated)?;
     user.has(&Permissions::ManageUsers).ok_or(ApiError::Unauthorized)?;
-    let max = user.permissions.iter().enumerate().filter_map(|(i, b)| b.then(|| i as i32)).last().unwrap_or(-1);
+    let max = user.permission.iter().enumerate().filter_map(|(i, b)| b.then(|| i as i32)).last().unwrap_or(-1);
     let mut perms = BitVec::from_elem(64, false);
     for perm in permissions {
         if user.has(&perm) && (perm as i32) < max {
