@@ -104,7 +104,7 @@ pub async fn register(
         .map_err(|_| ApiError::AlreadyExists)?;
 
     auth.login_user(id.id);
-    auth.remember_user(remember.is_some());
+    auth.remember_user(remember.is_some_and(|v| !v.is_empty()));
 
     leptos_axum::redirect("/", false);
 
@@ -128,7 +128,7 @@ pub async fn login(
     verify_password(&expected_passhash, &password)?;
 
     auth.login_user(user.id);
-    auth.remember_user(remember.is_some());
+    auth.remember_user(remember.is_some_and(|v| !v.is_empty()));
     match HeaderValue::from_str(&format!("/{}", redirect.unwrap_or(String::new()))) {
         Ok(r) => leptos_axum::redirect(r.to_str().unwrap_or("/"), false),
         Err(_) => leptos_axum::redirect("/", false),

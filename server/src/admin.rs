@@ -1,7 +1,7 @@
 use bit_vec::BitVec;
 use leptos::prelude::*;
 use server_fn::codec::PostUrl;
-use types::api::{ApiError, PartialRestrictedUser, Permissions, RestrictedUser, UserFilters, UserPermissions};
+use types::api::{ApiError, PartialRestrictedUser, Permissions, UserFilters, UserPermissions};
 
 // TODO: Move rank and title updates into rating update trigger tied to rank table
 #[server(RecalculateRankings, prefix="/api", endpoint="ranking/recalculate", input=PostUrl)]
@@ -67,7 +67,7 @@ pub async fn recalculate_runs(section_id: i32, redirect: Option<String>) -> Resu
 
     let user = auth()?.current_user.ok_or(ApiError::Unauthenticated)?;
     user.has(&Permissions::ManageRuns).ok_or(ApiError::Unauthorized)?;
-    (section_id <= 1092).ok_or(ApiError::InvalidSection)?;
+    (section_id > 1092).ok_or(ApiError::InvalidSection)?;
     let pool = pool()?;
 
     let mut tx = pool.begin().await.map_err(|_| ApiError::ServerError("Failed to start transaction.".into()))?;
@@ -88,10 +88,7 @@ pub async fn recalculate_runs(section_id: i32, redirect: Option<String>) -> Resu
     .bind(section_id)
     .execute(&mut *tx)
     .await
-    .map_err(|e| {
-        leptos::logging::warn!("{e:?}");
-        ApiError::ServerError("Database update failed".into())
-    })?;
+    .map_err(|_| ApiError::ServerError("Database update failed".into()))?;
 
     let _ = sqlx::query(
         r#"UPDATE run
@@ -109,10 +106,7 @@ pub async fn recalculate_runs(section_id: i32, redirect: Option<String>) -> Resu
     .bind(section_id)
     .execute(&mut *tx)
     .await
-    .map_err(|e| {
-        leptos::logging::warn!("{e:?}");
-        ApiError::ServerError("Database update failed".into())
-    })?;
+    .map_err(|_| ApiError::ServerError("Database update failed".into()))?;
 
     tx.commit().await.map_err(|_| ApiError::ServerError("Failed to commit transaction.".into()))?;
 
@@ -175,7 +169,7 @@ pub async fn update_section(
 
     let user = auth()?.current_user.ok_or(ApiError::Unauthenticated)?;
     user.has(&Permissions::ManageSections).ok_or(ApiError::Unauthorized)?;
-    (id <= 1092).ok_or(ApiError::InvalidSection)?;
+    (id > 1092).ok_or(ApiError::InvalidSection)?;
     let pool = pool()?;
 
     let mut update = false;
@@ -184,7 +178,9 @@ pub async fn update_section(
         SET"#,
     );
     let mut set = query.separated(", ");
-    if let Some(submit) = submittable {
+    if let Some(submit) = submittable
+        && !submit.is_empty()
+    {
         update = true;
         match submit.as_str() {
             "true" => {
@@ -235,7 +231,7 @@ pub async fn delete_section(id: i32, redirect: Option<String>) -> Result<(), Api
 
     let u = auth.current_user.ok_or(ApiError::Unauthenticated)?;
     u.has(&Permissions::ManageSections).ok_or(ApiError::Unauthorized)?;
-    (id <= 1092).ok_or(ApiError::InvalidSection)?;
+    (id > 1092).ok_or(ApiError::InvalidSection)?;
 
     let num = sqlx::query(
         r#"DELETE FROM section
@@ -278,7 +274,7 @@ pub async fn update_run(
     }
     if let Some(section_id) = section_id {
         user.has(&Permissions::ManageRuns).ok_or(ApiError::Unauthorized)?;
-        (section_id <= 1092).ok_or(ApiError::InvalidSection)?;
+        (section_id > 1092).ok_or(ApiError::InvalidSection)?;
         update = true;
         set.push(" section_id = ").push_bind_unseparated(section_id);
     }
@@ -345,10 +341,11 @@ pub async fn get_users(filter: UserFilters, offset: i32) -> Result<Vec<PartialRe
         .push_bind(offset)
         .push(";");
 
-    query.build_query_as::<PartialRestrictedUser>().fetch_all(&pool).await.map_err(|e| {
-        leptos::logging::warn!("{e:?}");
-        ApiError::ServerError("Database lookup failed.".into())
-    })
+    query
+        .build_query_as::<PartialRestrictedUser>()
+        .fetch_all(&pool)
+        .await
+        .map_err(|_| ApiError::ServerError("Database lookup failed.".into()))
 }
 
 #[server(UpdateUser, prefix="/api", endpoint="user/update", input=PostUrl)]
