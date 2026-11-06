@@ -332,8 +332,8 @@ pub struct Activity {
 pub enum Permissions {
     View = 0,
     Submit = 1,
-    Trusted = 2,
-    Delete = 3,
+    Delete = 2,
+    Trusted = 3,
     Verify = 4,
     ManageRuns = 5,
     ManageSections = 6,
