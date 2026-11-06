@@ -64,8 +64,8 @@ pub async fn get_runs(filter: RunFilters, offset: i32) -> Result<Vec<Run>, ApiEr
 
     let pool = crate::auth::ssr::pool()?;
     let mut query = QueryBuilder::<Postgres>::new(
-        r#"SELECT run.id, run.created_at, section_id, patch, layout, 
-            category, map, submittable, user_id, "name" AS username, time, proof, yt_id, verified, is_pb, is_wr
+        r#"SELECT run.id, run.created_at, section_id, patch, layout, category, map, 
+            submittable, user_id, "name" AS username, time, proof, yt_id, verified, is_pb, is_wr
         FROM run
         INNER JOIN section s ON section_id = s.id
         INNER JOIN "user" u ON user_id = u.id 

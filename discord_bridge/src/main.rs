@@ -45,8 +45,8 @@ async fn main() {
             match listener.recv().await {
                 Ok(notification) => {
                     let run = query_as::<_, Run>(
-                        r#"SELECT r.id, r.user_id, u.name, r.section_id, s.patch, s.layout, s.category, 
-                            s.map, r.time, r.proof, r.verified, r.yt_id, r.is_pb, r.is_wr, r.created_at
+                        r#"SELECT r.id, r.user_id, u.name AS username, r.section_id, s.patch, s.layout, s.category, 
+                            s.map, s.submittable, r.time, r.proof, r.verified, r.yt_id, r.is_pb, r.is_wr, r.created_at
                         FROM run r
                         INNER JOIN "user" u ON r.user_id = u.id
                         INNER JOIN section s ON r.section_id = s.id
@@ -60,7 +60,7 @@ async fn main() {
                         Ok(r) => {
                             if r.is_wr {
                                 let old = query_as::<_, PartialRun>(
-                                    r#"SELECT r.id, r.section_id, r.user_id, u.name, r.time, r.proof, 
+                                    r#"SELECT r.id, r.section_id, r.user_id, u.name AS username, r.time, r.proof, 
                                         r.verified, r.yt_id, r.is_pb, r.is_wr, r.created_at
                                     FROM run r
                                     INNER JOIN "user" u ON r.user_id = u.id
@@ -69,7 +69,7 @@ async fn main() {
                                     OFFSET 1
                                     LIMIT 1;"#,
                                 )
-                                .bind(r.section_id)
+                                .bind(r.section.id)
                                 .fetch_optional(&submit_pool)
                                 .await
                                 .ok()
@@ -77,7 +77,7 @@ async fn main() {
                                 send_wr(&r, &old, &submit_client).await;
                             } else if r.is_pb {
                                 let old = query_as::<_, PartialRun>(
-                                    r#"SELECT r.id, r.section_id, r.user_id, u.name, r.time, r.proof, 
+                                    r#"SELECT r.id, r.section_id, r.user_id, u.name AS username, r.time, r.proof, 
                                         r.verified, r.yt_id, r.is_pb, r.is_wr, r.created_at
                                     FROM run r
                                     INNER JOIN "user" u ON r.user_id = u.id
@@ -86,8 +86,8 @@ async fn main() {
                                     OFFSET 1
                                     LIMIT 1;"#,
                                 )
-                                .bind(r.section_id)
-                                .bind(r.user_id)
+                                .bind(r.section.id)
+                                .bind(r.user.user_id)
                                 .fetch_optional(&submit_pool)
                                 .await
                                 .ok()
@@ -136,7 +136,7 @@ async fn main() {
                                     FROM discord
                                     WHERE user_id = $1;"#
                                 )
-                                .bind(a.user_id)
+                                .bind(a.user.user_id)
                                 .fetch_all(&activity_pool)
                                 .await;
 
@@ -171,8 +171,9 @@ async fn main() {
                     match discord {
                         Ok(d) => {
                             let ranks = query_as::<_, Ranking>(
-                                r#"SELECT r.id, r.patch, r.layout, r.category, r.user_id, 
-                                u.name, r.title, r.rank, r.rating, r.created_at, r.updated_at
+                                r#"SELECT r.id, r.patch, r.layout, r.category, r.user_id, u.name AS username, 
+                                    array_length(enum_range(NULL::Title, title), 1) AS title, 
+                                    r.rank, r.rating, r.percentage, r.points, r.created_at, r.updated_at
                                 FROM rank r
                                 INNER JOIN "user" u ON r.user_id = u.id
                                 WHERE r.user_id = $1 AND r.layout IS NULL AND r.category IS NULL;"#
@@ -200,11 +201,11 @@ async fn send_pb(new: &Run, old: &Option<PartialRun>, client: &Client) {
     let _ = client.post(std::env::var("PB_WEBHOOK").unwrap()).json(&json!({
         "embeds": [{
             "color": 16764928,
-            "title": format!("New Personal Best by {}", new.username),
+            "title": format!("New Personal Best by {}", new.user.username),
             "url": format!("https://youtube.com/watch?v={}", new.yt_id.as_ref().unwrap()),
-            "thumbnail": { "url": format!("https://lucio.surf/cdn/maps/{}.jpg", encode(&new.map))},
+            "thumbnail": { "url": format!("https://lucio.surf/cdn/maps/{}.jpg", encode(&new.section.map))},
             "description": format!("Patch: *{}*\nLayout: *{}*\nCategory: *{}*\nMap: *{}*", 
-                new.patch, new.layout, new.category, new.map),
+                new.section.patch, new.section.layout, new.section.category, new.section.map),
             "fields": [{
                 "name": "New PB",
                 "value": format!("Time: *{}*\nProof: *[link](https://youtube.com/watch?v={})*\nDate: *<t:{}>*", 
@@ -244,22 +245,22 @@ async fn send_wr(new: &Run, old: &Option<PartialRun>, client: &Client) {
     let _ = client.post(std::env::var("WR_WEBHOOK").unwrap()).json(&json!({
         "embeds": [{
             "color": 7798548,
-            "title": format!("New World Record by {}", new.username),
+            "title": format!("New World Record by {}", new.user.username),
             "url": format!("https://youtube.com/watch?v={}", new.yt_id.as_ref().unwrap()),
-            "thumbnail": { "url": format!("https://lucio.surf/cdn/maps/{}.jpg", encode(&new.map))},
+            "thumbnail": { "url": format!("https://lucio.surf/cdn/maps/{}.jpg", encode(&new.section.map))},
             "description": format!("Patch: *{}*\nLayout: *{}*\nCategory: *{}*\nMap: *{}*", 
-                new.patch, new.layout, new.category, new.map),
+                new.section.patch, new.section.layout, new.section.category, new.section.map),
             "fields": [{
                 "name": "New Record",
                 "value": format!("User: *{}*\nTime: *{}*\nProof: *[link](https://youtube.com/watch?v={})*\nDate: *<t:{}>*", 
-                    new.username, new.time.to_string(), new.yt_id.as_ref().unwrap(), new.created_at.timestamp()),
+                    new.user.username, new.time.to_string(), new.yt_id.as_ref().unwrap(), new.created_at.timestamp()),
                 "inline": true
             },
             {
                 "name": "Old Record",
                 "value": match old {
                     Some(o) => format!("User: *{}*\nTime: *{}*\nProof: *[link](https://youtube.com/watch?v={})*\nDate: *<t:{}>*", 
-                        o.name, o.time.to_string(), o.yt_id.as_ref().unwrap(), o.created_at.timestamp()),
+                        o.user.username, o.time.to_string(), o.yt_id.as_ref().unwrap(), o.created_at.timestamp()),
                     None => "User: *none*\nTime: *none*\nProof: *none*\nDate: *none*".into(),
                 },
                 "inline": true
@@ -293,8 +294,8 @@ async fn send_title(activity: &Activity, client: &Client) {
             "title": "Title update",
             "description": match (activity.layout.as_ref(), activity.category.as_ref()) {
                 (Some(l), Some(c)) => format!("User: *{}*\nCombo: *Layout {} - {}*", 
-                    activity.username, l, c),
-                _ => format!("User: *{}*\nCombo: *Combined*", activity.username),
+                    activity.user.username, l, c),
+                _ => format!("User: *{}*\nCombo: *Combined*", activity.user.username),
             },
             "fields": [{
                 "name": old.to_string(),
@@ -316,7 +317,7 @@ async fn send_join(activity: &Activity, client: &Client) {
     let _ = client.post(std::env::var("ACTIVITY_WEBHOOK").unwrap()).json(&json!({
         "embeds": [{
             "color": 1342207,
-            "title": format!("{} joined the leaderboards!", activity.username)
+            "title": format!("{} joined the leaderboards!", activity.user.username)
         }]
     })).send().await;
 }
@@ -333,7 +334,7 @@ async fn update_title(activity: &Activity, auth: &Vec<Discord>, client: &Client,
             .bearer_auth(token.unwrap())
             .json(&json!({
                 "platform_name": "Lucio Surf League",
-                "platform_username": activity.username,
+                "platform_username": activity.user.username,
                 "metadata": {
                     "2_13": activity.title_new.as_ref().unwrap().clone() as i32
                 }
@@ -348,7 +349,7 @@ async fn set_title(ranks: &Vec<Ranking>, discord: &Discord, client: &Client, poo
     }
     let token = token.unwrap();
 
-    let name = ranks.first().map(|v| v.username.clone());
+    let name = ranks.first().map(|v| v.user.username.clone());
     if name.is_none() {
         return;
     }
