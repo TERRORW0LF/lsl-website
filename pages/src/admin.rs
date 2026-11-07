@@ -242,7 +242,7 @@ pub fn ManageRuns() -> impl IntoView {
                                   let r = r.clone();
                                   view! {
                                     <A
-                                      class:edit=true
+                                      class:edit=true scroll=false
                                       href=move || {
                                         let mut params = params.get();
                                         params.replace_decoded("run", serde_qs::to_string(&r).unwrap_or("".into()));
@@ -255,7 +255,7 @@ pub fn ManageRuns() -> impl IntoView {
                                 }
                               </Show> <Show when=move || del_perm.get() || user_id.get() == u_id>
                                 <A
-                                  class:delete=true
+                                  class:delete=true scroll=false
                                   href=move || format!("{}{}", id.to_string(), params.get().to_query_string())
                                 >
                                   <div></div>
@@ -523,7 +523,7 @@ pub fn ManageSections() -> impl IntoView {
                               {s.id} {format!("Layout {}", s.layout)} {s.category.clone()} {s.map.clone()}
                               {s.code.clone()} {if s.submittable { "Yes" } else { "No" }}
                               <A
-                                class:edit=true
+                                class:edit=true scroll=false
                                 href=move || {
                                   let mut params = params.get();
                                   params.replace_decoded("section", serde_qs::to_string(&s).unwrap_or("".into()));
@@ -533,7 +533,7 @@ pub fn ManageSections() -> impl IntoView {
                                 <div></div>
                               </A>
                               <A
-                                class:delete=true
+                                class:delete=true scroll=false
                                 href=move || format!("{}{}", id.to_string(), params.get().to_query_string())
                               >
                                 <div></div>
@@ -866,7 +866,7 @@ pub fn ManageUsers() -> impl IntoView {
                               {u.id} <a href=format!("/user/{}", u.id)>{u.username.clone()}</a>
                               {format!("{}", u.created_at.format("%d/%m/%Y %H:%M"))}
                               <A
-                                class:edit=true
+                                class:edit=true scroll=false
                                 href=move || {
                                   let mut params = params.get();
                                   params.replace_decoded("user", serde_qs::to_string(&u).unwrap_or("".into()));

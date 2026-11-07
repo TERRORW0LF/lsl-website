@@ -218,10 +218,24 @@ fn AppRouter() -> impl IntoView {
 #[component(transparent)]
 fn ModerationRouter() -> impl MatchNestedRoutes + Clone {
     let user = expect_context::<UserResource>();
-    let redirect_run = Signal::derive(move || format!("/moderation/runs{}", use_query_map().get().to_query_string()));
-    let redirect_section =
-        Signal::derive(move || format!("/moderation/sections{}", use_query_map().get().to_query_string()));
-    let redirect_user = Signal::derive(move || format!("/moderation/users{}", use_query_map().get().to_query_string()));
+    let query_run = Signal::derive(move || {
+        let mut query = use_query_map().get();
+        query.remove("run");
+        query.to_query_string()
+    });
+    let query_section = Signal::derive(move || {
+        let mut query = use_query_map().get();
+        query.remove("section");
+        query.to_query_string()
+    });
+    let query_user = Signal::derive(move || {
+        let mut query = use_query_map().get();
+        query.remove("user");
+        query.to_query_string()
+    });
+    let redirect_run = Signal::derive(move || format!("/moderation/runs{}", query_run.read()));
+    let redirect_section = Signal::derive(move || format!("/moderation/sections{}", query_section.read()));
+    let redirect_user = Signal::derive(move || format!("/moderation/users{}", query_user.read()));
     view! {
       <ProtectedParentRoute
         path=path!("moderation")

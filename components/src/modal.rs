@@ -10,7 +10,7 @@ use web_sys::FormData;
 #[component]
 pub fn Modal(#[prop(into)] redirect: Signal<String>, children: Children) -> impl IntoView {
     view! {
-      <A attr:class="toner" href=move || redirect.get()>
+      <A attr:class="toner" scroll=false href=move || redirect.get()>
         <div />
       </A>
       <section id="box">{children()}</section>
@@ -71,7 +71,7 @@ where
               ButtonType::Link(href) => {
                 EitherOf4::D(
                   view! {
-                    <A attr:class="button secondary" href=move || href.get()>
+                    <A attr:class="button secondary" scroll=false href=move || href.get()>
                       {b.text}
                     </A>
                   },

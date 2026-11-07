@@ -52,11 +52,13 @@ pub fn Select(
 
 #[component]
 pub fn FilterInput(#[prop(into)] name: String, #[prop(into)] indicator: String) -> impl IntoView {
+    let val = name.clone();
+    let key = Memo::new(move |_| use_query_map().read().get(&val));
     view! {
       <label for=name.clone() class="indicator">
         {indicator}
       </label>
-      <input class="select" name=name.clone() id=name.clone() />
+      <input class="select" name=name.clone() id=name.clone() value=move || key.get() />
     }
 }
 
