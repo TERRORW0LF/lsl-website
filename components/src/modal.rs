@@ -43,13 +43,7 @@ where
                 type="text"
                 name="redirect"
                 hidden
-                value=move || {
-                  if let Some(r) = redirect.redirect.read() {
-                    Some(format!("{}{}", r, use_query_map().get().to_query_string()))
-                  } else {
-                    use_query_map().read().get("redirect")
-                  }
-                }
+                value=move || redirect.redirect.get().map_or(use_query_map().read().get("redirect"), |v| Some(v))
               />
             }
           })
