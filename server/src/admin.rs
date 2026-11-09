@@ -3,7 +3,6 @@ use leptos::prelude::*;
 use server_fn::codec::PostUrl;
 use types::api::{ApiError, PartialRestrictedUser, Permissions, UserFilters, UserPermissions};
 
-// TODO: Move rank and title updates into rating update trigger tied to rank table
 #[server(RecalculateRankings, prefix="/api", endpoint="ranking/recalculate", input=PostUrl)]
 pub async fn recalculate_ranks(
     layout: Option<String>,
@@ -14,48 +13,64 @@ pub async fn recalculate_ranks(
 
     let user = auth()?.current_user.ok_or(ApiError::Unauthenticated)?;
     user.has_all(&[Permissions::ManageRuns, Permissions::ManageSections]).ok_or(ApiError::Unauthorized)?;
+    let layout = layout.map(|v| if v.is_empty() { None } else { Some(v) }).flatten();
+    let category = category.map(|v| if v.is_empty() { None } else { Some(v) }).flatten();
     if layout.is_some() && category.is_none() || (layout.is_none() && category.is_some()) {
         return Err(ApiError::InvalidInput);
     }
     let pool = pool()?;
 
     let _ = sqlx::query(
-        r#"WITH perc AS (SELECT COUNT (DISTINCT section_id)::double precision / (SELECT COUNT(id) 
+        r#"WITH ranking AS (SELECT distance, percent, scaled, rate, user_id 
+            FROM (SELECT (COUNT(DISTINCT section_id)::double precision / (SELECT COUNT(id) 
                     FROM section 
                     WHERE patch = '2.13' AND ($1 IS NULL OR layout = $1) 
-                        AND ($2 IS NULL OR category = $2) AND submittable = true) 
-                AS p, user_id AS u
-            FROM run
-            JOIN section ON section.id = section_id
-            WHERE patch = '2.13' AND ($1 IS NULL OR layout = $1) 
-                AND ($2 IS NULL OR category = $2) AND submittable = true
-            GROUP BY user_id),
-        ran AS (SELECT (p ^ (1 / (1.3 + p))) AS p, u
-			FROM perc),
-		po AS (SELECT AVG(points) as p, user_id as u 
-			FROM run r 
-			JOIN section s ON section_id = s.id
-			WHERE s.patch = '2.13' AND ($1 IS NULL OR layout = $1)
-				AND ($2 IS NULL OR category = $2) AND submittable = true
-			GROUP BY user_id)
-		UPDATE rank r
-		SET percentage = (SELECT p FROM perc WHERE u = r.user_id),
-        points = (SELECT p FROM po WHERE u = r.user_id),
-		rating = (-10000 * (SELECT p FROM ran WHERE u = r.user_id) * (
-			(EXP((-(SELECT p FROM po WHERE u = r.user_id) + 1) ^ 
-				(1 / (12 - 10.7 * (-EXP((-(SELECT p FROM po WHERE u = r.user_id) + 1) ^ 
-		            (1 / (1.9 * (3 - 2 * (SELECT p FROM po WHERE u = r.user_id)) 
-                        * (2 - (SELECT p FROM ran WHERE u = r.user_id))))) 
-				+ EXP(1.0)) / (EXP(1.0) - 1)))) 
-			- EXP(1.0)) / (EXP(1.0) - 1))),
-		updated_at = now()
-		WHERE patch = '2.13' AND layout IS NOT DISTINCT FROM $1 AND category IS NOT DISTINCT FROM $2;"#,
+                        AND ($2 IS NULL OR category = $2) AND submittable = true))
+                AS percent, AVG(points) AS distance, user_id
+                FROM run
+                JOIN section ON section.id = section_id
+                WHERE patch = '2.13' AND ($1 IS NULL OR layout = $1) 
+                    AND ($2 IS NULL OR category = $2) AND submittable = true AND verified = true
+                GROUP BY user_id) base, 
+            LATERAL (SELECT (percent ^ (1 / (1.3 + percent))) AS scaled) AS scale, 
+            LATERAL (SELECT -10000 * scaled * (
+			    (EXP((-distance + 1) ^ 
+			    	(1 / (12 - 10.7 * (-EXP((-distance + 1) ^ 
+		                (1 / (1.9 * (3 - 2 * distance) 
+                            * (2 - scaled)))) 
+    				+ EXP(1.0)) / (EXP(1.0) - 1)))) 
+	    		- EXP(1.0)) / (EXP(1.0) - 1)) AS rate) AS res)
+        MERGE INTO rank r
+        USING ranking ra ON r.user_id = ra.user_id AND patch = '2.13'
+            AND layout IS NOT DISTINCT FROM $1 AND category IS NOT DISTINCT FROM $2
+        WHEN MATCHED THEN UPDATE SET 
+            percentage = percent,
+            points = distance,
+		    rating = rate,
+		    updated_at = now()
+        WHEN NOT MATCHED BY TARGET THEN INSERT
+            (user_id, patch, layout, category, title, rank, rating, percentage, points)
+            VALUES (ra.user_id, '2.13', $1, $2, NULL, NULL, rate, percent, distance)
+        WHEN NOT MATCHED BY SOURCE AND patch = '2.13' AND layout IS NOT DISTINCT FROM $1 
+                AND category IS NOT DISTINCT FROM $2 THEN DELETE;"#,
     )
-    .bind(layout)
-    .bind(category)
+    .bind(&layout)
+    .bind(&category)
     .execute(&pool)
     .await
     .map_err(|_| ApiError::ServerError("Database update failed".into()))?;
+
+    let _ = sqlx::query("CALL rank_update_rank('2.13', $1, $2, NULL);")
+        .bind(layout)
+        .bind(category)
+        .execute(&pool)
+        .await
+        .map_err(|_| ApiError::ServerError("Database update failed".into()))?;
+
+    let _ = sqlx::query("CALL rank_update_rank('2.13', NULL, NULL, NULL);")
+        .execute(&pool)
+        .await
+        .map_err(|_| ApiError::ServerError("Database update failed".into()))?;
 
     util::ssr::redirect(redirect);
     Ok(())

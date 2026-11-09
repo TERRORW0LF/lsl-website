@@ -36,9 +36,9 @@ web-sys = {version ="0.3", features = ["DataTransfer", "FileList", "DomRectReadO
 argon2 = "0.5.3"
 async-trait = "0.1"
 axum = { version = "0.8", features = ["macros"] }
-axum_session = "0.21"
-axum_session_auth = "0.21"
-axum_session_sqlx = { version = "0.11", features = ["postgres", "tls-rustls"] }
+axum_session = "0.22"
+axum_session_auth = "0.22"
+axum_session_sqlx = { git = "https://github.com/TERRORW0LF/AxumSession.git", features = ["postgres", "tls-rustls"] }
 # leptos_axum = "0.9.0-rc0"
 leptos_axum = { git = "https://github.com/leptos-rs/leptos.git" }
 oauth2 = "5.0.0"

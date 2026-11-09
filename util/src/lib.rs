@@ -28,7 +28,9 @@ pub mod ssr {
     use http::HeaderValue;
 
     pub fn redirect(redirect: Option<String>) {
-        if let Some(red) = redirect {
+        if let Some(red) = redirect
+            && !red.is_empty()
+        {
             let red = if red.starts_with("/") { red } else { format!("/{}", red) };
             if let Some(re) = HeaderValue::from_str(&red).ok() {
                 leptos_axum::redirect(re.to_str().unwrap_or("/"), false);

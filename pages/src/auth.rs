@@ -181,7 +181,7 @@ pub fn Submit() -> impl IntoView {
                 name="layout"
                 indicator="Layout"
                 options=[("1", "Layout 1"), ("2", "Layout 2"), ("3", "Layout 3"), ("4", "Layout 4"), ("5", "Layout 5")]
-                prop:sleectedIndex=move || {
+                prop:selectedIndex=move || {
                   code.get().chars().next().map_or(0, |c| c.to_digit(10).unwrap_or(0) as i32 - 1)
                 }
                 attr:required=""

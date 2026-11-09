@@ -352,7 +352,10 @@ pub async fn submit(
         .bind(u.has(&Permissions::Trusted))
         .execute(&pool)
         .await
-        .map_err(|_| ApiError::ServerError("Database insert failed".into()))?;
+        .map_err(|e| {
+            leptos::logging::warn!("{e:?}");
+            ApiError::ServerError("Database insert failed".into())
+        })?;
 
         leptos_axum::redirect(&format!("/leaderboard/map/{}", section_id.id), false);
         Ok(())
