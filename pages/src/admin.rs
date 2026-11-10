@@ -433,10 +433,10 @@ pub fn ManageSections() -> impl IntoView {
       <section id="filter-list">
         <Outlet />
         <div class="row padding">
-          <A href="fix" attr:class="button secondary">
+          <A href=move || format!("add{}", params.read().to_query_string()) attr:class="button secondary">
             "Fix Rankings"
           </A>
-          <A href="add" attr:class="button primary">
+          <A href=move || format!("add{}", params.read().to_query_string()) attr:class="button primary">
             "Add Section"
           </A>
         </div>
