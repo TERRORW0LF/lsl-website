@@ -109,12 +109,16 @@ async fn main() {
             match listener.recv().await {
                 Ok(notification) => {
                     let activity = query_as::<_, Activity>(
-                        r#"SELECT a.id, a.user_id, u.name, a.rank_id, 
-                            r.patch, r.layout, r.category, a.title_old, 
-                            a.title_new, a.rank_old, a.rank_new, a.created_at
+                        r#"SELECT a.id, a.user_id, name AS username, rank_id, patch, layout, category, 
+                            (CASE WHEN title_old IS NULL THEN NULL 
+                                ELSE array_length(enum_range(NULL::Title, title_old), 1) 
+                            END) AS title_old, 
+                            (CASE WHEN title_new IS NULL THEN NULL 
+                                ELSE array_length(enum_range(NULL::Title, title_new), 1) 
+                            END) AS title_new, rank_old, rank_new, a.created_at
                         FROM activity a
                         INNER JOIN "user" u ON a.user_id = u.id
-                        INNER JOIN rank r ON a.rank_id = r.id
+                        LEFT JOIN rank r ON rank_id = r.id
                         WHERE a.id = $1::integer;"#,
                     )
                     .bind(notification.payload())
